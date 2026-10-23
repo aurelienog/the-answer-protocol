@@ -10,10 +10,17 @@ import (
 	"the-answer-protocol/internal/config"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/server"
+	"the-answer-protocol/internal/world"
 )
 
 func main() {
 	cfg := config.LoadConfig()
+
+	gameWorld, err := world.Load("data/world.json")
+	if err != nil {
+		log.Fatalf("Failed to load world: %v", err)
+	}
+	log.Printf("World loaded: %d rooms", len(gameWorld.Rooms))
 
 	registry := server.NewRegistry()
 
@@ -35,7 +42,7 @@ func main() {
 			continue
 		}
 
-		go handleConnection(conn, dispatcher, registry)
+		go handleConnection(conn, dispatcher, registry, gameWorld)
 	}
 }
 
@@ -43,6 +50,7 @@ func handleConnection(
 	conn net.Conn,
 	dispatcher *commands.Dispatcher,
 	registry *server.Registry,
+	gameWorld *world.World,
 ) {
 	sessionID := conn.RemoteAddr().String()
 
@@ -50,7 +58,7 @@ func handleConnection(
 		ID:          sessionID,
 		Connection:  conn,
 		PlayerName:  "",
-		CurrentRoom: "42_cluster",
+		CurrentRoom: "harbor_square",
 		Outbox:      make(chan string, server.OutboxSize),
 	}
 
@@ -186,6 +194,8 @@ func handleConnection(
 		// Dispatch commands only after successful authentication.
 		ctx := &commands.Context{
 			PlayerName: session.PlayerName,
+			World:       gameWorld,
+			CurrentRoom: session.CurrentRoom,
 		}
 
 		message, err := dispatcher.Dispatch(ctx, line)
