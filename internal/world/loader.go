@@ -23,7 +23,7 @@ func Load(path string) (*World, error) {
 	}
 
 	gameWorld := &World{
-		rooms: definition.Rooms,
+		rooms:       definition.Rooms,
 		playerRooms: make(map[string]string),
 	}
 

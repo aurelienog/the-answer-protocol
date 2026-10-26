@@ -70,6 +70,7 @@ func handleConnection(
 
 	registered := false
 	authenticated := false
+	playerEnterBroadcast := false
 
 	go server.WritePump(session, writerDone)
 
@@ -89,11 +90,13 @@ func handleConnection(
 		if authenticated {
 			// Remove the player from the world before notifying others.
 			gameWorld.RemovePlayer(session.PlayerName)
+		}
 
+		if playerEnterBroadcast {
 			registry.Broadcast(
 				protocol.EVT("PLAYER_LEAVE", session.PlayerName),
 			)
-		}
+		}	
 
 		session.CloseOutbox()
 
@@ -125,8 +128,8 @@ func handleConnection(
 			return
 		}
 
-		line := strings.TrimSpace(event.Line)
-		if line == "" {
+		line := event.Line
+		if strings.TrimSpace(line) == "" {
 			continue
 		}
 
@@ -141,14 +144,14 @@ func handleConnection(
 			}
 
 			if request.Command != "CONNECT" {
-				if server.SendMessage(session, protocol.ERR(400, "CONNECT_REQUIRED")) != nil {
+				if server.SendMessage(session, protocol.ERR(403, "CONNECT_REQUIRED")) != nil {
 					return
 				}
 				continue
 			}
 
 			if len(request.Args) != 1 {
-				if server.SendMessage(session, protocol.ERR(400, "INVALID_USERNAME")) != nil {
+				if server.SendMessage(session, protocol.ERR(407, "INVALID_USERNAME")) != nil {
 					return
 				}
 				continue
@@ -156,7 +159,7 @@ func handleConnection(
 
 			username := request.Args[0]
 			if !validUsername(username) {
-				if server.SendMessage(session, protocol.ERR(400, "INVALID_USERNAME")) != nil {
+				if server.SendMessage(session, protocol.ERR(407, "INVALID_USERNAME")) != nil {
 					return
 				}
 				continue
@@ -209,6 +212,7 @@ func handleConnection(
 			log.Printf("Player %q connected from %s", username, sessionID)
 
 			registry.Broadcast(protocol.EVT("PLAYER_ENTER", username))
+			playerEnterBroadcast = true
 			continue
 		}
 
@@ -247,7 +251,7 @@ func handleConnection(
 
 		if err != nil {
 			if errors.Is(err, commands.ErrUnknownCommand) {
-				if server.SendMessage(session, protocol.ERR(400, "UNKNOWN_COMMAND")) != nil {
+				if server.SendMessage(session, protocol.ERR(408, "UNKNOWN_COMMAND")) != nil {
 					return
 				}
 				continue
@@ -255,7 +259,7 @@ func handleConnection(
 
 			log.Printf("Command error from %s: %v", session.PlayerName, err)
 
-			if server.SendMessage(session, protocol.ERR(400, "COMMAND_FAILED")) != nil {
+			if server.SendMessage(session, protocol.ERR(409, "COMMAND_FAILED")) != nil {
 				return
 			}
 			continue

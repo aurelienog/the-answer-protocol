@@ -39,10 +39,10 @@ func LoadConfig() *Config {
 	host := flag.String("host", defaultHost, "Server IP or hostname (used by clients)")
 	port := flag.String("port", defaultPort, "TCP port for the game server to listen/connect")
 	world := flag.String("world", defaultWorld, "Path to the world configuration json asset")
-	
+
 	// flag.Parse() will be triggered at main invocation boundary
 	flag.Parse()
-	
+
 	return &Config{
 		ServerHost: *host,
 		ServerPort: *port,

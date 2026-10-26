@@ -17,7 +17,7 @@ type Session struct {
 	Connection net.Conn // The active open TCP socket connection
 	PlayerName string   // Bound player entity name within the game world
 
-	Outbox chan string
+	Outbox       chan string
 	outboxMu     sync.Mutex
 	outboxClosed bool
 }

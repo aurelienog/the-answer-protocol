@@ -4,15 +4,15 @@ import "fmt"
 
 // PrintBanner displays the TAP ASCII art.
 func PrintBanner() {
-	fmt.Println(`
-  ████████╗ █████╗ ██████╗
-  ╚══██╔══╝██╔══██╗██╔══██╗
-     ██║   ███████║██████╔╝
-     ██║   ██╔══██║██╔═══╝
-     ██║   ██║  ██║██║
-     ╚═╝   ╚═╝  ╚═╝╚═╝
+	fmt.Print(`
+    ████████╗ █████╗ ██████╗
+    ╚══██╔══╝██╔══██╗██╔══██╗
+      ██║   ███████║██████╔╝
+      ██║   ██╔══██║██╔═══╝
+      ██║   ██║  ██║██║
+      ╚═╝   ╚═╝  ╚═╝╚═╝
 
-       THE ANSWER PROTOCOL
-     A TCP Multiplayer Adventure
-`)
+        THE ANSWER PROTOCOL
+      A TCP Multiplayer Adventure
+  `)
 }

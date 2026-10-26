@@ -6,8 +6,8 @@ import (
 
 // World represents the game world.
 type World struct {
-	mu    sync.RWMutex
-	rooms map[string]Room
+	mu          sync.RWMutex
+	rooms       map[string]Room
 	playerRooms map[string]string
 }
 

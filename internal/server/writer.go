@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	OutboxSize  = 32
+	OutboxSize   = 32
 	WriteTimeout = 10 * time.Second
 )
 

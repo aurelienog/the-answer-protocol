@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ErrNameInUse       = errors.New("player name already in use")
-	ErrInvalidSession  = errors.New("invalid session")
-	ErrSessionIDInUse  = errors.New("session ID already in use")
+	ErrNameInUse      = errors.New("player name already in use")
+	ErrInvalidSession = errors.New("invalid session")
+	ErrSessionIDInUse = errors.New("session ID already in use")
 )
 
 // Registry manages authenticated player sessions safely.
@@ -151,7 +151,6 @@ func (r *Registry) Queue(sessionID string, message protocol.Message) error {
 
 	return nil
 }
-
 
 // ¿Qué mejora esta versión?
 // - Dos jugadores no pueden ocupar el mismo nombre, aunque intenten conectarse simultáneamente.

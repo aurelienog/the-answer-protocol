@@ -3,12 +3,12 @@ package commands
 import "the-answer-protocol/internal/world"
 
 type Context struct {
-    PlayerName string
-    RawArgs    []string
+	PlayerName string
+	RawArgs    []string
 	RawText    string
-	World       *world.World
+	World      *world.World
 }
 
 // Context provides the execution boundary environment for any game command
-	// Here you will later inject pointers to:
-	// - events.Bus (to broadcast observer notifications)
+// Here you will later inject pointers to:
+// - events.Bus (to broadcast observer notifications)

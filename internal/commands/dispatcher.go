@@ -44,7 +44,9 @@ func (d *Dispatcher) Dispatch(
 	if err != nil {
 		return protocol.Message{}, err
 	}
-
+	if ctx == nil {
+		return protocol.Message{}, fmt.Errorf("command context is nil")
+	}
 	cmdName := strings.ToLower(request.Command)
 
 	cmd, exists := d.registry[cmdName]
@@ -55,7 +57,6 @@ func (d *Dispatcher) Dispatch(
 			request.Command,
 		)
 	}
-
 	ctx.RawArgs = request.Args
 	ctx.RawText = request.RawArgs
 
