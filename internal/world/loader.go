@@ -13,17 +13,25 @@ func Load(path string) (*World, error) {
 		return nil, fmt.Errorf("read world file %q: %w", path, err)
 	}
 
-	var gameWorld World
+	// Temporary structure used only to decode the JSON file.
+	var definition struct {
+		Rooms map[string]Room `json:"rooms"`
+	}
 
-	if err := json.Unmarshal(data, &gameWorld); err != nil {
+	if err := json.Unmarshal(data, &definition); err != nil {
 		return nil, fmt.Errorf("decode world file %q: %w", path, err)
+	}
+
+	gameWorld := &World{
+		rooms: definition.Rooms,
+		playerRooms: make(map[string]string),
 	}
 
 	if err := gameWorld.Validate(); err != nil {
 		return nil, fmt.Errorf("validate world file %q: %w", path, err)
 	}
 
-	return &gameWorld, nil
+	return gameWorld, nil
 }
 
 // Validate checks that the world definition is internally consistent.
@@ -32,11 +40,14 @@ func (w *World) Validate() error {
 		return fmt.Errorf("world is nil")
 	}
 
-	if len(w.Rooms) == 0 {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if len(w.rooms) == 0 {
 		return fmt.Errorf("world has no rooms")
 	}
 
-	for key, room := range w.Rooms {
+	for key, room := range w.rooms {
 		if key == "" {
 			return fmt.Errorf("room has an empty key")
 		}
@@ -61,7 +72,7 @@ func (w *World) Validate() error {
 				)
 			}
 
-			if _, exists := w.Rooms[destination]; !exists {
+			if _, exists := w.rooms[destination]; !exists {
 				return fmt.Errorf(
 					"room %q has an exit %q to unknown room %q",
 					key,
