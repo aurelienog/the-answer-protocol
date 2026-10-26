@@ -13,6 +13,8 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
+const initialRoomID = "harbor_square"
+
 func main() {
 	cfg := config.LoadConfig()
 
@@ -20,7 +22,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load world: %v", err)
 	}
-	log.Printf("World loaded: %d rooms", len(gameWorld.Rooms))
+	log.Printf("World loaded: %d rooms", gameWorld.RoomCount())
+
 
 	registry := server.NewRegistry()
 
@@ -58,7 +61,6 @@ func handleConnection(
 		ID:          sessionID,
 		Connection:  conn,
 		PlayerName:  "",
-		CurrentRoom: "harbor_square",
 		Outbox:      make(chan string, server.OutboxSize),
 	}
 
@@ -85,6 +87,9 @@ func handleConnection(
 		// The session has already been removed, so it won't receive
 		// its own departure notification.
 		if authenticated {
+			// Remove the player from the world before notifying others.
+			gameWorld.RemovePlayer(session.PlayerName)
+
 			registry.Broadcast(
 				protocol.EVT("PLAYER_LEAVE", session.PlayerName),
 			)
@@ -159,6 +164,7 @@ func handleConnection(
 
 			session.PlayerName = username
 
+			// Register the session first to reserve the unique username.
 			if err := registry.Add(session); err != nil {
 				if errors.Is(err, server.ErrNameInUse) {
 					if server.SendMessage(session, protocol.ERR(201, "NAME_IN_USE")) != nil {
@@ -176,6 +182,21 @@ func handleConnection(
 			}
 
 			registered = true
+
+			// Register the player's location in the world.
+			if err := gameWorld.AddPlayer(username, initialRoomID); err != nil {
+				log.Printf("Failed to add player %q to world: %v", username, err)
+
+				registry.Remove(sessionID)
+				registered = false
+
+				if server.SendMessage(session, protocol.ERR(900, "CONNECTION_FAILED")) != nil {
+					return
+				}
+				return
+			}
+
+			// The player is fully registered and authenticated.
 			authenticated = true
 
 			if err := server.SendMessage(session, protocol.OK("connected")); err != nil {
@@ -194,8 +215,7 @@ func handleConnection(
 		// Dispatch commands only after successful authentication.
 		ctx := &commands.Context{
 			PlayerName: session.PlayerName,
-			World:       gameWorld,
-			CurrentRoom: session.CurrentRoom,
+			World:      gameWorld,
 		}
 
 		message, err := dispatcher.Dispatch(ctx, line)

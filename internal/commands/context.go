@@ -7,7 +7,6 @@ type Context struct {
     RawArgs    []string
 	RawText    string
 	World       *world.World
-	CurrentRoom string
 }
 
 // Context provides the execution boundary environment for any game command

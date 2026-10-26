@@ -33,17 +33,27 @@ func (c *LookCommand) Execute(
 		)
 	}
 
-	room, exists := ctx.World.Rooms[ctx.CurrentRoom]
-	if !exists {
-		return protocol.Message{}, fmt.Errorf(
-			"LOOK: room %q does not exist",
-			ctx.CurrentRoom,
-		)
+	// Get the player's current room from the world.
+	roomID, err := ctx.World.GetPlayerRoom(ctx.PlayerName)
+	if err != nil {
+		return protocol.Message{}, fmt.Errorf("LOOK: %w", err)
+	}
+
+	// Get a snapshot of the room.
+	room, err := ctx.World.GetRoom(roomID)
+	if err != nil {
+		return protocol.Message{}, fmt.Errorf("LOOK: %w", err)
+	}
+
+	// Get the players currently in the room.
+	players, err := ctx.World.GetPlayersInRoom(roomID)
+	if err != nil {
+		return protocol.Message{}, fmt.Errorf("LOOK: %w", err)
 	}
 
 	response := lookResponse{
 		Room:    room,
-		Players: []string{},
+		Players: players,
 		Items:   room.Items,
 		NPCs:    room.NPCs,
 	}

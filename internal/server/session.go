@@ -2,8 +2,8 @@ package server
 
 import (
 	"errors"
-	"sync"
 	"net"
+	"sync"
 )
 
 var (
@@ -16,7 +16,6 @@ type Session struct {
 	ID         string   // Unique identifier (usually RemoteAddr or custom GUID)
 	Connection net.Conn // The active open TCP socket connection
 	PlayerName string   // Bound player entity name within the game world
-	CurrentRoom string  // ID of the room the player is currently occupying
 
 	Outbox chan string
 	outboxMu     sync.Mutex
