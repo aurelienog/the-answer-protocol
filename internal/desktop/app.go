@@ -52,8 +52,8 @@ func (a *App) emit(evType, rawLine string) {
 	}
 }
 
-// closeExisting закриває старе TCP-з'єднання перед новим логіном,
-// щоб сервер звільнив нікнейм у своєму Registry.
+// closeExisting closes the old TCP connection before a new login,
+// so that the server releases the nickname in its Registry.
 func (a *App) closeExisting() {
 	a.mu.Lock()
 	oldConn := a.conn
@@ -65,11 +65,11 @@ func (a *App) closeExisting() {
 		_ = oldConn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
 		_, _ = fmt.Fprintln(oldConn, "QUIT")
 		_ = oldConn.Close()
-		time.Sleep(80 * time.Millisecond) // Даємо серверу час видалити сесію з Registry
+		time.Sleep(80 * time.Millisecond) // We give the server time to remove the session from the Registry.
 	}
 }
 
-// HandleSession перевіряє, чи вже є активне з'єднання (рятує при натисканні F5!)
+// HandleSession checks whether an active connection already exists (saves the day when pressing F5!)
 func (a *App) HandleSession(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()
 	connected := a.conn != nil && a.playerName != ""
@@ -98,7 +98,7 @@ func (a *App) HandleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Якщо гравець оновив сторінку або перепідключається — спочатку звільняємо стару сесію!
+	// If the player refreshes the page or reconnects — first, we free the old session!
 	a.closeExisting()
 
 	addr := net.JoinHostPort(strings.TrimSpace(req.Host), strings.TrimSpace(req.Port))
@@ -228,7 +228,7 @@ func (a *App) HandleCommand(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "OK"})
 }
 
-// Shutdown коректно відправляє QUIT серверу і завершує процес GUI-клієнта
+// Shutdown correctly sends QUIT to the server and terminates the GUI client process.
 func (a *App) Shutdown() {
 	log.Println("Window closed. Disconnecting from server and exiting GUI client...")
 	a.closeExisting()
@@ -245,7 +245,7 @@ func (a *App) HandleStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	// Відправляємо початковий коментар, щоб браузер одразу зафіксував відкритий потік
+	// We send an initial comment so that the browser immediately registers an open stream.
 	fmt.Fprintf(w, ": connected\n\n")
 	flusher.Flush()
 
@@ -260,8 +260,8 @@ func (a *App) HandleStream(w http.ResponseWriter, r *http.Request) {
 		remaining := len(a.subscribers)
 		a.subMu.Unlock()
 
-		// Якщо більше немає відкритих вікон — чекаємо 1.5 сек (на випадок F5 reload)
-		// і якщо вікно не повернулося — чисто завершуємо програму!
+		// If there are no more open windows — we wait 1.5 seconds (in case of F5 reload)
+		// and if the window hasn't returned — we simply terminate the program!
 		if remaining == 0 {
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
