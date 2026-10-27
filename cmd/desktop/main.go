@@ -36,22 +36,22 @@ func main() {
 	url := fmt.Sprintf("http://%s", listener.Addr().String())
 	log.Printf("TAP Desktop GUI started! Window URL: %s", url)
 
-	// Створюємо тимчасову папку профілю для ігрового вікна,
-	// щоб Chrome запускався як окремий процес і ми могли закрити його при Ctrl+C!
+	// Create a temporary profile folder for the game window,
+	// so that Chrome runs as a separate process and we can close it using Ctrl+C!
 	tempProfile, _ := os.MkdirTemp("", "tap-gui-*")
 
 	var browserCmd *exec.Cmd
 	go func() {
 		browserCmd = openNativeWindow(url, tempProfile)
 		if browserCmd != nil {
-			// Якщо користувач закрив вікно хрестиком [X] — процес браузера завершиться сам!
+			// If the user closes the window using the [X] button, the browser process will terminate automatically!
 			_ = browserCmd.Wait()
 			_ = os.RemoveAll(tempProfile)
 			app.Shutdown()
 		}
 	}()
 
-	// Перехоплюємо Ctrl+C (SIGINT / SIGTERM) у терміналі!
+	// Intercepting Ctrl+C (SIGINT / SIGTERM) in the terminal!
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
