@@ -2,8 +2,8 @@ package server
 
 import (
 	"bufio"
-	"errors"
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"strings"

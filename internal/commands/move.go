@@ -52,10 +52,11 @@ func (command *MoveCommand) Execute(
 		)
 	}
 
-	if err := context.World.MovePlayer(
+	event, err := context.World.MovePlayer(
 		context.PlayerName,
 		direction,
-	); err != nil {
+	)
+	if err != nil {
 		if errors.Is(err, world.ErrNoExit) {
 			return protocol.ERR(301, "NO_EXIT"), nil
 		}
@@ -63,10 +64,11 @@ func (command *MoveCommand) Execute(
 		return protocol.Message{}, fmt.Errorf("MOVE: %w", err)
 	}
 
-	roomID, err := context.World.GetPlayerRoom(context.PlayerName)
-	if err != nil {
-		return protocol.Message{}, fmt.Errorf("MOVE: %w", err)
+	// Publish the event only after the movement succeeds.
+	if context.Events != nil {
+		context.Events.Publish(event)
 	}
 
-	return protocol.OK("room=" + roomID), nil
+	// The movement event will be published here in a later step.
+	return protocol.OK("room=" + event.NewRoomID), nil
 }

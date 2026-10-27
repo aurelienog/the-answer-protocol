@@ -97,3 +97,19 @@ func (w *World) GetPlayersInRoom(roomID string) ([]string, error) {
 
 	return players, nil
 }
+
+// getPlayersInRoomLocked returns the players in a room.
+// The caller must hold at least a read lock on the world.
+func (w *World) getPlayersInRoomLocked(roomID string) []string {
+	players := make([]string, 0)
+
+	for playerName, currentRoomID := range w.playerRooms {
+		if currentRoomID == roomID {
+			players = append(players, playerName)
+		}
+	}
+
+	sort.Strings(players)
+
+	return players
+}
