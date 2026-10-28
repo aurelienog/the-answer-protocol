@@ -36,4 +36,35 @@ func TestLoadWorld(t *testing.T) {
 	if got := room.Exits["north"]; got != "market_street" {
 		t.Errorf("expected north exit to market_street, got %q", got)
 	}
+
+	items, err := gameWorld.GetRoomItems("harbor_square")
+	if err != nil {
+		t.Fatalf("expected to get items in harbor_square: %v", err)
+	}
+
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item in harbor_square, got %d", len(items))
+	}
+
+	item := items[0]
+
+	if item.ID != "item.rope" {
+		t.Errorf("expected item ID %q, got %q", "item.rope", item.ID)
+	}
+
+	if item.Name != "Rope" {
+		t.Errorf("expected item name %q, got %q", "Rope", item.Name)
+	}
+
+	if item.Description == "" {
+		t.Error("expected item description to be non-empty")
+	}
+
+	if item.Type != world.ItemTypeCommon {
+		t.Errorf(
+			"expected item type %q, got %q",
+			world.ItemTypeCommon,
+			item.Type,
+		)
+	}
 }

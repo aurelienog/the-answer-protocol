@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"the-answer-protocol/internal/commands"
+	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
 
 func createCommandTestWorld(t *testing.T) *world.World {
 	t.Helper()
-
+	
 	worldData := `{
 		"rooms": {
 			"harbor_square": {
@@ -37,8 +38,17 @@ func createCommandTestWorld(t *testing.T) *world.World {
 				"items": [],
 				"npcs": []
 			}
+		},
+		"items": {
+			"map": {
+				"id": "map",
+				"name": "Map",
+				"description": "A map of the surrounding area.",
+				"type": "common"
+			}
 		}
 	}`
+
 
 	worldFile := filepath.Join(t.TempDir(), "world.json")
 
@@ -85,9 +95,9 @@ func TestLookCommandReturnsCurrentRoom(t *testing.T) {
 		Room struct {
 			ID string `json:"id"`
 		} `json:"room"`
-		Players []string `json:"players"`
-		Items   []string `json:"items"`
-		NPCs    []string `json:"npcs"`
+		Players []string     `json:"players"`
+		Items   []world.Item `json:"items"`
+		NPCs    []string     `json:"npcs"`
 	}
 
 	if err := json.Unmarshal([]byte(message.Payload), &response); err != nil {
@@ -102,13 +112,32 @@ func TestLookCommandReturnsCurrentRoom(t *testing.T) {
 		t.Errorf("expected Alice in room players, got %v", response.Players)
 	}
 
-	if len(response.Items) != 1 || response.Items[0] != "map" {
-		t.Errorf("expected map in room items, got %v", response.Items)
+	if len(response.Items) != 1 {
+		t.Fatalf("expected 1 item in room items, got %d", len(response.Items))
+	}
+
+	item := response.Items[0]
+
+	if item.ID != "map" {
+		t.Errorf("expected item ID %q, got %q", "map", item.ID)
+	}
+
+	if item.Name != "Map" {
+		t.Errorf("expected item name %q, got %q", "Map", item.Name)
+	}
+
+	if item.Description != "A map of the surrounding area." {
+		t.Errorf("unexpected item description: %q", item.Description)
+	}
+
+	if item.Type != world.ItemTypeCommon {
+		t.Errorf("expected item type %q, got %q", world.ItemTypeCommon, item.Type)
 	}
 
 	if len(response.NPCs) != 1 || response.NPCs[0] != "guard" {
 		t.Errorf("expected guard in room NPCs, got %v", response.NPCs)
 	}
+
 }
 
 // TestLookCommandRejectsNilWorld checks missing world configuration.
@@ -130,12 +159,19 @@ func TestMoveCommandChangesRoom(t *testing.T) {
 	gameWorld := createCommandTestWorld(t)
 	addTestPlayer(t, gameWorld, "Alice")
 
+	eventBus := events.NewBus()
+	var publishedEvents []any
+	eventBus.Subscribe(func(event any) {
+		publishedEvents = append(publishedEvents, event)
+	})
+
 	command := commands.NewMoveCommand()
 
 	message, err := command.Execute(&commands.Context{
 		PlayerName: "Alice",
 		World:      gameWorld,
 		RawArgs:    []string{"north"},
+		Events:     eventBus,
 	})
 	if err != nil {
 		t.Fatalf("MOVE returned unexpected error: %v", err)
@@ -157,6 +193,35 @@ func TestMoveCommandChangesRoom(t *testing.T) {
 	if roomID != "market" {
 		t.Errorf("expected Alice in market, got %q", roomID)
 	}
+
+	if len(publishedEvents) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publishedEvents))
+	}
+
+	moved, ok := publishedEvents[0].(world.PlayerMoved)
+	if !ok {
+		t.Fatalf("expected world.PlayerMoved, got %T", publishedEvents[0])
+	}
+
+	if moved.PlayerName != "Alice" {
+		t.Errorf("expected moving player Alice, got %q", moved.PlayerName)
+	}
+
+	if moved.PreviousRoomID != "harbor_square" {
+		t.Errorf("expected previous room harbor_square, got %q", moved.PreviousRoomID)
+	}
+
+	if moved.NewRoomID != "market" {
+		t.Errorf("expected new room market, got %q", moved.NewRoomID)
+	}
+
+	if len(moved.PreviousRoomPlayers) != 1 || moved.PreviousRoomPlayers[0] != "Alice" {
+		t.Errorf("expected Alice in previous room snapshot, got %v", moved.PreviousRoomPlayers)
+	}
+
+	if len(moved.NewRoomPlayers) != 0 {
+		t.Errorf("expected empty destination room snapshot, got %v", moved.NewRoomPlayers)
+	}
 }
 
 // TestMoveCommandRejectsMissingExit checks the protocol error for invalid movement.
@@ -165,6 +230,13 @@ func TestMoveCommandRejectsMissingExit(t *testing.T) {
 	addTestPlayer(t, gameWorld, "Alice")
 
 	command := commands.NewMoveCommand()
+
+	eventBus := events.NewBus()
+	publishedEvents := 0
+
+	eventBus.Subscribe(func(event any) {
+		publishedEvents++
+	})
 
 	message, err := command.Execute(&commands.Context{
 		PlayerName: "Alice",
@@ -194,6 +266,10 @@ func TestMoveCommandRejectsMissingExit(t *testing.T) {
 
 	if roomID != "harbor_square" {
 		t.Errorf("player should remain in harbor_square, got %q", roomID)
+	}
+
+	if publishedEvents != 0 {
+		t.Errorf("expected no events for failed movement, got %d", publishedEvents)
 	}
 }
 

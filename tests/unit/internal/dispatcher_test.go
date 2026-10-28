@@ -11,8 +11,8 @@ import (
 )
 
 type mockCommand struct {
-	name          string
-	execute       func(*commands.Context) (protocol.Message, error)
+	name    string
+	execute func(*commands.Context) (protocol.Message, error)
 }
 
 func (command *mockCommand) Name() string {
