@@ -9,17 +9,26 @@ import (
 func parseConnectRequest(line string) (string, *protocol.Message) {
 	request, err := protocol.ParseRequest(line)
 	if err != nil {
-		message := protocol.ERR(400, "INVALID_REQUEST")
+		message := protocol.ERR(
+			protocol.CodeInvalidRequest,
+			"INVALID_REQUEST",
+		)
 		return "", &message
 	}
 
 	if request.Command != "CONNECT" {
-		message := protocol.ERR(403, "CONNECT_REQUIRED")
+		message := protocol.ERR(
+			protocol.CodeConnectRequired,
+			"CONNECT_REQUIRED",
+		)
 		return "", &message
 	}
 
 	if len(request.Args) != 1 || !validUsername(request.Args[0]) {
-		message := protocol.ERR(407, "INVALID_USERNAME")
+		message := protocol.ERR(
+			protocol.CodeInvalidUsername,
+			"INVALID_USERNAME",
+		)
 		return "", &message
 	}
 

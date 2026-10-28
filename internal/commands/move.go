@@ -2,7 +2,6 @@ package commands
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"the-answer-protocol/internal/protocol"
@@ -15,60 +14,49 @@ func NewMoveCommand() *MoveCommand {
 	return &MoveCommand{}
 }
 
-func (command *MoveCommand) Name() string {
-	return "move"
+func (c *MoveCommand) Name() string {
+	return "MOVE"
 }
 
-func (command *MoveCommand) Execute(
-	context *Context,
-) (protocol.Message, error) {
-	if context == nil {
-		return protocol.Message{}, fmt.Errorf("MOVE: context is nil")
+func (c *MoveCommand) Execute(ctx *Context) (protocol.Message, error) {
+	if ctx == nil || ctx.World == nil {
+		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
-	if context.World == nil {
-		return protocol.Message{}, fmt.Errorf(
-			"MOVE: world is not initialized",
-		)
+	if strings.TrimSpace(ctx.PlayerName) == "" {
+		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
-	if context.PlayerName == "" {
-		return protocol.Message{}, fmt.Errorf(
-			"MOVE: player name is empty",
-		)
+	if len(ctx.RawArgs) != 1 {
+		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 	}
 
-	if len(context.RawArgs) != 1 {
-		return protocol.Message{}, fmt.Errorf(
-			"MOVE: expected exactly one direction",
-		)
-	}
-
-	direction := strings.ToLower(strings.TrimSpace(context.RawArgs[0]))
-
+	direction := strings.ToLower(strings.TrimSpace(ctx.RawArgs[0]))
 	if direction == "" {
-		return protocol.Message{}, fmt.Errorf(
-			"MOVE: direction cannot be empty",
-		)
+		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 	}
 
-	event, err := context.World.MovePlayer(
-		context.PlayerName,
-		direction,
-	)
+	event, err := ctx.World.MovePlayer(ctx.PlayerName, direction)
 	if err != nil {
-		if errors.Is(err, world.ErrNoExit) {
-			return protocol.ERR(301, "NO_EXIT"), nil
+		switch {
+		case errors.Is(err, world.ErrNoExit):
+			return protocol.ERR(protocol.CodeNoExit, "NO_EXIT"), nil
+
+		case errors.Is(err, world.ErrPlayerNotFound),
+			errors.Is(err, world.ErrInvalidWorldState):
+			return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
+
+		case errors.Is(err, world.ErrInvalidArgument):
+			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
+
+		default:
+			return protocol.ERR(protocol.CodeCommandFailed, "COMMAND_FAILED"), nil
 		}
-
-		return protocol.Message{}, fmt.Errorf("MOVE: %w", err)
 	}
 
-	// Publish the event only after the movement succeeds.
-	if context.Events != nil {
-		context.Events.Publish(event)
+	if ctx.Events != nil {
+		ctx.Events.Publish(event)
 	}
 
-	// The movement event will be published here in a later step.
 	return protocol.OK("room=" + event.NewRoomID), nil
 }

@@ -149,7 +149,7 @@ func HandleConnection(
 			// Register the session first to reserve the unique username.
 			if err := authenticatePlayer(session, registry, gameWorld); err != nil {
 				if errors.Is(err, ErrNameInUse) {
-					if SendMessage(session, protocol.ERR(201, "NAME_IN_USE")) != nil {
+					if SendMessage(session, protocol.ERR(protocol.CodeNameInUse, "NAME_IN_USE")) != nil {
 						return
 					}
 					continue
@@ -157,7 +157,7 @@ func HandleConnection(
 
 				log.Printf("Failed to authenticate player %q: %v", session.PlayerName, err)
 
-				if SendMessage(session, protocol.ERR(900, "CONNECTION_FAILED")) != nil {
+				if SendMessage(session, protocol.ERR(protocol.CodeConnectionFailed, "CONNECTION_FAILED")) != nil {
 					return
 				}
 				return
@@ -245,16 +245,12 @@ func HandleConnection(
 		}
 
 		if err != nil {
-			if errors.Is(err, commands.ErrUnknownCommand) {
-				if SendMessage(session, protocol.ERR(408, "UNKNOWN_COMMAND")) != nil {
-					return
-				}
-				continue
-			}
-
 			log.Printf("Command error from %s: %v", session.PlayerName, err)
 
-			if SendMessage(session, protocol.ERR(409, "COMMAND_FAILED")) != nil {
+			if SendMessage(session, protocol.ERR(
+				protocol.CodeCommandFailed,
+				"COMMAND_FAILED",
+			)) != nil {
 				return
 			}
 			continue

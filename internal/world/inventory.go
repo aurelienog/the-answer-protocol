@@ -6,7 +6,7 @@ import "fmt"
 // to their inventory.
 func (w *World) TakeItem(playerName, itemID string) error {
 	if w == nil {
-		return fmt.Errorf("world is nil")
+		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.Lock()
@@ -14,11 +14,15 @@ func (w *World) TakeItem(playerName, itemID string) error {
 
 	roomID, exists := w.playerRooms[playerName]
 	if !exists {
-		return fmt.Errorf("player %q is not in the world", playerName)
+		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+	}
+
+	if _, exists := w.rooms[roomID]; !exists {
+		return fmt.Errorf("%w: room %q does not exist", ErrInvalidWorldState, roomID)
 	}
 
 	if _, exists := w.items[itemID]; !exists {
-		return fmt.Errorf("item %q does not exist", itemID)
+		return fmt.Errorf("%w: %q", ErrItemNotFound, itemID)
 	}
 
 	// Prevent the player from acquiring the same item definition twice.
@@ -26,14 +30,25 @@ func (w *World) TakeItem(playerName, itemID string) error {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
 			return fmt.Errorf(
-				"inventory references nonexistent instance %q",
+				"%w: inventory references nonexistent instance %q",
+				ErrInvalidWorldState,
 				instanceID,
+			)
+		}
+
+		if _, exists := w.items[instance.ItemID]; !exists {
+			return fmt.Errorf(
+				"%w: instance %q references nonexistent item %q",
+				ErrInvalidWorldState,
+				instanceID,
+				instance.ItemID,
 			)
 		}
 
 		if instance.ItemID == itemID {
 			return fmt.Errorf(
-				"player %q already has item %q",
+				"%w: player %q already has item %q",
+				ErrItemAlreadyOwned,
 				playerName,
 				itemID,
 			)
@@ -49,9 +64,19 @@ func (w *World) TakeItem(playerName, itemID string) error {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
 			return fmt.Errorf(
-				"room %q references nonexistent instance %q",
+				"%w: room %q references nonexistent instance %q",
+				ErrInvalidWorldState,
 				roomID,
 				instanceID,
+			)
+		}
+
+		if _, exists := w.items[instance.ItemID]; !exists {
+			return fmt.Errorf(
+				"%w: instance %q references nonexistent item %q",
+				ErrInvalidWorldState,
+				instanceID,
+				instance.ItemID,
 			)
 		}
 
@@ -63,7 +88,12 @@ func (w *World) TakeItem(playerName, itemID string) error {
 	}
 
 	if instanceIndex == -1 {
-		return fmt.Errorf("item %q is not in room %q", itemID, roomID)
+		return fmt.Errorf(
+			"%w: item %q is not in room %q",
+			ErrItemNotInRoom,
+			itemID,
+			roomID,
+		)
 	}
 
 	// Remove the instance from the room.
@@ -85,7 +115,7 @@ func (w *World) TakeItem(playerName, itemID string) error {
 // to their current room.
 func (w *World) DropItem(playerName, itemID string) error {
 	if w == nil {
-		return fmt.Errorf("world is nil")
+		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.Lock()
@@ -93,15 +123,16 @@ func (w *World) DropItem(playerName, itemID string) error {
 
 	roomID, exists := w.playerRooms[playerName]
 	if !exists {
-		return fmt.Errorf("player %q is not in the world", playerName)
+		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	if _, exists := w.rooms[roomID]; !exists {
-		return fmt.Errorf("room %q does not exist", roomID)
+		return fmt.Errorf("%w: room %q does not exist", ErrInvalidWorldState, roomID)
 	}
 
-	if _, exists := w.items[itemID]; !exists {
-		return fmt.Errorf("item %q does not exist", itemID)
+	item, exists := w.items[itemID]
+	if !exists {
+		return fmt.Errorf("%w: %q", ErrItemNotFound, itemID)
 	}
 
 	inventory := w.playerInventories[playerName]
@@ -114,8 +145,18 @@ func (w *World) DropItem(playerName, itemID string) error {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
 			return fmt.Errorf(
-				"inventory references nonexistent instance %q",
+				"%w: inventory references nonexistent instance %q",
+				ErrInvalidWorldState,
 				instanceID,
+			)
+		}
+
+		if _, exists := w.items[instance.ItemID]; !exists {
+			return fmt.Errorf(
+				"%w: instance %q references nonexistent item %q",
+				ErrInvalidWorldState,
+				instanceID,
+				instance.ItemID,
 			)
 		}
 
@@ -128,18 +169,18 @@ func (w *World) DropItem(playerName, itemID string) error {
 
 	if instanceIndex == -1 {
 		return fmt.Errorf(
-			"player %q does not have item %q",
+			"%w: player %q does not have item %q",
+			ErrItemNotInInventory,
 			playerName,
 			itemID,
 		)
 	}
 
-	item := w.items[itemID]
-
 	// Only common items can be dropped.
 	if item.Type != ItemTypeCommon {
 		return fmt.Errorf(
-			"item %q cannot be dropped because its type is %q",
+			"%w: item %q has type %q",
+			ErrItemCannotBeDropped,
 			itemID,
 			item.Type,
 		)
@@ -170,14 +211,14 @@ func (w *World) DropItem(playerName, itemID string) error {
 // Each entry corresponds to one concrete instance.
 func (w *World) GetInventory(playerName string) ([]Item, error) {
 	if w == nil {
-		return nil, fmt.Errorf("world is nil")
+		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
 	if _, exists := w.playerRooms[playerName]; !exists {
-		return nil, fmt.Errorf("player %q is not in the world", playerName)
+		return nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	inventory := w.playerInventories[playerName]
@@ -187,7 +228,8 @@ func (w *World) GetInventory(playerName string) ([]Item, error) {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
 			return nil, fmt.Errorf(
-				"inventory references nonexistent instance %q",
+				"%w: inventory references nonexistent instance %q",
+				ErrInvalidWorldState,
 				instanceID,
 			)
 		}
@@ -195,7 +237,8 @@ func (w *World) GetInventory(playerName string) ([]Item, error) {
 		item, exists := w.items[instance.ItemID]
 		if !exists {
 			return nil, fmt.Errorf(
-				"instance %q references nonexistent item %q",
+				"%w: instance %q references nonexistent item %q",
+				ErrInvalidWorldState,
 				instanceID,
 				instance.ItemID,
 			)

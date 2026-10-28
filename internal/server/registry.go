@@ -36,7 +36,8 @@ func NewRegistry() *Registry {
 // The player's name must already be assigned.
 // Both the session ID and player name must be unique.
 func (r *Registry) Add(s *Session) error {
-	if s == nil || s.ID == "" || s.PlayerName == "" || s.Outbox == nil {
+	if r == nil || s == nil || s.ID == "" ||
+		s.PlayerName == "" || s.Outbox == nil {
 		return ErrInvalidSession
 	}
 

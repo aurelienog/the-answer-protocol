@@ -3,33 +3,48 @@ package world
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // AddPlayer places a player in a room.
 // It fails if the player name is empty, the room does not exist,
 // or the player is already registered.
+// AddPlayer places a player in a room.
+// It fails if the player name is empty, the room does not exist,
+// or the player is already registered.
 func (w *World) AddPlayer(playerName, roomID string) error {
 	if w == nil {
-		return fmt.Errorf("world is nil")
+		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
+	playerName = strings.TrimSpace(playerName)
+	roomID = strings.TrimSpace(roomID)
+
 	if playerName == "" {
-		return fmt.Errorf("player name cannot be empty")
+		return fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
 	}
 
 	if roomID == "" {
-		return fmt.Errorf("room ID cannot be empty")
+		return fmt.Errorf("%w: room ID cannot be empty", ErrInvalidArgument)
 	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	if _, exists := w.rooms[roomID]; !exists {
-		return fmt.Errorf("room %q does not exist", roomID)
+		return fmt.Errorf(
+			"%w: room %q does not exist",
+			ErrInvalidWorldState,
+			roomID,
+		)
 	}
 
 	if _, exists := w.playerRooms[playerName]; exists {
-		return fmt.Errorf("player %q is already in the world", playerName)
+		return fmt.Errorf(
+			"%w: player %q is already in the world",
+			ErrPlayerAlreadyExists,
+			playerName,
+		)
 	}
 
 	if w.playerRooms == nil {
@@ -58,7 +73,7 @@ func (w *World) RemovePlayer(playerName string) {
 // GetPlayerRoom returns the ID of the room occupied by a player.
 func (w *World) GetPlayerRoom(playerName string) (string, error) {
 	if w == nil {
-		return "", fmt.Errorf("world is nil")
+		return "", fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.RLock()
@@ -66,7 +81,16 @@ func (w *World) GetPlayerRoom(playerName string) (string, error) {
 
 	roomID, exists := w.playerRooms[playerName]
 	if !exists {
-		return "", fmt.Errorf("player %q is not in the world", playerName)
+		return "", fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+	}
+
+	if _, exists := w.rooms[roomID]; !exists {
+		return "", fmt.Errorf(
+			"%w: player %q references nonexistent room %q",
+			ErrInvalidWorldState,
+			playerName,
+			roomID,
+		)
 	}
 
 	return roomID, nil
@@ -74,16 +98,22 @@ func (w *World) GetPlayerRoom(playerName string) (string, error) {
 
 // GetPlayersInRoom returns the names of players in a room.
 // The result is sorted alphabetically for deterministic output.
+// GetPlayersInRoom returns the names of players in a room.
+// The result is sorted alphabetically for deterministic output.
 func (w *World) GetPlayersInRoom(roomID string) ([]string, error) {
 	if w == nil {
-		return nil, fmt.Errorf("world is nil")
+		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
 	if _, exists := w.rooms[roomID]; !exists {
-		return nil, fmt.Errorf("room %q does not exist", roomID)
+		return nil, fmt.Errorf(
+			"%w: room %q does not exist",
+			ErrInvalidWorldState,
+			roomID,
+		)
 	}
 
 	players := make([]string, 0)

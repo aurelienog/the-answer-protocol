@@ -1,48 +1,61 @@
 package world
 
 import (
-	"errors"
 	"fmt"
+	"strings"
 )
-
-var ErrNoExit = errors.New("no exit in the requested direction")
 
 // MovePlayer moves a player through an exit from their current room.
 // It returns a PlayerMoved event containing the room occupants captured
 // immediately before the move.
 // The operation is atomic.
-func (world *World) MovePlayer(
+func (w *World) MovePlayer(
 	playerName, direction string,
 ) (PlayerMoved, error) {
-	if world == nil {
-		return PlayerMoved{}, fmt.Errorf("world is nil")
+	if w == nil {
+		return PlayerMoved{}, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
 	}
 
+	playerName = strings.TrimSpace(playerName)
+	direction = strings.ToLower(strings.TrimSpace(direction))
+
 	if playerName == "" {
-		return PlayerMoved{}, fmt.Errorf("player name cannot be empty")
+		return PlayerMoved{}, fmt.Errorf(
+			"%w: player name cannot be empty",
+			ErrInvalidArgument,
+		)
 	}
 
 	if direction == "" {
-		return PlayerMoved{}, fmt.Errorf("direction cannot be empty")
+		return PlayerMoved{}, fmt.Errorf(
+			"%w: direction cannot be empty",
+			ErrInvalidArgument,
+		)
 	}
 
-	world.mu.Lock()
-	defer world.mu.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	// Find the player's current room.
-	currentRoomID, exists := world.playerRooms[playerName]
+	currentRoomID, exists := w.playerRooms[playerName]
 	if !exists {
 		return PlayerMoved{}, fmt.Errorf(
-			"player %q is not in the world",
+			"%w: %q",
+			ErrPlayerNotFound,
 			playerName,
 		)
 	}
 
 	// Verify that the current room exists.
-	currentRoom, exists := world.rooms[currentRoomID]
+	currentRoom, exists := w.rooms[currentRoomID]
 	if !exists {
 		return PlayerMoved{}, fmt.Errorf(
-			"current room %q does not exist",
+			"%w: player %q references nonexistent room %q",
+			ErrInvalidWorldState,
+			playerName,
 			currentRoomID,
 		)
 	}
@@ -59,20 +72,21 @@ func (world *World) MovePlayer(
 	}
 
 	// Verify that the destination room exists.
-	if _, exists := world.rooms[destinationRoomID]; !exists {
+	if _, exists := w.rooms[destinationRoomID]; !exists {
 		return PlayerMoved{}, fmt.Errorf(
-			"destination room %q for direction %q does not exist",
+			"%w: destination room %q for direction %q does not exist",
+			ErrInvalidWorldState,
 			destinationRoomID,
 			direction,
 		)
 	}
 
 	// Capture both room populations before changing the player's location.
-	previousRoomPlayers := world.getPlayersInRoomLocked(currentRoomID)
-	newRoomPlayers := world.getPlayersInRoomLocked(destinationRoomID)
+	previousRoomPlayers := w.getPlayersInRoomLocked(currentRoomID)
+	newRoomPlayers := w.getPlayersInRoomLocked(destinationRoomID)
 
 	// Update the player's location only after all validations succeed.
-	world.playerRooms[playerName] = destinationRoomID
+	w.playerRooms[playerName] = destinationRoomID
 
 	return PlayerMoved{
 		PlayerName:          playerName,

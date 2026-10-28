@@ -1,13 +1,10 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"the-answer-protocol/internal/protocol"
 )
-
-var ErrUnknownCommand = errors.New("unknown command")
 
 // Dispatcher routes incoming requests to registered commands.
 type Dispatcher struct {
@@ -51,11 +48,10 @@ func (d *Dispatcher) Dispatch(
 
 	cmd, exists := d.registry[cmdName]
 	if !exists {
-		return protocol.Message{}, fmt.Errorf(
-			"%w: %s",
-			ErrUnknownCommand,
-			request.Command,
-		)
+		return protocol.ERR(
+			protocol.CodeUnknownCommand,
+			"UNKNOWN_COMMAND",
+		), nil
 	}
 	ctx.RawArgs = request.Args
 	ctx.RawText = request.RawArgs
