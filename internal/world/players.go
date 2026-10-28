@@ -52,6 +52,7 @@ func (w *World) RemovePlayer(playerName string) {
 	defer w.mu.Unlock()
 
 	delete(w.playerRooms, playerName)
+	delete(w.playerInventories, playerName)
 }
 
 // GetPlayerRoom returns the ID of the room occupied by a player.

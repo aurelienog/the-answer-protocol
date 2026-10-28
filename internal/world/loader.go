@@ -16,6 +16,7 @@ func Load(path string) (*World, error) {
 	// Temporary structure used only to decode the JSON file.
 	var definition struct {
 		Rooms map[string]Room `json:"rooms"`
+		Items map[string]Item `json:"items"`
 	}
 
 	if err := json.Unmarshal(data, &definition); err != nil {
@@ -23,8 +24,10 @@ func Load(path string) (*World, error) {
 	}
 
 	gameWorld := &World{
-		rooms:       definition.Rooms,
-		playerRooms: make(map[string]string),
+		rooms:             definition.Rooms,
+		playerRooms:       make(map[string]string),
+		items:             definition.Items,
+		playerInventories: make(map[string][]string),
 	}
 
 	if err := gameWorld.Validate(); err != nil {
@@ -40,45 +43,91 @@ func (w *World) Validate() error {
 		return fmt.Errorf("world is nil")
 	}
 
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
 	if len(w.rooms) == 0 {
 		return fmt.Errorf("world has no rooms")
 	}
 
-	for key, room := range w.rooms {
-		if key == "" {
-			return fmt.Errorf("room has an empty key")
+	// Validate item definitions.
+	for key, item := range w.items {
+		if key == "" || item.ID == "" {
+			return fmt.Errorf("item ID cannot be empty")
 		}
 
-		if room.ID != key {
+		if item.ID != key {
 			return fmt.Errorf(
-				"room key %q does not match its ID %q",
+				"item key %q does not match item ID %q",
+				key,
+				item.ID,
+			)
+		}
+
+		if item.Name == "" {
+			return fmt.Errorf("item %q has an empty name", key)
+		}
+
+		switch item.Type {
+		case ItemTypeCommon, ItemTypeQuest, ItemTypeUnique:
+		default:
+			return fmt.Errorf(
+				"item %q has invalid type %q",
+				key,
+				item.Type,
+			)
+		}
+	}
+
+	// Validate rooms, exits and item references.
+	uniqueItemRooms := make(map[string]string)
+
+	for key, room := range w.rooms {
+		if room.ID == "" {
+			return fmt.Errorf("room key %q has an empty ID", key)
+		}
+
+		if key != room.ID {
+			return fmt.Errorf(
+				"room key %q does not match room ID %q",
 				key,
 				room.ID,
 			)
 		}
 
 		if room.Name == "" {
-			return fmt.Errorf("room %q has no name", key)
+			return fmt.Errorf("room %q has an empty name", key)
 		}
 
-		for direction, destination := range room.Exits {
-			if direction == "" {
+		for direction, destinationID := range room.Exits {
+			if _, exists := w.rooms[destinationID]; !exists {
 				return fmt.Errorf(
-					"room %q has an exit with an empty direction",
+					"room %q has exit %q to nonexistent room %q",
 					key,
+					direction,
+					destinationID,
+				)
+			}
+		}
+
+		for _, itemID := range room.Items {
+			item, exists := w.items[itemID]
+			if !exists {
+				return fmt.Errorf(
+					"room %q references nonexistent item %q",
+					key,
+					itemID,
 				)
 			}
 
-			if _, exists := w.rooms[destination]; !exists {
-				return fmt.Errorf(
-					"room %q has an exit %q to unknown room %q",
-					key,
-					direction,
-					destination,
-				)
+			if item.Type == ItemTypeUnique {
+				if previousRoom, exists := uniqueItemRooms[itemID]; exists {
+					return fmt.Errorf(
+						"unique item %q appears in both room %q and room %q",
+						itemID,
+						previousRoom,
+						key,
+					)
+				}
+
+				uniqueItemRooms[itemID] = key
 			}
 		}
 	}

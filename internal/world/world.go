@@ -6,9 +6,11 @@ import (
 
 // World represents the game world.
 type World struct {
-	mu          sync.RWMutex
-	rooms       map[string]Room
-	playerRooms map[string]string
+	mu                sync.RWMutex
+	rooms             map[string]Room
+	playerRooms       map[string]string
+	items             map[string]Item
+	playerInventories map[string][]string
 }
 
 // Room represents a location in the game world.
