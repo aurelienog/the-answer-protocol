@@ -36,3 +36,35 @@ func (w *World) RoomCount() int {
 
 	return len(w.rooms)
 }
+
+// GetRoomItems returns the complete item definitions for a room.
+func (w *World) GetRoomItems(roomID string) ([]Item, error) {
+	if w == nil {
+		return nil, fmt.Errorf("world is nil")
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	room, exists := w.rooms[roomID]
+	if !exists {
+		return nil, fmt.Errorf("room %q does not exist", roomID)
+	}
+
+	items := make([]Item, 0, len(room.Items))
+
+	for _, itemID := range room.Items {
+		item, exists := w.items[itemID]
+		if !exists {
+			return nil, fmt.Errorf(
+				"room %q references nonexistent item %q",
+				roomID,
+				itemID,
+			)
+		}
+
+		items = append(items, item)
+	}
+
+	return items, nil
+}

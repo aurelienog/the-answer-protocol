@@ -8,10 +8,10 @@ import (
 )
 
 type lookResponse struct {
-	Room    world.Room `json:"room"`
-	Players []string   `json:"players"`
-	Items   []string   `json:"items"`
-	NPCs    []string   `json:"npcs"`
+	Room    world.Room  `json:"room"`
+	Players []string    `json:"players"`
+	Items   []world.Item `json:"items"`
+	NPCs    []string    `json:"npcs"`
 }
 
 type LookCommand struct{}
@@ -51,10 +51,16 @@ func (c *LookCommand) Execute(
 		return protocol.Message{}, fmt.Errorf("LOOK: %w", err)
 	}
 
+	// Get the complete item definitions for the room.
+	items, err := ctx.World.GetRoomItems(roomID)
+	if err != nil {
+		return protocol.Message{}, fmt.Errorf("LOOK: %w", err)
+	}
+
 	response := lookResponse{
 		Room:    room,
 		Players: players,
-		Items:   room.Items,
+		Items:   items,
 		NPCs:    room.NPCs,
 	}
 
