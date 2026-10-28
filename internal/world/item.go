@@ -16,3 +16,9 @@ type Item struct {
 	Description string   `json:"description"`
 	Type        ItemType `json:"type"`
 }
+
+// ItemInstance represents a unique instance of an item definition.
+type ItemInstance struct {
+    ID     string `json:"id"`
+    ItemID string `json:"item_id"`
+}

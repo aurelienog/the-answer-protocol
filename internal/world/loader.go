@@ -27,7 +27,13 @@ func Load(path string) (*World, error) {
 		rooms:             definition.Rooms,
 		playerRooms:       make(map[string]string),
 		items:             definition.Items,
+		itemInstances:     make(map[string]ItemInstance),
+		roomItemInstances: make(map[string][]string),
 		playerInventories: make(map[string][]string),
+	}
+
+	if err := gameWorld.initializeItemInstances(); err != nil {
+		return nil, fmt.Errorf("initialize item instances in world file %q: %w", path, err)
 	}
 
 	if err := gameWorld.Validate(); err != nil {
@@ -107,7 +113,7 @@ func (w *World) Validate() error {
 			}
 		}
 
-		for _, itemID := range room.Items {
+		for itemID, quantity := range room.Items {
 			item, exists := w.items[itemID]
 			if !exists {
 				return fmt.Errorf(
@@ -117,7 +123,25 @@ func (w *World) Validate() error {
 				)
 			}
 
+			if quantity <= 0 {
+				return fmt.Errorf(
+					"room %q has invalid quantity %d for item %q",
+					key,
+					quantity,
+					itemID,
+				)
+			}
+
 			if item.Type == ItemTypeUnique {
+				if quantity > 1 {
+					return fmt.Errorf(
+						"unique item %q has quantity %d in room %q; maximum is 1",
+						itemID,
+						quantity,
+						key,
+					)
+				}
+
 				if previousRoom, exists := uniqueItemRooms[itemID]; exists {
 					return fmt.Errorf(
 						"unique item %q appears in both room %q and room %q",
@@ -128,6 +152,58 @@ func (w *World) Validate() error {
 				}
 
 				uniqueItemRooms[itemID] = key
+			}
+		}
+	}
+
+	return nil
+}
+
+// initializeItemInstances creates one instance for each item quantity
+// declared in the world definition.
+func (w *World) initializeItemInstances() error {
+	for roomID, room := range w.rooms {
+		for itemID, quantity := range room.Items {
+			if quantity <= 0 {
+				return fmt.Errorf(
+					"room %q has invalid quantity %d for item %q",
+					roomID,
+					quantity,
+					itemID,
+				)
+			}
+
+			if _, exists := w.items[itemID]; !exists {
+				return fmt.Errorf(
+					"room %q references nonexistent item %q",
+					roomID,
+					itemID,
+				)
+			}
+
+			for i := 0; i < quantity; i++ {
+				instanceID := fmt.Sprintf(
+					"instance:%s:%d",
+					itemID,
+					i+1,
+				)
+
+				if _, exists := w.itemInstances[instanceID]; exists {
+					return fmt.Errorf(
+						"duplicate item instance ID %q",
+						instanceID,
+					)
+				}
+
+				w.itemInstances[instanceID] = ItemInstance{
+					ID:     instanceID,
+					ItemID: itemID,
+				}
+
+				w.roomItemInstances[roomID] = append(
+					w.roomItemInstances[roomID],
+					instanceID,
+				)
 			}
 		}
 	}

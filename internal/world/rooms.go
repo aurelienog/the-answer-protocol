@@ -1,8 +1,11 @@
 package world
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-// GetRoom returns a snapshot of a room.
+// GetRoom returns a snapshot of a room with current item quantities.
 func (w *World) GetRoom(roomID string) (Room, error) {
 	if w == nil {
 		return Room{}, fmt.Errorf("world is nil")
@@ -16,11 +19,32 @@ func (w *World) GetRoom(roomID string) (Room, error) {
 		return Room{}, fmt.Errorf("room %q does not exist", roomID)
 	}
 
-	// Return copies of the collections so callers cannot
-	// modify the world's internal state through the result.
 	room.Exits = cloneMap(room.Exits)
-	room.Items = cloneSlice(room.Items)
 	room.NPCs = cloneSlice(room.NPCs)
+
+	// Derive item quantities from the current room instances.
+	room.Items = make(map[string]int)
+
+	for _, instanceID := range w.roomItemInstances[roomID] {
+		instance, exists := w.itemInstances[instanceID]
+		if !exists {
+			return Room{}, fmt.Errorf(
+				"room %q references nonexistent instance %q",
+				roomID,
+				instanceID,
+			)
+		}
+
+		if _, exists := w.items[instance.ItemID]; !exists {
+			return Room{}, fmt.Errorf(
+				"instance %q references nonexistent item %q",
+				instanceID,
+				instance.ItemID,
+			)
+		}
+
+		room.Items[instance.ItemID]++
+	}
 
 	return room, nil
 }
@@ -37,7 +61,9 @@ func (w *World) RoomCount() int {
 	return len(w.rooms)
 }
 
-// GetRoomItems returns the complete item definitions for a room.
+// GetRoomItems returns the complete item definitions for a room,
+// including one entry for each available copy.
+// GetRoomItems returns the item definitions for all instances in a room.
 func (w *World) GetRoomItems(roomID string) ([]Item, error) {
 	if w == nil {
 		return nil, fmt.Errorf("world is nil")
@@ -46,20 +72,29 @@ func (w *World) GetRoomItems(roomID string) ([]Item, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	room, exists := w.rooms[roomID]
-	if !exists {
+	if _, exists := w.rooms[roomID]; !exists {
 		return nil, fmt.Errorf("room %q does not exist", roomID)
 	}
 
-	items := make([]Item, 0, len(room.Items))
+	instanceIDs := w.roomItemInstances[roomID]
+	items := make([]Item, 0, len(instanceIDs))
 
-	for _, itemID := range room.Items {
-		item, exists := w.items[itemID]
+	for _, instanceID := range instanceIDs {
+		instance, exists := w.itemInstances[instanceID]
 		if !exists {
 			return nil, fmt.Errorf(
-				"room %q references nonexistent item %q",
+				"room %q references nonexistent instance %q",
 				roomID,
-				itemID,
+				instanceID,
+			)
+		}
+
+		item, exists := w.items[instance.ItemID]
+		if !exists {
+			return nil, fmt.Errorf(
+				"instance %q references nonexistent item %q",
+				instanceID,
+				instance.ItemID,
 			)
 		}
 
@@ -67,4 +102,75 @@ func (w *World) GetRoomItems(roomID string) ([]Item, error) {
 	}
 
 	return items, nil
+}
+
+// FindRoomItem finds an available item definition by canonical ID or display name.
+// Matching is case-insensitive and ignores surrounding whitespace.
+func (w *World) FindRoomItem(roomID, query string) (Item, error) {
+	if w == nil {
+		return Item{}, fmt.Errorf("world is nil")
+	}
+
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return Item{}, fmt.Errorf("item name cannot be empty")
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if _, exists := w.rooms[roomID]; !exists {
+		return Item{}, fmt.Errorf("room %q does not exist", roomID)
+	}
+
+	normalizedQuery := strings.ToLower(query)
+
+	var match Item
+	found := false
+
+	for _, instanceID := range w.roomItemInstances[roomID] {
+		instance, exists := w.itemInstances[instanceID]
+		if !exists {
+			return Item{}, fmt.Errorf(
+				"room %q references nonexistent instance %q",
+				roomID,
+				instanceID,
+			)
+		}
+
+		item, exists := w.items[instance.ItemID]
+		if !exists {
+			return Item{}, fmt.Errorf(
+				"instance %q references nonexistent item %q",
+				instanceID,
+				instance.ItemID,
+			)
+		}
+
+		if !strings.EqualFold(item.ID, normalizedQuery) &&
+			!strings.EqualFold(item.Name, normalizedQuery) {
+			continue
+		}
+
+		if found && match.ID != item.ID {
+			return Item{}, fmt.Errorf(
+				"item name %q is ambiguous in room %q",
+				query,
+				roomID,
+			)
+		}
+
+		match = item
+		found = true
+	}
+
+	if !found {
+		return Item{}, fmt.Errorf(
+			"item %q is not available in room %q",
+			query,
+			roomID,
+		)
+	}
+
+	return match, nil
 }
