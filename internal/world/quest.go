@@ -22,6 +22,14 @@ const (
 	QuestStatusLocked    QuestStatus = "locked"
 )
 
+// QuestSummary contains the public information about a quest
+// that is returned to the client during an NPC conversation.
+type QuestSummary struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // PlayerQuest represents the progress of one player on one quest.
 type PlayerQuest struct {
 	QuestID string

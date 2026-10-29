@@ -1,0 +1,509 @@
+{
+  "rooms": {
+    "harbor_square": {
+      "id": "harbor_square",
+      "name": "Central Harbor Square",
+      "description": "A sunlit square paved with cobblestone overlooking the royal harbor. In the center stands the statue of Arvendale's founder. Captain Eliza watches over the docks.",
+      "exits": {
+        "north": "market_street",
+        "east": "tavern",
+        "south": "docks"
+      },
+      "items": {
+        "item.rope": 1
+      },
+      "npcs": [
+        "captain_eliza"
+      ]
+    },
+    "market_street": {
+      "id": "market_street",
+      "name": "Market Street",
+      "description": "A lively avenue lined with colorful merchant awnings and bustling stalls. To the west rings the hammer of the Blacksmith's Forge, while a Town Guide and a Guild Scout chat near the fountain.",
+      "exits": {
+        "south": "harbor_square",
+        "east": "apothecary",
+        "west": "blacksmith_forge",
+        "north": "town_gate"
+      },
+      "items": {
+        "item.pouch": 2
+      },
+      "npcs": [
+        "town_guide",
+        "quest_advisor"
+      ]
+    },
+    "blacksmith_forge": {
+      "id": "blacksmith_forge",
+      "name": "Royal Blacksmith Forge",
+      "description": "Heat radiates from a roaring stone furnace. Newly forged blades and reinforced shields rest beside the anvil.",
+      "exits": {
+        "east": "market_street"
+      },
+      "items": {
+        "item.iron_sword": 1,
+        "item.oak_shield": 1
+      },
+      "npcs": [
+        "blacksmith"
+      ]
+    },
+    "apothecary": {
+      "id": "apothecary",
+      "name": "Apothecary Shop",
+      "description": "Sunlight streams through stained glass onto shelves of red healing elixirs, dried roots, and herbal remedies.",
+      "exits": {
+        "west": "market_street",
+        "south": "tavern"
+      },
+      "items": {
+        "item.healing_potion": 3
+      },
+      "npcs": [
+        "herbalist"
+      ]
+    },
+    "tavern": {
+      "id": "tavern",
+      "name": "The Salty Siren Tavern",
+      "description": "A cozy harbor inn filled with warm hearthlight, the aroma of fresh bread, and bottles of aged port wine.",
+      "exits": {
+        "west": "harbor_square",
+        "north": "apothecary"
+      },
+      "items": {
+        "item.bread": 3,
+        "item.wine": 2
+      },
+      "npcs": [
+        "tavern_keeper"
+      ]
+    },
+    "docks": {
+      "id": "docks",
+      "name": "The Great Pier",
+      "description": "Weathered timber planks creak above turquoise harbor waters. The imposing Dock Warden stands guard near the entrance to the eastern warehouse.",
+      "exits": {
+        "north": "harbor_square",
+        "east": "warehouse"
+      },
+      "items": {
+        "item.lantern": 2
+      },
+      "npcs": [
+        "dock_warden"
+      ]
+    },
+    "warehouse": {
+      "id": "warehouse",
+      "name": "Abandoned Warehouse",
+      "description": "A shadowy storehouse at the edge of the pier filled with stolen royal cargo. A Shadow Smuggler guards a desk with sealed documents. Reports about missing ships lie among the papers.",
+      "exits": {
+        "west": "docks"
+      },
+      "items": {
+        "item.compromise_letter": 1,
+        "item.missing_ships_report": 1
+      },
+      "npcs": [
+        "smuggler"
+      ]
+    },
+    "town_gate": {
+      "id": "town_gate",
+      "name": "North Town Gate",
+      "description": "Massive iron-bound stone gates adorned with blue and gold banners, marking the boundary between the city and the northern forest.",
+      "exits": {
+        "south": "market_street",
+        "north": "forest_edge"
+      },
+      "items": {},
+      "npcs": [
+        "gate_guard"
+      ]
+    },
+    "forest_edge": {
+      "id": "forest_edge",
+      "name": "Whispering Forest Edge",
+      "description": "Golden sunbeams filter through ancient pines onto mossy stones where rare medicinal herbs grow. A ferocious Dire Wolf prowls nearby.",
+      "exits": {
+        "south": "town_gate"
+      },
+      "items": {
+        "item.herbs": 3
+      },
+      "npcs": [
+        "dire_wolf"
+      ]
+    }
+  },
+  "items": {
+    "item.rope": {
+      "id": "item.rope",
+      "name": "Hempen Rope",
+      "description": "A strong coil of braided sailors' rope.",
+      "type": "common"
+    },
+    "item.iron_sword": {
+      "id": "item.iron_sword",
+      "name": "Iron Sword",
+      "description": "A sturdy iron blade forged by Master Borin. Grants a combat attack bonus when held.",
+      "type": "unique"
+    },
+    "item.oak_shield": {
+      "id": "item.oak_shield",
+      "name": "Oak Shield",
+      "description": "A heavy oak shield reinforced with iron bands. Grants a defense bonus in combat.",
+      "type": "unique"
+    },
+    "item.herbs": {
+      "id": "item.herbs",
+      "name": "Healing Herbs",
+      "description": "Fragrant medicinal herbs gathered from the Whispering Forest for the people of Arvendale.",
+      "type": "quest"
+    },
+    "item.compromise_letter": {
+      "id": "item.compromise_letter",
+      "name": "Incriminating Letter",
+      "description": "A sealed letter containing evidence of the harbor smuggling operation. Bring it to Captain Eliza.",
+      "type": "quest"
+    },
+    "item.missing_ships_report": {
+      "id": "item.missing_ships_report",
+      "name": "Missing Ships Report",
+      "description": "A report containing clues about vessels that disappeared from the royal harbor. Bring it to Captain Eliza.",
+      "type": "quest"
+    },
+    "item.gold_coins": {
+      "id": "item.gold_coins",
+      "name": "Purse of Gold Coins",
+      "description": "A purse of gold coins awarded for completing an important investigation.",
+      "type": "unique"
+    },
+    "item.healing_potion": {
+      "id": "item.healing_potion",
+      "name": "Healing Elixir",
+      "description": "A bright crimson alchemical elixir that restores health points after battle.",
+      "type": "common"
+    },
+    "item.bread": {
+      "id": "item.bread",
+      "name": "Fresh Bread",
+      "description": "A warm, crusty loaf baked this morning at The Salty Siren Tavern.",
+      "type": "common"
+    },
+    "item.wine": {
+      "id": "item.wine",
+      "name": "Harbor Vintage Wine",
+      "description": "A bottle of rich spiced wine served to sailors at The Salty Siren.",
+      "type": "common"
+    },
+    "item.lantern": {
+      "id": "item.lantern",
+      "name": "Brass Lantern",
+      "description": "A polished brass oil lantern that illuminates dark storehouses.",
+      "type": "common"
+    },
+    "item.pouch": {
+      "id": "item.pouch",
+      "name": "Leather Pouch",
+      "description": "A sturdy leather belt pouch dropped near the market stalls.",
+      "type": "common"
+    }
+  },
+  "npcs": {
+    "captain_eliza": {
+      "id": "captain_eliza",
+      "name": "Captain Eliza",
+      "role": "quest_giver",
+      "hostile": false,
+      "hp": 100,
+      "max_hp": 100,
+      "damage": 10,
+      "quest_id": "quest.expose_smugglers",
+      "dialogue": {
+        "default": [
+          "El puerto nunca cuenta todos sus secretos.",
+          "Últimamente, hay demasiada gente haciendo preguntas."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {
+        "quest.expose_smugglers": {
+          "available": [
+            "Necesito pruebas contra los contrabandistas.",
+            "Encuentra la carta que los compromete y tráemela."
+          ],
+          "active": [
+            "¿Has encontrado la carta?",
+            "Sin pruebas no puedo actuar contra los contrabandistas."
+          ],
+          "completed": [
+            "La carta confirma nuestras sospechas.",
+            "Has hecho un gran servicio al puerto."
+          ],
+          "locked": [
+            "Todavía no es el momento de hablar de ese asunto."
+          ]
+        },
+        "quest.investigate_missing_ships": {
+          "available": [
+            "Has demostrado que puedo confiar en ti.",
+            "Varios barcos han desaparecido sin dejar rastro.",
+            "Investiga qué ocurrió y vuelve con respuestas."
+          ],
+          "active": [
+            "¿Has descubierto algo sobre los barcos desaparecidos?",
+            "Necesito saber qué está ocurriendo en estas aguas."
+          ],
+          "completed": [
+            "Por fin conocemos la verdad sobre los barcos.",
+            "Tu ayuda ha sido decisiva."
+          ],
+          "locked": [
+            "Primero debemos resolver otros asuntos del puerto."
+          ]
+        }
+      }
+    },
+    "quest_advisor": {
+      "id": "quest_advisor",
+      "name": "Asesor del mercado",
+      "role": "asesor",
+      "hostile": false,
+      "hp": 60,
+      "max_hp": 60,
+      "damage": 5,
+      "quest_id": "quest.gather_herbs",
+      "dialogue": {
+        "default": [
+          "Si buscas respuestas, escucha a quienes trabajan en el mercado."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {
+        "quest.gather_herbs": {
+          "available": [
+            "Necesito hierbas medicinales para atender a varios vecinos.",
+            "Tráeme las hierbas y te recompensaré."
+          ],
+          "active": [
+            "¿Has conseguido las hierbas medicinales?"
+          ],
+          "completed": [
+            "Con esto podremos atender a quienes lo necesitan.",
+            "Gracias por tu ayuda."
+          ],
+          "locked": [
+            "Ahora mismo tengo otros asuntos que atender."
+          ]
+        }
+      }
+    },
+    "town_guide": {
+      "id": "town_guide",
+      "name": "Town Guide",
+      "role": "guide",
+      "hostile": false,
+      "hp": 50,
+      "max_hp": 50,
+      "damage": 0,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "Welcome to Arvendale! The harbor is south, the forge is west, and the northern gate leads to the Whispering Forest."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "blacksmith": {
+      "id": "blacksmith",
+      "name": "Master Borin",
+      "role": "blacksmith",
+      "hostile": false,
+      "hp": 80,
+      "max_hp": 80,
+      "damage": 8,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "A well-forged blade can make all the difference. Take a look at the equipment near my anvil."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "herbalist": {
+      "id": "herbalist",
+      "name": "Apprentice Elisa",
+      "role": "herbalist",
+      "hostile": false,
+      "hp": 45,
+      "max_hp": 45,
+      "damage": 2,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "The herbs from the Whispering Forest can help heal the sick. Gather them carefully."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "tavern_keeper": {
+      "id": "tavern_keeper",
+      "name": "Mara",
+      "role": "tavern_keeper",
+      "hostile": false,
+      "hp": 50,
+      "max_hp": 50,
+      "damage": 2,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "Welcome to The Salty Siren! Fresh bread and harbor wine are available today."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "dock_warden": {
+      "id": "dock_warden",
+      "name": "Dock Warden",
+      "role": "warden",
+      "hostile": false,
+      "hp": 90,
+      "max_hp": 90,
+      "damage": 8,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "Keep clear of restricted cargo. The harbor has had enough trouble lately."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "smuggler": {
+      "id": "smuggler",
+      "name": "Shadow Smuggler",
+      "role": "smuggler",
+      "hostile": true,
+      "hp": 70,
+      "max_hp": 70,
+      "damage": 12,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "You shouldn't be here. Leave the warehouse before you get into trouble."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "gate_guard": {
+      "id": "gate_guard",
+      "name": "North Gate Guard",
+      "role": "guard",
+      "hostile": false,
+      "hp": 75,
+      "max_hp": 75,
+      "damage": 7,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "The forest lies beyond these gates. Watch your step, and beware of the wolf."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    },
+    "dire_wolf": {
+      "id": "dire_wolf",
+      "name": "Dire Wolf",
+      "role": "beast",
+      "hostile": true,
+      "hp": 45,
+      "max_hp": 45,
+      "damage": 10,
+      "quest_id": "",
+      "dialogue": {
+        "default": [
+          "The wolf growls and bares its teeth."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {}
+    }
+  },
+  "quests": {
+    "quest.expose_smugglers": {
+      "id": "quest.expose_smugglers",
+      "name": "Exponer a los contrabandistas",
+      "description": "Consigue pruebas contra los contrabandistas del puerto.",
+      "giver_npc_id": "captain_eliza",
+      "required_item_id": "item.compromise_letter",
+      "consume_required_item": true,
+      "reward_item_ids": [
+        "item.iron_sword"
+      ],
+      "next_quest_id": "quest.investigate_missing_ships"
+    },
+    "quest.investigate_missing_ships": {
+      "id": "quest.investigate_missing_ships",
+      "name": "Investigar los barcos desaparecidos",
+      "description": "Descubre qué ha ocurrido con los barcos desaparecidos.",
+      "giver_npc_id": "captain_eliza",
+      "required_item_id": "item.missing_ships_report",
+      "consume_required_item": true,
+      "reward_item_ids": [
+        "item.gold_coins"
+      ],
+      "next_quest_id": ""
+    },
+    "quest.gather_herbs": {
+      "id": "quest.gather_herbs",
+      "name": "Reunir hierbas medicinales",
+      "description": "Consigue hierbas para el asesor del mercado.",
+      "giver_npc_id": "quest_advisor",
+      "required_item_id": "item.herbs",
+      "consume_required_item": true,
+      "reward_item_ids": [
+        "item.healing_potion"
+      ],
+      "next_quest_id": ""
+    }
+  }
+}
