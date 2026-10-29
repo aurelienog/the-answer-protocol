@@ -24,3 +24,11 @@ type PlayerLeft struct {
 	RoomID      string
 	RoomPlayers []string
 }
+
+// ItemDropped represents a common item successfully dropped in a room.
+type ItemDropped struct {
+	PlayerName string
+	ItemID     string
+	RoomID     string
+	RoomPlayers []string
+}

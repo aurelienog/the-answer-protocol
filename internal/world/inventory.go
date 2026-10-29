@@ -112,10 +112,10 @@ func (w *World) TakeItem(playerName, itemID string) error {
 }
 
 // DropItem moves one common item instance from the player's inventory
-// to their current room.
-func (w *World) DropItem(playerName, itemID string) error {
+// to their current room and returns the corresponding event.
+func (w *World) DropItem(playerName, itemID string) (ItemDropped, error) {
 	if w == nil {
-		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return ItemDropped{}, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.Lock()
@@ -123,16 +123,16 @@ func (w *World) DropItem(playerName, itemID string) error {
 
 	roomID, exists := w.playerRooms[playerName]
 	if !exists {
-		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+		return ItemDropped{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	if _, exists := w.rooms[roomID]; !exists {
-		return fmt.Errorf("%w: room %q does not exist", ErrInvalidWorldState, roomID)
+		return ItemDropped{}, fmt.Errorf("%w: room %q does not exist", ErrInvalidWorldState, roomID)
 	}
 
 	item, exists := w.items[itemID]
 	if !exists {
-		return fmt.Errorf("%w: %q", ErrItemNotFound, itemID)
+		return ItemDropped{}, fmt.Errorf("%w: %q", ErrItemNotFound, itemID)
 	}
 
 	inventory := w.playerInventories[playerName]
@@ -144,7 +144,7 @@ func (w *World) DropItem(playerName, itemID string) error {
 	for i, instanceID := range inventory {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
-			return fmt.Errorf(
+			return ItemDropped{}, fmt.Errorf(
 				"%w: inventory references nonexistent instance %q",
 				ErrInvalidWorldState,
 				instanceID,
@@ -152,7 +152,7 @@ func (w *World) DropItem(playerName, itemID string) error {
 		}
 
 		if _, exists := w.items[instance.ItemID]; !exists {
-			return fmt.Errorf(
+			return ItemDropped{}, fmt.Errorf(
 				"%w: instance %q references nonexistent item %q",
 				ErrInvalidWorldState,
 				instanceID,
@@ -168,7 +168,7 @@ func (w *World) DropItem(playerName, itemID string) error {
 	}
 
 	if instanceIndex == -1 {
-		return fmt.Errorf(
+		return ItemDropped{}, fmt.Errorf(
 			"%w: player %q does not have item %q",
 			ErrItemNotInInventory,
 			playerName,
@@ -178,12 +178,21 @@ func (w *World) DropItem(playerName, itemID string) error {
 
 	// Only common items can be dropped.
 	if item.Type != ItemTypeCommon {
-		return fmt.Errorf(
+		return ItemDropped{}, fmt.Errorf(
 			"%w: item %q has type %q",
 			ErrItemCannotBeDropped,
 			itemID,
 			item.Type,
 		)
+	}
+
+	// Capture the room occupants before modifying the world.
+	// The world lock prevents concurrent room changes during this operation.
+	roomPlayers := make([]string, 0)
+	for name, playerRoomID := range w.playerRooms {
+		if playerRoomID == roomID {
+			roomPlayers = append(roomPlayers, name)
+		}
 	}
 
 	// Remove the instance from the player's inventory.
@@ -204,7 +213,12 @@ func (w *World) DropItem(playerName, itemID string) error {
 		selectedInstanceID,
 	)
 
-	return nil
+	return ItemDropped{
+		PlayerName:  playerName,
+		ItemID:      itemID,
+		RoomID:      roomID,
+		RoomPlayers: roomPlayers,
+	}, nil
 }
 
 // GetInventory returns the item definitions in a player's inventory.

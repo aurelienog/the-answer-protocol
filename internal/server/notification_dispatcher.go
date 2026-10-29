@@ -42,6 +42,9 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 			event.PlayerName,
 			protocol.EVT("ROOM_PRESENCE_LEAVE", event.PlayerName),
 		)
+
+	case world.ItemDropped:
+		dispatcher.handleItemDropped(event)
 	}
 }
 
@@ -58,6 +61,14 @@ func (dispatcher *NotificationDispatcher) handlePlayerMoved(event world.PlayerMo
 		event.NewRoomPlayers,
 		event.PlayerName,
 		protocol.EVT("ROOM_PRESENCE_ENTER", event.PlayerName),
+	)
+}
+
+func (dispatcher *NotificationDispatcher) handleItemDropped(event world.ItemDropped) {
+	dispatcher.notifyPlayers(
+		event.RoomPlayers,
+		event.PlayerName,
+		protocol.EVT("ITEM_DROPPED", event.ItemID),
 	)
 }
 
@@ -78,7 +89,7 @@ func (dispatcher *NotificationDispatcher) notifyPlayers(
 
 		if err := dispatcher.registry.Queue(session.ID, message); err != nil {
 			log.Printf(
-				"Failed to queue presence notification for %q: %v",
+				"Failed to queue notification for %q: %v",
 				playerName,
 				err,
 			)

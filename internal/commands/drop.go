@@ -31,10 +31,8 @@ func (c *DropCommand) Execute(ctx *Context) (protocol.Message, error) {
 	inventory, err := ctx.World.GetInventory(ctx.PlayerName)
 	if err != nil {
 		switch {
-		case errors.Is(err, world.ErrPlayerNotFound):
-			return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
-
-		case errors.Is(err, world.ErrInvalidWorldState):
+		case errors.Is(err, world.ErrPlayerNotFound),
+			errors.Is(err, world.ErrInvalidWorldState):
 			return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 
 		default:
@@ -59,7 +57,8 @@ func (c *DropCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeItemNotInInventory, "ITEM_NOT_IN_INVENTORY"), nil
 	}
 
-	if err := ctx.World.DropItem(ctx.PlayerName, itemID); err != nil {
+	event, err := ctx.World.DropItem(ctx.PlayerName, itemID)
+	if err != nil {
 		switch {
 		case errors.Is(err, world.ErrPlayerNotFound),
 			errors.Is(err, world.ErrInvalidWorldState):
@@ -77,6 +76,10 @@ func (c *DropCommand) Execute(ctx *Context) (protocol.Message, error) {
 		default:
 			return protocol.ERR(protocol.CodeCommandFailed, "COMMAND_FAILED"), nil
 		}
+	}
+
+	if ctx.Events != nil {
+		ctx.Events.Publish(event)
 	}
 
 	return protocol.OK("dropped=" + itemID), nil
