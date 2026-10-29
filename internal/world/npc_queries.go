@@ -61,8 +61,8 @@ func (w *World) TalkToNPC(playerName, npcID string) (NPCConversation, error) {
 		)
 	}
 
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	roomID, exists := w.playerRooms[playerName]
 	if !exists {
@@ -131,6 +131,7 @@ func (w *World) TalkToNPC(playerName, npcID string) (NPCConversation, error) {
 	quest.RewardItemIDs = cloneSlice(quest.RewardItemIDs)
 	conversation.Quest = &quest
 
+	// Preserve the current status if the player already knows this quest.
 	if playerQuests, exists := w.playerQuests[playerName]; exists {
 		if progress, exists := playerQuests[quest.ID]; exists {
 			conversation.QuestStatus = progress.Status
@@ -138,12 +139,28 @@ func (w *World) TalkToNPC(playerName, npcID string) (NPCConversation, error) {
 		}
 	}
 
+	// The quest must meet its prerequisites before it becomes available.
 	canAccept, _ := w.canAcceptQuestLocked(playerName, quest.ID)
-	if canAccept {
-		conversation.QuestStatus = QuestStatusAvailable
-	} else {
+	if !canAccept {
 		conversation.QuestStatus = QuestStatusLocked
+		return conversation, nil
 	}
+
+	// Talking to the quest giver discovers the quest.
+	if w.playerQuests == nil {
+		w.playerQuests = make(map[string]map[string]PlayerQuest)
+	}
+
+	if w.playerQuests[playerName] == nil {
+		w.playerQuests[playerName] = make(map[string]PlayerQuest)
+	}
+
+	w.playerQuests[playerName][quest.ID] = PlayerQuest{
+		QuestID: quest.ID,
+		Status:  QuestStatusAvailable,
+	}
+
+	conversation.QuestStatus = QuestStatusAvailable
 
 	return conversation, nil
 }

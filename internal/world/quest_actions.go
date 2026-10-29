@@ -27,6 +27,47 @@ func (w *World) AcceptQuest(playerName, questID string) error {
 		return fmt.Errorf("%w: %q", ErrQuestNotFound, questID)
 	}
 	
+	// The player must have discovered the quest by talking to its giver.
+	playerQuests := w.playerQuests[playerName]
+	progress, discovered := playerQuests[questID]
+
+	if !discovered || progress.Status != QuestStatusAvailable {
+		return fmt.Errorf(
+			"%w: quest %q has not been discovered or is not available",
+			ErrNoQuestAvailable,
+			questID,
+		)
+	}
+
+	// The quest giver must be present in the player's current room.
+	roomID := w.playerRooms[playerName]
+	room, exists := w.rooms[roomID]
+	if !exists {
+		return fmt.Errorf(
+			"%w: player %q references nonexistent room %q",
+			ErrInvalidWorldState,
+			playerName,
+			roomID,
+		)
+	}
+
+	giverPresent := false
+	for _, npcID := range room.NPCs {
+		if npcID == quest.GiverNPCID {
+			giverPresent = true
+			break
+		}
+	}
+
+	if !giverPresent {
+		return fmt.Errorf(
+			"%w: quest giver %q is not in the player's room",
+			ErrNoQuestAvailable,
+			quest.GiverNPCID,
+		)
+	}
+
+	// Validate the quest's prerequisites.
 	canAccept, reason := w.canAcceptQuestLocked(playerName, questID)
 	if !canAccept {
 		return fmt.Errorf(
