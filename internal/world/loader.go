@@ -15,8 +15,10 @@ func Load(path string) (*World, error) {
 
 	// Temporary structure used only to decode the JSON file.
 	var definition struct {
-		Rooms map[string]Room `json:"rooms"`
-		Items map[string]Item `json:"items"`
+		Rooms  map[string]Room  `json:"rooms"`
+		Items  map[string]Item  `json:"items"`
+		NPCs   map[string]NPC   `json:"npcs"`
+		Quests map[string]Quest `json:"quests"`
 	}
 
 	if err := json.Unmarshal(data, &definition); err != nil {
@@ -25,11 +27,14 @@ func Load(path string) (*World, error) {
 
 	gameWorld := &World{
 		rooms:             definition.Rooms,
+		npcs:              definition.NPCs,
+		quests:             definition.Quests,
 		playerRooms:       make(map[string]string),
 		items:             definition.Items,
 		itemInstances:     make(map[string]ItemInstance),
 		roomItemInstances: make(map[string][]string),
 		playerInventories: make(map[string][]string),
+		playerQuests:      make(map[string]map[string]PlayerQuest),
 	}
 
 	if err := gameWorld.initializeItemInstances(); err != nil {
@@ -53,107 +58,20 @@ func (w *World) Validate() error {
 		return fmt.Errorf("world has no rooms")
 	}
 
-	// Validate item definitions.
-	for key, item := range w.items {
-		if key == "" || item.ID == "" {
-			return fmt.Errorf("item ID cannot be empty")
-		}
-
-		if item.ID != key {
-			return fmt.Errorf(
-				"item key %q does not match item ID %q",
-				key,
-				item.ID,
-			)
-		}
-
-		if item.Name == "" {
-			return fmt.Errorf("item %q has an empty name", key)
-		}
-
-		switch item.Type {
-		case ItemTypeCommon, ItemTypeQuest, ItemTypeUnique:
-		default:
-			return fmt.Errorf(
-				"item %q has invalid type %q",
-				key,
-				item.Type,
-			)
-		}
+	if err := w.validateNPCs(); err != nil {
+		return err
 	}
 
-	// Validate rooms, exits and item references.
-	uniqueItemRooms := make(map[string]string)
+	if err := w.validateItems(); err != nil {
+		return err
+	}
 
-	for key, room := range w.rooms {
-		if room.ID == "" {
-			return fmt.Errorf("room key %q has an empty ID", key)
-		}
+	if err := w.validateQuests(); err != nil {
+		return err
+	}
 
-		if key != room.ID {
-			return fmt.Errorf(
-				"room key %q does not match room ID %q",
-				key,
-				room.ID,
-			)
-		}
-
-		if room.Name == "" {
-			return fmt.Errorf("room %q has an empty name", key)
-		}
-
-		for direction, destinationID := range room.Exits {
-			if _, exists := w.rooms[destinationID]; !exists {
-				return fmt.Errorf(
-					"room %q has exit %q to nonexistent room %q",
-					key,
-					direction,
-					destinationID,
-				)
-			}
-		}
-
-		for itemID, quantity := range room.Items {
-			item, exists := w.items[itemID]
-			if !exists {
-				return fmt.Errorf(
-					"room %q references nonexistent item %q",
-					key,
-					itemID,
-				)
-			}
-
-			if quantity <= 0 {
-				return fmt.Errorf(
-					"room %q has invalid quantity %d for item %q",
-					key,
-					quantity,
-					itemID,
-				)
-			}
-
-			if item.Type == ItemTypeUnique {
-				if quantity > 1 {
-					return fmt.Errorf(
-						"unique item %q has quantity %d in room %q; maximum is 1",
-						itemID,
-						quantity,
-						key,
-					)
-				}
-
-				if previousRoom, exists := uniqueItemRooms[itemID]; exists {
-					return fmt.Errorf(
-						"unique item %q appears in both room %q and room %q",
-						itemID,
-						previousRoom,
-						key,
-					)
-				}
-
-				uniqueItemRooms[itemID] = key
-			}
-		}
+	if err := w.validateRooms(); err != nil {
+		return err
 	}
 
 	return nil

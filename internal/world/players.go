@@ -56,18 +56,91 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 	return nil
 }
 
-// RemovePlayer removes a player from the world.
+// RemovePlayer returns the player's unique items to their current room
+// and removes the player's state from the world.
 // It is safe to call this method more than once.
-func (w *World) RemovePlayer(playerName string) {
+func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned, error) {
 	if w == nil {
-		return
+		return PlayerLeft{}, UniqueItemsReturned{},
+			fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	delete(w.playerRooms, playerName)
+	roomID, exists := w.playerRooms[playerName]
+	if !exists {
+		return PlayerLeft{}, UniqueItemsReturned{},
+			fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+	}
+
+	if _, exists := w.rooms[roomID]; !exists {
+		return PlayerLeft{}, UniqueItemsReturned{},
+			fmt.Errorf(
+				"%w: player %q references nonexistent room %q",
+				ErrInvalidWorldState,
+				playerName,
+				roomID,
+			)
+	}
+
+	// Capture room occupants before removing the player.
+	roomPlayers := w.getPlayersInRoomLocked(roomID)
+
+	// Validate the inventory before modifying the world.
+	inventory := w.playerInventories[playerName]
+	uniqueInstanceIDs := make([]string, 0)
+
+	for _, instanceID := range inventory {
+		instance, exists := w.itemInstances[instanceID]
+		if !exists {
+			return PlayerLeft{}, UniqueItemsReturned{},
+				fmt.Errorf(
+					"%w: inventory references nonexistent instance %q",
+					ErrInvalidWorldState,
+					instanceID,
+				)
+		}
+
+		item, exists := w.items[instance.ItemID]
+		if !exists {
+			return PlayerLeft{}, UniqueItemsReturned{},
+				fmt.Errorf(
+					"%w: instance %q references nonexistent item %q",
+					ErrInvalidWorldState,
+					instanceID,
+					instance.ItemID,
+				)
+		}
+
+		if item.Type == ItemTypeUnique {
+			uniqueInstanceIDs = append(uniqueInstanceIDs, instanceID)
+		}
+	}
+
+	// Return the existing unique instances to the room.
+	w.roomItemInstances[roomID] = append(
+		w.roomItemInstances[roomID],
+		uniqueInstanceIDs...,
+	)
+
+	// Remove the player's state only after returning the unique items.
 	delete(w.playerInventories, playerName)
+	delete(w.playerRooms, playerName)
+
+	leftEvent := PlayerLeft{
+		PlayerName:  playerName,
+		RoomID:      roomID,
+		RoomPlayers: roomPlayers,
+	}
+
+	returnedEvent := UniqueItemsReturned{
+		PlayerName: playerName,
+		RoomID:     roomID,
+		ItemIDs:    uniqueInstanceIDs,
+	}
+
+	return leftEvent, returnedEvent, nil
 }
 
 // GetPlayerRoom returns the ID of the room occupied by a player.

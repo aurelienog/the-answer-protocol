@@ -49,11 +49,21 @@ func (c *LookCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return mapLookError(err)
 	}
 
+	npcs, err := ctx.World.GetNPCsInRoom(roomID)
+	if err != nil {
+		return mapLookError(err)
+	}
+
+	npcNames := make([]string, 0, len(npcs))
+	for _, npc := range npcs {
+		npcNames = append(npcNames, npc.Name)
+	}
+
 	response := lookResponse{
 		Room:    room,
 		Players: players,
 		Items:   items,
-		NPCs:    room.NPCs,
+		NPCs:    npcNames,
 	}
 
 	return protocol.OKJSON(response)

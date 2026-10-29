@@ -7,7 +7,7 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
-// cleanupPlayer removes the player's state before publishing the departure.
+// cleanupPlayer removes the player's state before publishing departure events.
 func cleanupPlayer(
 	sessionID string,
 	session *Session,
@@ -19,28 +19,37 @@ func cleanupPlayer(
 	eventPublisher events.Publisher,
 ) {
 	if authenticated && playerEnterBroadcast {
-		roomID, err := gameWorld.GetPlayerRoom(session.PlayerName)
+		playerLeft, uniqueItemsReturned, err := gameWorld.RemovePlayer(session.PlayerName)
 		if err != nil {
-			log.Printf("Failed to get room for departing player %q: %v", session.PlayerName, err)
+			log.Printf(
+				"Failed to remove departing player %q: %v",
+				session.PlayerName,
+				err,
+			)
 		} else {
-			players, err := gameWorld.GetPlayersInRoom(roomID)
-			if err != nil {
-				log.Printf("Failed to get players in room %q: %v", roomID, err)
-			} else if eventPublisher != nil {
-				eventPublisher.Publish(world.PlayerLeft{
-					PlayerName:  session.PlayerName,
-					RoomID:      roomID,
-					RoomPlayers: players,
-				})
+			// The world state has already been updated before publishing.
+			if eventPublisher != nil {
+				if len(uniqueItemsReturned.ItemIDs) > 0 {
+					eventPublisher.Publish(uniqueItemsReturned)
+				}
+
+				eventPublisher.Publish(playerLeft)
 			}
+		}
+	} else if authenticated {
+		// The player was authenticated but their entry was not broadcast.
+		// Remove their state without publishing departure events.
+		_, _, err := gameWorld.RemovePlayer(session.PlayerName)
+		if err != nil {
+			log.Printf(
+				"Failed to remove departing player %q: %v",
+				session.PlayerName,
+				err,
+			)
 		}
 	}
 
 	if registered {
 		registry.Remove(sessionID)
-	}
-
-	if authenticated {
-		gameWorld.RemovePlayer(session.PlayerName)
 	}
 }

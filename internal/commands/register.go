@@ -7,6 +7,7 @@ func RegisterCommands(dispatcher *Dispatcher) {
 	dispatcher.Register(NewTakeCommand())
 	dispatcher.Register(NewDropCommand())
 	dispatcher.Register(NewInventoryCommand())
+	dispatcher.Register(NewTalkCommand())
 	// Register additional commands as they are implemented:
 	// dispatcher.Register(NewAttackCommand())
 	// dispatcher.Register(NewHelpCommand())

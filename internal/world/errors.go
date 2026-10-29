@@ -17,4 +17,5 @@ var (
 	ErrInvalidWorldState    = errors.New("invalid world state")
 	ErrItemNameAmbiguous = errors.New("item name is ambiguous")
 	ErrInvalidArgument   = errors.New("invalid argument")
+	ErrQuestNotFound = errors.New("quest not found")
 )

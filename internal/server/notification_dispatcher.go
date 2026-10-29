@@ -2,6 +2,7 @@ package server
 
 import (
 	"log"
+	"strings"
 
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
@@ -45,6 +46,9 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 
 	case world.ItemDropped:
 		dispatcher.handleItemDropped(event)
+
+	case world.UniqueItemsReturned:
+		dispatcher.handleUniqueItemsReturned(event)
 	}
 }
 
@@ -69,6 +73,19 @@ func (dispatcher *NotificationDispatcher) handleItemDropped(event world.ItemDrop
 		event.RoomPlayers,
 		event.PlayerName,
 		protocol.EVT("ITEM_DROPPED", event.ItemID),
+	)
+}
+
+func (dispatcher *NotificationDispatcher) handleUniqueItemsReturned(event world.UniqueItemsReturned) {
+	if len(event.ItemIDs) == 0 {
+		return
+	}
+
+	// ItemIDs currently contains the concrete instance IDs returned to the room.
+	// Send one global notification describing the return.
+	itemIDs := strings.Join(event.ItemIDs, ",")
+	dispatcher.registry.Broadcast(
+		protocol.EVT("UNIQUE_ITEMS_RETURNED", itemIDs),
 	)
 }
 

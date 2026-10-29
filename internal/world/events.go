@@ -32,3 +32,11 @@ type ItemDropped struct {
 	RoomID     string
 	RoomPlayers []string
 }
+
+// UniqueItemsReturned represents unique items returned to a room
+// when a player disconnects.
+type UniqueItemsReturned struct {
+    PlayerName string
+    RoomID     string
+    ItemIDs    []string
+}

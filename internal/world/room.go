@@ -193,3 +193,4 @@ func (w *World) FindRoomItem(roomID, query string) (Item, error) {
 
 	return match, nil
 }
+
