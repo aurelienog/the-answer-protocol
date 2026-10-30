@@ -9,9 +9,6 @@ import (
 // AddPlayer places a player in a room.
 // It fails if the player name is empty, the room does not exist,
 // or the player is already registered.
-// AddPlayer places a player in a room.
-// It fails if the player name is empty, the room does not exist,
-// or the player is already registered.
 func (w *World) AddPlayer(playerName, roomID string) error {
 	if w == nil {
 		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
@@ -63,6 +60,12 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 	if w == nil {
 		return PlayerLeft{}, UniqueItemsReturned{},
 			fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+	}
+
+	playerName = strings.TrimSpace(playerName)
+	if playerName == "" {
+		return PlayerLeft{}, UniqueItemsReturned{},
+			fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
 	}
 
 	w.mu.Lock()
@@ -118,6 +121,11 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 		}
 	}
 
+	// Remove the player from their group before disconnecting them.
+	if err := w.removePlayerFromGroupLocked(playerName); err != nil {
+		return PlayerLeft{}, UniqueItemsReturned{}, err
+	}
+
 	// Return the existing unique instances to the room.
 	w.roomItemInstances[roomID] = append(
 		w.roomItemInstances[roomID],
@@ -142,6 +150,7 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 
 	return leftEvent, returnedEvent, nil
 }
+
 
 // GetPlayerRoom returns the ID of the room occupied by a player.
 func (w *World) GetPlayerRoom(playerName string) (string, error) {

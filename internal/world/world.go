@@ -17,6 +17,9 @@ type World struct {
 	quests             map[string]Quest
 	playerQuests       map[string]map[string]PlayerQuest
 	nextItemInstanceID uint64
+	nextGroupID 	uint64
+	groups         	map[string]Group
+	playerGroups    map[string]string
 }
 
 // Room represents a location in the game world.
@@ -27,6 +30,18 @@ type Room struct {
 	Exits       map[string]string `json:"exits"`
 	Items       map[string]int `json:"items"`
 	NPCs        []string       `json:"npcs"`
+}
+
+type Group struct {
+	ID          string
+	Name        string
+	Members     []string
+	Invitations map[string]bool
+}
+
+type GroupInvitation struct {
+	ID   string
+	Name string
 }
 
 // cloneMap returns a copy of a string map.

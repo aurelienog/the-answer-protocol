@@ -11,6 +11,7 @@ func RegisterCommands(dispatcher *Dispatcher) {
 	dispatcher.Register(NewQuestCommand())
 	dispatcher.Register(NewQuestsCommand())
 	dispatcher.Register(NewWhoCommand())
+	dispatcher.Register(NewGroupCommand())
 
 	// Register additional commands as they are implemented:
 	// dispatcher.Register(NewAttackCommand())

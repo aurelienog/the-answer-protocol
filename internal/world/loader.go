@@ -26,15 +26,17 @@ func Load(path string) (*World, error) {
 	}
 
 	gameWorld := &World{
-		rooms:             definition.Rooms,
-		npcs:              definition.NPCs,
+		rooms:              definition.Rooms,
+		npcs:               definition.NPCs,
 		quests:             definition.Quests,
-		playerRooms:       make(map[string]string),
-		items:             definition.Items,
-		itemInstances:     make(map[string]ItemInstance),
-		roomItemInstances: make(map[string][]string),
-		playerInventories: make(map[string][]string),
-		playerQuests:      make(map[string]map[string]PlayerQuest),
+		playerRooms:        make(map[string]string),
+		items:              definition.Items,
+		itemInstances:      make(map[string]ItemInstance),
+		roomItemInstances:  make(map[string][]string),
+		playerInventories:  make(map[string][]string),
+		playerQuests:       make(map[string]map[string]PlayerQuest),
+		groups:             make(map[string]Group),
+		playerGroups:       make(map[string]string),
 	}
 
 	if err := gameWorld.initializeItemInstances(); err != nil {
