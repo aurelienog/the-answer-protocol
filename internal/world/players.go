@@ -217,3 +217,18 @@ func (w *World) getPlayersInRoomLocked(roomID string) []string {
 
 	return players
 }
+
+// GetPlayerCount returns the total number of players in the world.
+func (w *World) GetPlayerCount() (int, error) {
+	if w == nil {
+		return 0, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	return len(w.playerRooms), nil
+}
