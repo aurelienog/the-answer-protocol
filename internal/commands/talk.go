@@ -41,58 +41,15 @@ func (c *TalkCommand) Execute(ctx *Context) (protocol.Message, error) {
 		), nil
 	}
 
-	npcs, err := getNPCsForPlayer(ctx.World, ctx.PlayerName)
-	if err != nil {
-		return mapTalkError(err)
-	}
-
-	npcID, err := resolveNPCID(target, npcs)
-	if err != nil {
-		return mapTalkError(err)
-	}
-
-	conversation, err := ctx.World.TalkToNPC(ctx.PlayerName, npcID)
+	conversation, err := ctx.World.TalkToNPC(
+		ctx.PlayerName,
+		target,
+	)
 	if err != nil {
 		return mapTalkError(err)
 	}
 
 	return protocol.OKJSON(conversation)
-}
-
-func getNPCsForPlayer(w *world.World, playerName string) ([]world.NPC, error) {
-	roomID, err := w.GetPlayerRoom(playerName)
-	if err != nil {
-		return nil, err
-	}
-
-	return w.GetNPCsInRoom(roomID)
-}
-
-func resolveNPCID(target string, npcs []world.NPC) (string, error) {
-	normalizedTarget := normalizeNPCTarget(target)
-
-	var matchedID string
-
-	for _, npc := range npcs {
-		if normalizeNPCTarget(npc.ID) == normalizedTarget ||
-			normalizeNPCTarget(npc.Name) == normalizedTarget {
-			if matchedID != "" && matchedID != npc.ID {
-				return "", world.ErrInvalidArgument
-			}
-
-			matchedID = npc.ID
-		}
-	}
-
-	if matchedID == "" {
-		return "", world.ErrNPCNotFound
-	}
-
-	return matchedID, nil
-}
-
-func normalizeNPCTarget(value string) string {
-	return strings.ToLower(strings.Join(strings.Fields(value), " "))
 }
 
 func mapTalkError(err error) (protocol.Message, error) {

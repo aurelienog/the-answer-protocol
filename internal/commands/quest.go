@@ -26,43 +26,74 @@ func (c *QuestCommand) Execute(ctx *Context) (protocol.Message, error) {
 		), nil
 	}
 
-	if len(ctx.RawArgs) > 1 {
+	if len(ctx.RawArgs) == 0 {
 		return protocol.ERR(
 			protocol.CodeInvalidArguments,
 			"INVALID_ARGUMENTS",
 		), nil
 	}
 
-	if len(ctx.RawArgs) == 1 {
-		questID := strings.TrimSpace(ctx.RawArgs[0])
-		if questID == "" {
-			return protocol.ERR(
-				protocol.CodeInvalidArguments,
-				"INVALID_ARGUMENTS",
-			), nil
-		}
+	npcIdentifier := strings.TrimSpace(strings.Join(ctx.RawArgs, " "))
+	if npcIdentifier == "" {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
 
-		quest, err := ctx.World.GetPlayerQuestSummary(
+	conversation, err := ctx.World.TalkToNPC(
+		ctx.PlayerName,
+		npcIdentifier,
+	)
+	if err != nil {
+		return mapQuestError(err)
+	}
+
+	// The NPC does not offer any quest.
+	if conversation.Quest == nil {
+		return protocol.ERR(
+			protocol.CodeNoQuestAvailable,
+			"NO_QUEST_AVAILABLE",
+		), nil
+	}
+
+	switch conversation.QuestStatus {
+	case world.QuestStatusAvailable:
+		// QUEST also accepts the quest. ACCEPT is not a TAP command.
+		err := ctx.World.AcceptQuest(
 			ctx.PlayerName,
-			questID,
+			conversation.Quest.ID,
 		)
 		if err != nil {
 			return mapQuestError(err)
 		}
 
-		return protocol.OKJSON(quest)
+	case world.QuestStatusActive,
+		world.QuestStatusCompleted,
+		world.QuestStatusLocked:
+		return protocol.ERR(
+			protocol.CodeNoQuestAvailable,
+			"NO_QUEST_AVAILABLE",
+		), nil
+
+	default:
+		return protocol.ERR(
+			protocol.CodeNoQuestAvailable,
+			"NO_QUEST_AVAILABLE",
+		), nil
 	}
 
-	quests, err := ctx.World.GetPlayerQuests(ctx.PlayerName)
-	if err != nil {
-		return mapQuestError(err)
-	}
-
-	return protocol.OKJSON(quests)
+	return protocol.OKJSON(conversation.Quest)
 }
 
 func mapQuestError(err error) (protocol.Message, error) {
 	switch {
+	case errors.Is(err, world.ErrNPCNotFound):
+		return protocol.ERR(
+			protocol.CodeNPCNotFound,
+			"NPC_NOT_FOUND",
+		), nil
+
 	case errors.Is(err, world.ErrPlayerNotFound),
 		errors.Is(err, world.ErrInvalidWorldState):
 		return protocol.ERR(
@@ -79,8 +110,8 @@ func mapQuestError(err error) (protocol.Message, error) {
 	case errors.Is(err, world.ErrQuestNotFound),
 		errors.Is(err, world.ErrNoQuestAvailable):
 		return protocol.ERR(
-			protocol.CodeCommandFailed,
-			"QUEST_NOT_AVAILABLE",
+			protocol.CodeNoQuestAvailable,
+			"NO_QUEST_AVAILABLE",
 		), nil
 
 	default:

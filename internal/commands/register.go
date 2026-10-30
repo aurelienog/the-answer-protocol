@@ -8,9 +8,8 @@ func RegisterCommands(dispatcher *Dispatcher) {
 	dispatcher.Register(NewDropCommand())
 	dispatcher.Register(NewInventoryCommand())
 	dispatcher.Register(NewTalkCommand())
-	dispatcher.Register(NewAcceptCommand())
-	dispatcher.Register(NewCompleteCommand())
 	dispatcher.Register(NewQuestCommand())
+	dispatcher.Register(NewQuestsCommand())
 
 	// Register additional commands as they are implemented:
 	// dispatcher.Register(NewAttackCommand())
