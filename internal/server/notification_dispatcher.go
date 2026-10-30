@@ -59,6 +59,9 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 	case world.GroupLeave:
 		dispatcher.handleGroupLeave(event)
 
+	case world.ChatMessage:
+    	dispatcher.handleChatMessage(event)
+
 	}
 }
 
@@ -132,7 +135,10 @@ func (dispatcher *NotificationDispatcher) handleGroupInvite(event world.GroupInv
 
 	if err := dispatcher.registry.Queue(
 		session.ID,
-		protocol.EVT("GROUP", "INVITE"),
+		protocol.EVT(
+			"GROUP",
+			"INVITE player="+event.Inviter+" group="+event.GroupName,
+		),
 	); err != nil {
 		log.Printf(
 			"Failed to queue group invitation notification for %q: %v",
@@ -146,7 +152,7 @@ func (dispatcher *NotificationDispatcher) handleGroupJoin(event world.GroupJoin)
 	dispatcher.notifyPlayers(
 		event.Members,
 		event.PlayerName,
-		protocol.EVT("GROUP", "JOIN"),
+		protocol.EVT("GROUP", "JOIN player="+event.PlayerName),
 	)
 }
 
@@ -154,6 +160,26 @@ func (dispatcher *NotificationDispatcher) handleGroupLeave(event world.GroupLeav
 	dispatcher.notifyPlayers(
 		event.Members,
 		event.PlayerName,
-		protocol.EVT("GROUP", "LEAVE"),
+		protocol.EVT("GROUP", "LEAVE player="+event.PlayerName),
 	)
+}
+
+func (dispatcher *NotificationDispatcher) handleChatMessage(event world.ChatMessage) {
+    data := "CHAT player=" + event.PlayerName + " message=" + event.Message
+    notification := protocol.EVT(event.Scope, data)
+
+    for _, playerName := range event.Recipients {
+        session, exists := dispatcher.registry.GetByName(playerName)
+        if !exists {
+            continue
+        }
+
+        if err := dispatcher.registry.Queue(session.ID, notification); err != nil {
+            log.Printf(
+                "Failed to queue chat message for %q: %v",
+                playerName,
+                err,
+            )
+        }
+    }
 }

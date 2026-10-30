@@ -352,3 +352,41 @@ func (w *World) GetGroupInvitations(playerName string) ([]GroupInvitation, error
 
 	return invitations, nil
 }
+
+// GetPlayerGroup returns the group a player belongs to.
+func (w *World) GetPlayerGroup(playerName string) (Group, error) {
+	if w == nil {
+		return Group{}, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+	}
+
+	playerName = strings.TrimSpace(playerName)
+	if playerName == "" {
+		return Group{}, fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if _, exists := w.playerRooms[playerName]; !exists {
+		return Group{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+	}
+
+	groupID, exists := w.playerGroups[playerName]
+	if !exists {
+		return Group{}, fmt.Errorf("%w: %q", ErrPlayerNotInGroup, playerName)
+	}
+
+	group, exists := w.groups[groupID]
+	if !exists {
+		return Group{}, fmt.Errorf(
+			"%w: player %q references nonexistent group %q",
+			ErrInvalidWorldState,
+			playerName,
+			groupID,
+		)
+	}
+
+	group.Members = cloneSlice(group.Members)
+
+	return group, nil
+}

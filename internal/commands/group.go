@@ -115,6 +115,18 @@ func (c *GroupCommand) Execute(ctx *Context) (protocol.Message, error) {
 
 		return protocol.OK(""), nil
 
+	case "INFO":
+		if len(ctx.RawArgs) != 1 {
+			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
+		}
+
+		group, err := ctx.World.GetPlayerGroup(ctx.PlayerName)
+		if err != nil {
+			return mapGroupError(err), nil
+		}
+
+		return protocol.OKJSON(group)
+
 	default:
 		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 	}

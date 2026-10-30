@@ -72,3 +72,10 @@ type GroupChat struct {
     Message    string
     Members    []string
 }
+
+type ChatMessage struct {
+    Scope      string
+    PlayerName string
+    Message    string
+    Recipients []string
+}
