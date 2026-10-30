@@ -12,7 +12,7 @@
 - [Combat System](#combat-system)
 - [Quest System](#implementation)
 - [World Design](#World-Design)
-- [Server Logging](#project-management)
+- [Server Logging](#Server-Logging)
 - [Group Contributions](#group-contributions)
 - [Building and Running](#building-and-running)
 - [Testing](#testing)
@@ -20,13 +20,26 @@
 
 ## Description
 
-A TCP-based multiplayer text adventure protocol and game server written in Go.
+The Answer Protocol (TAP) is a TCP-based multiplayer text adventure protocol and game server written in Go.
 
-The Answer Protocol (TAP) is an application-level protocol designed for multiplayer text-based adventures. It defines how clients connect to a server, authenticate players, send commands, receive responses, and process asynchronous events.
+TAP defines an application-level communication protocol for multiplayer text-based adventures. It specifies how clients connect to a server, authenticate players, send commands, receive responses, and process asynchronous events.
 
-The project currently includes a TCP game server, a command-line client, a command dispatching system, session management, and an initial world representation.
+The project includes:
 
-The goal is to build a multiplayer adventure with a shared world, room-based interactions, inventory management, combat, quests, and multiple client interfaces.
+- A TCP game server.
+- A command-line client.
+- A desktop GUI client.
+- A command registration and dispatching system.
+- Session management and connection handling.
+- A shared game world with rooms and exits.
+- Item definitions, item instances, and player inventories.
+- NPC interactions and dialogue.
+- A quest system with player-specific progress.
+- Player groups and invitation management.
+- Global, room, and group chat.
+- Asynchronous notifications for relevant game events.
+
+The goal is to provide a multiplayer adventure environment in which players can explore a shared world, interact with other players and NPCs, manage items, complete quests, and communicate with each other.
 
 ## Instructions
 
@@ -50,7 +63,7 @@ The server loads the world and listens on its configured TCP port.
 Run the CLI client using the repository's configured build or run target.
 
 ```bash
-make run-cli
+make run-client
 ```
 
 The client connects to the configured server address and port.
@@ -78,7 +91,7 @@ QUIT
 Run the CLI client using the repository's configured build or run target.
 
 ```bash
-make run-gui
+make run-client-gui
 ```
 
 The client connects to the configured server address and port.
@@ -94,11 +107,11 @@ The main components have distinct responsibilities:
 | `cmd/server` | Starts the TCP server and initializes application dependencies. |
 | `cmd/cli` | Runs the terminal client and handles user input. |
 | `cmd/desktop` | Runs the GUI client and handles user input. |
-| `internal/protocol` | Parses incoming protocol messages and constructs outgoing responses and events. |
+| `internal/protocol` | Defines TAP messages, error codes, and response encoding.|
 | `internal/commands` | Registers commands and dispatches requests to their handlers. |
-| `internal/server` | Manages TCP connections, sessions, input/output pumps, and connected players. |
-| `internal/world` | Loads and represents the game world. |
-| `data/` | Contains declarative world data. |
+| `internal/server` | Manages TCP connections, sessions, input/output pumps, notifications, and connected players. |
+| `internal/world` | Maintains the game world, player state, items, NPCs, quests, and groups. |
+| `data/` | Contains the declarative world data. |
 
 ### High-level architecture
 
@@ -135,9 +148,74 @@ The main components have distinct responsibilities:
               |                     |
               v                     v
           World Data          Session Cleanup
+
+                       TAP CLIENTS
+                            |
+                            | TCP
+                            v
+                     +--------------+
+                     |  TCP Server  |
+                     +--------------+
+                            |
+                            v
+                     +--------------+
+                     |   Session    |
+                     |  Management  |
+                     +--------------+
+                            |
+                            v
+                     +--------------+
+                     |   Protocol   |
+                     |    Handler   |
+                     +--------------+
+                            |
+                            v
+                     +--------------+
+                     |  Dispatcher  |
+                     +--------------+
+                            |
+                +-----------+-----------+
+                |                       |
+                v                       v
+          Command Handler          Session Cleanup
+                |
+                v
+           World Logic
+                |
+                v
+          Game State Changes
+                |
+                v
+           Internal Events
+                |
+                v
+      Notification Dispatcher
+                |
+                v
+          Session Outboxes
+                |
+                v
+            TCP Clients
 ```
 
-This diagram represents the logical flow. The actual implementation also uses separate goroutines for connection reading and writing.
+This diagram represents the logical flow. The implementation also uses separate goroutines for connection reading and writing.
+
+### World State Management
+
+The World component centralizes the shared game state.
+
+It maintains:
+
+- Room definitions and connections between rooms.
+- Player positions.
+-Item definitions and individual item instances.
+-Items currently available in rooms.
+-Player inventories.
+-NPC definitions and dialogue.
+-Quest definitions and player quest progress.
+-Player groups and group invitations.
+
+Access to shared world state is protected by a sync.RWMutex, allowing concurrent reads while protecting state modifications.
 
 ## Design Patterns
 
@@ -147,7 +225,7 @@ TAP uses a command-oriented architecture to separate command dispatching from co
 
 The `Dispatcher` acts as the command registry and routing component. Each registered command has its own handler and can be developed independently of the network connection lifecycle.
 
-Conceptually, the flow is:
+The command flow is:
 
 ```text
 Client Input
@@ -160,9 +238,17 @@ Dispatcher
      |
      +------ LOOK ------> Look Handler
      |
-     +------ QUIT ------> Quit Handler
+     +------ MOVE ------> Move Handler
      |
-     +------ MOVE ------> Move Handler (planned)
+     +------ TAKE ------> Take Handler
+     |
+     +------ DROP ------> Drop Handler
+     |
+     +------ CHAT ------> Chat Handler
+     |
+     +------ GROUP -----> Group Handler
+     |
+     +------ QUEST -----> Quest Handler
 ```
 
 The server does not need a separate network-handling branch for every game command. Instead, it delegates recognized commands to the corresponding handler.
@@ -175,7 +261,7 @@ This separation provides several benefits:
 - Unknown commands can be handled consistently.
 - Command-specific logic is easier to maintain.
 
-The command handlers receive a context containing the information needed to execute a command, such as the player's identity and the relevant world state.
+The command handlers receive a context containing the information needed to execute a command, such as the player's identity and the relevant world state and event publisher.
 
 ### 2. Reader–Writer–Outbox Concurrency Model
 
@@ -242,99 +328,79 @@ Its responsibilities include:
 - Registering authenticated sessions.
 - Preventing duplicate active usernames.
 - Removing disconnected sessions.
+- Retrieving sessions by player name.
 - Broadcasting messages to registered sessions.
+- Queuing notifications for individual sessions.
 
 The registry is a session-management component, not the game world's source of truth.
 
-For example, knowing that two players are connected does not automatically mean that the server maintains correct room membership or that both players receive only the events relevant to their current room.
-
-Those responsibilities will need to be implemented as the world model and movement system evolve.
+For example, knowing that two players are connected does not automatically determine their room membership. Room membership and other gameplay relationships are maintained by the world model.
 
 ### 4. Observer and Publish-Subscribe:
 
 ```
-             COMANDO MOVE
-                  |
-                  v
-             World / lógica
-             del movimiento
-                  |
-                  v
-          Evento interno publicado
-                  |
-                  v
-              EVENT BUS
-                  |
-                  v
-       COMPONENTE DE NOTIFICACIONES
-       ¿Quién debe recibir el evento?
-                  |
-          +-------+-------+
-          |       |       |
-          v       v       v
-       Outbox  Outbox  Outbox
-       Alice    Bob    Charlie
-          |       |       |
-          v       v       v
-       TCP      TCP      TCP
-
-
-
-                  MoveCommand
-                       |
-                       v
-                 World.MovePlayer
-                       |
-             Movimiento confirmado
-                       |
-                       v
-              Evento PlayerMoved
-                       |
-                       v
-                   Event Bus
-                       |
-                       v
-           Notification Dispatcher
-                 /           \
-                v             v
-         Jugadores de     Jugadores de
-          sala anterior    sala nueva
-                \             /
-                 v           v
-                  Session.Outbox
-                       |
-                       v
-                    WritePump
-                       |
-                       v
-                      TCP
-
-
-Jugador ejecuta MOVE
-        │
-        ▼
-MoveCommand
-        │
-        ▼
-World.MovePlayer()
-  ├── Mueve al jugador
-  └── Devuelve PlayerMoved con las listas de ocupantes
-        │
-        ▼
-Event Bus
-        │
-        ▼
+Player executes MOVE
+        |
+        v
+   MoveCommand
+        |
+        v
+ World.MovePlayer()
+        |
+        v
+  PlayerMoved Event
+        |
+        v
+     Event Bus
+        |
+        v
 Notification Dispatcher
-  ├── Notifica la salida a la sala anterior
-  └── Notifica la entrada a la nueva sala
-        │
-        ▼
-Registry → Outbox → WritePump → TCP
+        |
+        +-----------------------+
+        |                       |
+        v                       v
+Previous Room Players     New Room Players
+        |                       |
+        +-----------+-----------+
+                    |
+                    v
+              Session Registry
+                    |
+                    v
+                session.Outbox
+                    |
+                    v
+                WritePump
+                    |
+                    v
+                   TCP
 ```
+The notification dispatcher handles several event categories:
+
+
+| Internal event | TAP notification | Recipients|  
+|---|---|---|
+| PlayerMoved| ROOM_PRESENCE_LEAVE and ROOM_PRESENCE_ENTER | Players in the previous and destination rooms, excluding the moving player.| 
+| PlayerEntered | ROOM_PRESENCE_ENTER | Other players in the room.|
+| PlayerLeft | ROOM_PRESENCE_LEAVE | Other players in the room.| 
+| ItemDropped | ITEM_DROPPED | Other players in the room.| 
+| UniqueItemsReturned | UNIQUE_ITEMS_RETURNED | All registered sessions.| 
+| GroupInvite | GROUP INVITE | The invited player.| 
+| GroupJoin | GROUP JOIN | Other members of the group.| 
+| GroupLeave | GROUP LEAVE | Remaining members of the group.|
+| ChatMessage | Scope-specific CHAT event | All recipients selected by the chat scope.| 
+
+The dispatcher uses the session registry to locate recipients and queues notifications through their outboxes. It does not write directly to client TCP connections.
 
 ## Protocol Implementation
 
-TAP defines three primary message categories.
+The protocol specification is the authority for message syntax, command semantics, and error codes. 
+
+TAP messages are UTF-8 text lines exchanged over TCP.
+
+Each outgoing message is encoded as a line terminated by a line feed (\n). Embedded carriage returns and line feeds are rejected in protocol fields.
+
+The protocol defines three primary message categories:
 
 | Prefix | Purpose | Example |
 |---|---|---|
@@ -342,15 +408,129 @@ TAP defines three primary message categories.
 | `ERR` | Error response | `ERR 201 NAME_IN_USE` |
 | `EVT` | Asynchronous event | `EVT PLAYER_ENTER alice` |
 
-Messages are UTF-8 text lines exchanged over TCP.
+### Message Formats
 
-The `internal/protocol` package is responsible for interpreting requests and constructing protocol responses and events.
+Successful response:
+```
+OK [payload]
+```
+A successful response can contain an optional payload.
 
-The protocol specification is the authority for message syntax, command semantics, and error codes. Implementation details should remain consistent with that specification.
+Error response:
+```
+ERR <code> <name>
+```
+Error codes are numeric three-digit values.
 
-### TAP Errors
+Asynchronous event:
+```
+EVT <event-type> [data]
+```
+Events are generated by server-side game operations and sent to the relevant connected clients.
 
-## 8.2 Standard Error Codes
+### Commands Reference
+
+| Command | Syntax | Behaviour | Successful response |
+|---|---|---|---|
+| `LOOK` | `LOOK`| Displays information about the current room.| `OK room=<room>`|  
+| `QUIT` | `QUIT`| Terminates the player's session.| `OK bye` |  
+| `MOVE` | `MOVE <direction>`| Moves the player through an available exit.| `OK room=<room>`|  
+| `TAKE` | `TAKE <item>` | Takes an item from the current room. | `OK taken=<item_id>` |
+| `DROP` | `DROP <item>` | Drops an item from the player's inventory. | `OK dropped=<item_id>` |
+| `INVENTORY` | `INVENTORY` | Lists the IDs of the player's inventory items. | `OK ["item_id", ...]` |
+| `TALK` | `TALK <npc>` | Starts a conversation with an NPC and retrieves dialogue and quest information. | `OK <JSON>` |
+| `QUEST` | `QUEST <npc>` | Accepts an available quest offered by the specified NPC. | `OK <JSON>` |
+| `QUESTS` | `QUESTS` | Lists the player's discovered quests and their statuses. | `OK <JSON>` |
+| `WHO` | `WHO` | Retrieves information about connected players. | `OK players=<total player count>` |
+| `GROUP` | `GROUP <subcommand>` | Manages player groups and invitations. | Depends on subcommand |
+| `CHAT` | `CHAT <scope> <message>` | Sends a message to a global, room or group audience. | `OK` |
+
+#### Group command reference
+
+| Subcommand | Syntax | Behaviour | Successful response |
+|---|---|---|---|
+| `CREATE` | `GROUP CREATE <name>` | Creates a group. | `OK group=<id> name=<nombre>` |
+| `INVITE` | `GROUP INVITE <player>` | Invites a registered player. |`OK` |
+| `INVITATIONS` | `GROUP INVITATIONS` | Lists pending group invitations. | `OK groups=<id>:<nombre>,<id>:<nombre>` |
+| `JOIN` | `GROUP JOIN <name>` | Joins a group using a pending invitation. | `OK group=<id> name=<nombre>` |
+| `LEAVE` | `GROUP LEAVE` | Leaves the current group. | `OK` |
+| `INFO` | `GROUP INFO` | Retrieves the current group information. | `OK <JSON>`  |
+
+#### Chat Command Reference
+
+```
+CHAT <scope> <message>
+```
+
+TAP supports three chat scopes:
+
+| Scope | Recipients |  
+|---|---|  
+| GLOBAL | All registered players in the world. |  
+| ROOM | Players currently occupying the sender's room. |  
+| GROUP | Members of the sender's group. |  
+
+Examples:
+
+```
+CHAT GLOBAL Hello everyone!
+CHAT ROOM Hello, everyone in this room!
+CHAT GROUP Let's meet up!
+```
+
+Chat messages are delivered asynchronously to the selected recipients, including the sender.
+
+The original message content is preserved after the scope separator, allowing messages to contain spaces.
+
+### Asynchronous Events
+
+The server sends asynchronous events to inform clients about relevant world and social changes.
+
+Examples include:
+
+**Room presence:**
+
+```
+EVT ROOM_PRESENCE_ENTER alice
+EVT ROOM_PRESENCE_LEAVE alice
+```
+
+**Dropped items:**
+
+```
+EVT ITEM_DROPPED iron_sword
+```
+
+**Unique items returned to a room:**
+
+```
+EVT UNIQUE_ITEMS_RETURNED instance_1,instance_2
+```
+
+**Group invitations:**
+
+```
+EVT GROUP INVITE player=alice group=Adventurers
+```
+
+**Group membership changes:**
+
+```
+EVT GROUP JOIN player=bob
+EVT GROUP LEAVE player=bob
+```
+
+**Chat:**
+
+```
+EVT GLOBAL CHAT player=alice message=Hello everyone!
+EVT ROOM CHAT player=alice message=Hello, room!
+EVT GROUP CHAT player=alice message=Let's meet up!
+```
+
+Notifications are queued through the recipient sessions' outboxes. The dispatcher excludes the acting player from room presence, item-drop, and group membership notifications where appropriate. Chat notifications are sent to all selected recipients, including the sender.
+
+### TAP Error Codes
 
 The server uses standard error codes to communicate protocol errors, gameplay restrictions, and operational failures.
 
@@ -380,6 +560,8 @@ Each error response contains a numeric code and a symbolic error name. Clients s
 | `900` | `CONNECTION_FAILED` | The connection could not be established or the session could not be registered. |
 | `901` | `SEND_FAILED` | The server failed to transmit a message. |
 
+Some command handlers also use command-specific symbolic names with standard numeric codes, such as ITEM_REQUIRED, AMBIGUOUS_ITEM_NAME, GROUP_ALREADY_EXISTS, and NPC_NOT_AVAILABLE. These are not additional constants in the standard error-code list.
+
 ### Error Handling Principles
 
 - **Gameplay restrictions** should return specific error codes whenever available. For example, attempting to drop a quest item should return `ITEM_CANNOT_BE_DROPPED`, not `COMMAND_FAILED`.
@@ -388,9 +570,164 @@ Each error response contains a numeric code and a symbolic error name. Clients s
 - **Connection and transmission failures** should use the dedicated connection error codes.
 - Error responses must not expose internal implementation details or sensitive server information.
 
+### Combat System
+
+NPCs contain attributes that can support combat mechanics, including:
+
+- Hostility.
+- Current health points (HP).
+- Maximum health points (MaxHP).
+- Damage value.
+
+These attributes are part of the NPC world model.
+
+However, the combat command is not currently registered in the command dispatcher. ATTACK is commented out in the command registration code.
+
+Therefore, combat interactions should be considered pending implementation rather than an available gameplay feature.
+
+### Quest System
+
+TAP includes a quest system connected to NPC interactions and player inventory.
+
+Quests are defined in the world model and can include:
+
+- A unique quest ID.
+- A name and description.
+- A giver NPC.
+- A required item.
+- An option to consume the required item.
+- Reward item IDs.
+- An optional next quest, allowing quest chains.
+
+Quest progress is tracked separately for each player.
+
+#### Quest States
+
+|Status|Description|
+|---|---|
+|available|The quest can be accepted.|
+|active|The player has accepted the quest and it is in progress.|
+|completed|The player has completed the quest.|
+|locked|The quest is not currently available to the player.|
+
+### NPC Dialogue and Quests
+
+NPCs can provide different dialogue depending on the player's quest state.
+
+Dialogue categories include:
+
+- Default dialogue.
+- Available quest dialogue.
+- Active quest dialogue.
+- Completed quest dialogue.
+- Locked quest dialogue.
+
+If no dialogue is defined for a particular quest state, the NPC can fall back to its default dialogue.
+
+The TALK command retrieves NPC dialogue and optional quest information.
+
+The QUEST command accepts an available quest directly. The QUESTS command retrieves the player's discovered quests and their statuses.
+
 ## World Design
 
-The server loads the initial world from `data/world.json`.
+The game world is represented through rooms, items, NPCs, quests, and groups.
+
+The World component maintains the state of these entities and their relationships.
+
+### Rooms
+
+Rooms represent locations in the shared game world.
+
+Each room contains:
+- A unique ID.
+- A name.
+- A description.
+- A collection of exits.
+- Item counts.
+- References to NPCs present in the room.
+
+Exits connect rooms using directional identifiers and destination room IDs.
+
+Players have a current room, which determines their location and the recipients of room-scoped interactions.
+
+### Items and Item Instances
+
+The world distinguishes between item definitions and individual item instances.
+
+An item definition contains:
+
+-A unique ID.
+-A name.
+-A description.
+-An item type.
+
+The supported item types are:
+
+|Type|Description|
+|---|---|
+|common|A regular item.|
+|quest|An item associated with quest mechanics.|
+|unique|An item with unique instance behaviour.|
+
+An ItemInstance represents a concrete occurrence of an item definition.
+
+This distinction allows the world to track individual items independently, even when multiple instances share the same item definition.
+
+### Player Inventories
+
+Each player's inventory stores references to individual item instances.
+
+The world tracks which instances are located in rooms and which are owned by players.
+
+The TAKE, DROP, and INVENTORY commands provide the corresponding player interactions.
+
+Items can also have restrictions that prevent them from being dropped.
+
+### NPCs
+
+NPCs are entities located in the game world.
+
+Their data includes:
+
+- A unique ID and name.
+- A role.
+- A hostility flag.
+- Current and maximum HP.
+- A damage value.
+- An optional associated quest.
+- Default and quest-specific dialogue.
+
+NPC interactions are handled through the TALK and QUEST commands.
+
+### Groups
+
+Groups are shared social entities that allow players to organize and communicate.
+
+The world maintains:
+- Group IDs and names.
+- Group membership.
+- Pending invitations.
+- A mapping between players and their current groups.
+
+A player can belong to only one group at a time. Group invitations and membership changes generate events that can be delivered to the relevant connected players.
+
+### World Initialization
+
+The server loads the initial world from data/world.json.
+
+The world model is responsible for maintaining the runtime state after initialization, including player positions, item instances, inventories, NPC interactions, quest progress, and group membership.
+
+## Server Logging
+
+The server uses Go's standard logging facilities to report operational issues.
+
+The notification dispatcher logs failures when it cannot queue asynchronous notifications for a recipient session.
+
+For example, a failed notification queue operation is reported with the affected player name and the underlying error.
+
+Logging helps identify problems in asynchronous message delivery without requiring notification handlers to write directly to client connections.
+
+## Group Contributions
 
 ---  
 
