@@ -68,44 +68,44 @@ func (w *World) CreateGroup(playerName, groupName string) (string, error) {
 }
 
 // InvitePlayer invites a registered player to the inviter's group.
-func (w *World) InvitePlayer(inviterName, targetName string) error {
+func (w *World) InvitePlayer(inviterName, targetName string) (GroupInvite, error) {
 	if w == nil {
-		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return GroupInvite{}, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	inviterName = strings.TrimSpace(inviterName)
 	targetName = strings.TrimSpace(targetName)
 
 	if inviterName == "" || targetName == "" {
-		return fmt.Errorf(
+		return GroupInvite{}, fmt.Errorf(
 			"%w: inviter name and target name cannot be empty",
 			ErrInvalidArgument,
 		)
 	}
 
 	if inviterName == targetName {
-		return fmt.Errorf("%w: a player cannot invite themselves", ErrInvalidArgument)
+		return GroupInvite{}, fmt.Errorf("%w: a player cannot invite themselves", ErrInvalidArgument)
 	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	if _, exists := w.playerRooms[inviterName]; !exists {
-		return fmt.Errorf("%w: %q", ErrPlayerNotFound, inviterName)
+		return GroupInvite{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, inviterName)
 	}
 
 	if _, exists := w.playerRooms[targetName]; !exists {
-		return fmt.Errorf("%w: %q", ErrPlayerNotFound, targetName)
+		return GroupInvite{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, targetName)
 	}
 
 	groupID, exists := w.playerGroups[inviterName]
 	if !exists {
-		return fmt.Errorf("%w: inviter %q", ErrPlayerNotInGroup, inviterName)
+		return GroupInvite{}, fmt.Errorf("%w: inviter %q", ErrPlayerNotInGroup, inviterName)
 	}
 
 	group, exists := w.groups[groupID]
 	if !exists {
-		return fmt.Errorf(
+		return GroupInvite{}, fmt.Errorf(
 			"%w: player %q references nonexistent group %q",
 			ErrInvalidWorldState,
 			inviterName,
@@ -114,7 +114,7 @@ func (w *World) InvitePlayer(inviterName, targetName string) error {
 	}
 
 	if _, exists := w.playerGroups[targetName]; exists {
-		return fmt.Errorf("%w: %q", ErrPlayerAlreadyInGroup, targetName)
+		return GroupInvite{}, fmt.Errorf("%w: %q", ErrPlayerAlreadyInGroup, targetName)
 	}
 
 	if group.Invitations == nil {
@@ -122,7 +122,7 @@ func (w *World) InvitePlayer(inviterName, targetName string) error {
 	}
 
 	if group.Invitations[targetName] {
-		return fmt.Errorf(
+		return GroupInvite{}, fmt.Errorf(
 			"%w: player %q",
 			ErrGroupInvitationAlreadyExists,
 			targetName,
@@ -132,19 +132,25 @@ func (w *World) InvitePlayer(inviterName, targetName string) error {
 	group.Invitations[targetName] = true
 	w.groups[groupID] = group
 
-	return nil
+	return GroupInvite{
+		GroupID:     groupID,
+		GroupName:   group.Name,
+		Inviter: inviterName,
+		Invitee: targetName,
+	}, nil
 }
 
 // JoinGroup joins a group when the player has a pending invitation.
-func (w *World) JoinGroup(playerName, groupName string) (string, error) {
+func (w *World) JoinGroup(playerName, groupName string) (string, GroupJoin, error) {
 	if w == nil {
-		return "", fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return "", GroupJoin{}, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
+	groupName = strings.TrimSpace(groupName)
 	playerName = strings.TrimSpace(playerName)
 
 	if playerName == "" || groupName == "" {
-		return "", fmt.Errorf(
+		return "", GroupJoin{}, fmt.Errorf(
 			"%w: player name and group name cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -154,11 +160,11 @@ func (w *World) JoinGroup(playerName, groupName string) (string, error) {
 	defer w.mu.Unlock()
 
 	if _, exists := w.playerRooms[playerName]; !exists {
-		return "", fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+		return "", GroupJoin{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	if _, exists := w.playerGroups[playerName]; exists {
-		return "", fmt.Errorf("%w: %q", ErrPlayerAlreadyInGroup, playerName)
+		return "", GroupJoin{}, fmt.Errorf("%w: %q", ErrPlayerAlreadyInGroup, playerName)
 	}
 
 	var group Group
@@ -173,16 +179,22 @@ func (w *World) JoinGroup(playerName, groupName string) (string, error) {
 	}
 
 	if groupID == "" {
-		return "", fmt.Errorf("%w: %q", ErrGroupNotFound, groupName)
+		return "", GroupJoin{}, fmt.Errorf("%w: %q", ErrGroupNotFound, groupName)
 	}
 
 	if !group.Invitations[playerName] {
-		return "", fmt.Errorf(
+		return "", GroupJoin{},  fmt.Errorf(
 			"%w: player %q for group %q",
 			ErrGroupInvitationNotFound,
 			playerName,
 			groupID,
 		)
+	}
+
+	members := make([]string, 0, len(group.Members))
+
+	for _, member := range group.Members {
+		members = append(members, member)
 	}
 
 	group.Members = append(group.Members, playerName)
@@ -191,32 +203,67 @@ func (w *World) JoinGroup(playerName, groupName string) (string, error) {
 	w.groups[groupID] = group
 	w.playerGroups[playerName] = groupID
 
-	return groupID, nil
+	return groupID, GroupJoin{
+		GroupID:    groupID,
+		GroupName:  group.Name,
+		PlayerName: playerName,
+		Members:    members,
+	}, nil
 }
 
 // LeaveGroup removes a player from their current group.
-func (w *World) LeaveGroup(playerName string) error {
+func (w *World) LeaveGroup(playerName string) (GroupLeave, error) {
 	if w == nil {
-		return fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return GroupLeave{}, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	playerName = strings.TrimSpace(playerName)
 	if playerName == "" {
-		return fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
+		return GroupLeave{}, fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
 	}
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	if _, exists := w.playerRooms[playerName]; !exists {
-		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+		return GroupLeave{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	if _, exists := w.playerGroups[playerName]; !exists {
-		return fmt.Errorf("%w: %q", ErrPlayerNotInGroup, playerName)
+		return GroupLeave{}, fmt.Errorf("%w: %q", ErrPlayerNotInGroup, playerName)
 	}
 
-	return w.removePlayerFromGroupLocked(playerName)
+	groupID := w.playerGroups[playerName]
+	group, exists := w.groups[groupID]
+	if !exists {
+		return GroupLeave{}, fmt.Errorf(
+			"%w: player %q references nonexistent group %q",
+			ErrInvalidWorldState,
+			playerName,
+			groupID,
+		)
+	}
+
+	members := make([]string, 0, len(group.Members))
+
+	for _, member := range group.Members {
+		if member != playerName {
+			members = append(members, member)
+		}
+	}
+
+	event := GroupLeave{
+		GroupID:    groupID,
+		GroupName:  group.Name,
+		PlayerName: playerName,
+		Members:    members,
+	}
+
+	if err := w.removePlayerFromGroupLocked(playerName); err != nil {
+		return GroupLeave{}, err
+	}
+
+	return event, nil
 }
 
 // removePlayerFromGroupLocked removes a player from their group.

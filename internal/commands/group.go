@@ -55,8 +55,13 @@ func (c *GroupCommand) Execute(ctx *Context) (protocol.Message, error) {
 			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 		}
 
-		if err := ctx.World.InvitePlayer(ctx.PlayerName, targetName); err != nil {
+		event, err := ctx.World.InvitePlayer(ctx.PlayerName, targetName)
+		if err != nil {
 			return mapGroupError(err), nil
+		}
+
+		if ctx.Events != nil {
+			ctx.Events.Publish(event)
 		}
 
 		return protocol.OK(""), nil
@@ -83,9 +88,13 @@ func (c *GroupCommand) Execute(ctx *Context) (protocol.Message, error) {
 			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 		}
 
-		joinedGroupID, err := ctx.World.JoinGroup(ctx.PlayerName, groupName)
+		joinedGroupID, event, err := ctx.World.JoinGroup(ctx.PlayerName, groupName)
 		if err != nil {
 			return mapGroupError(err), nil
+		}
+
+		if ctx.Events != nil {
+			ctx.Events.Publish(event)
 		}
 
 		return protocol.OK("group=" + joinedGroupID), nil
@@ -95,8 +104,13 @@ func (c *GroupCommand) Execute(ctx *Context) (protocol.Message, error) {
 			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 		}
 
-		if err := ctx.World.LeaveGroup(ctx.PlayerName); err != nil {
+		event, err := ctx.World.LeaveGroup(ctx.PlayerName)
+		if err != nil {
 			return mapGroupError(err), nil
+		}
+
+		if ctx.Events != nil {
+			ctx.Events.Publish(event)
 		}
 
 		return protocol.OK(""), nil

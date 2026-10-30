@@ -40,3 +40,35 @@ type UniqueItemsReturned struct {
     RoomID     string
     ItemIDs    []string
 }
+
+// GroupInvite represents a player receiving a group invitation.
+type GroupInvite struct {
+    GroupID   string
+    GroupName string
+    Inviter   string
+    Invitee   string
+}
+
+// GroupJoin represents a player joining a group.
+type GroupJoin struct {
+    GroupID    string
+    GroupName  string
+    PlayerName string
+    Members    []string
+}
+
+// GroupLeave represents a player leaving a group.
+type GroupLeave struct {
+    GroupID    string
+    GroupName  string
+    PlayerName string
+    Members    []string
+}
+
+// GroupChat represents a message sent to a group.
+type GroupChat struct {
+    GroupID    string
+    PlayerName string
+    Message    string
+    Members    []string
+}

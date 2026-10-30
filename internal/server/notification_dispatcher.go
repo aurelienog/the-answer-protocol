@@ -49,6 +49,16 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 
 	case world.UniqueItemsReturned:
 		dispatcher.handleUniqueItemsReturned(event)
+
+	case world.GroupInvite:
+    	dispatcher.handleGroupInvite(event)
+
+	case world.GroupJoin:
+		dispatcher.handleGroupJoin(event)
+
+	case world.GroupLeave:
+		dispatcher.handleGroupLeave(event)
+
 	}
 }
 
@@ -112,4 +122,38 @@ func (dispatcher *NotificationDispatcher) notifyPlayers(
 			)
 		}
 	}
+}
+
+func (dispatcher *NotificationDispatcher) handleGroupInvite(event world.GroupInvite) {
+	session, exists := dispatcher.registry.GetByName(event.Invitee)
+	if !exists {
+		return
+	}
+
+	if err := dispatcher.registry.Queue(
+		session.ID,
+		protocol.EVT("GROUP", "INVITE"),
+	); err != nil {
+		log.Printf(
+			"Failed to queue group invitation notification for %q: %v",
+			event.Invitee,
+			err,
+		)
+	}
+}
+
+func (dispatcher *NotificationDispatcher) handleGroupJoin(event world.GroupJoin) {
+	dispatcher.notifyPlayers(
+		event.Members,
+		event.PlayerName,
+		protocol.EVT("GROUP", "JOIN"),
+	)
+}
+
+func (dispatcher *NotificationDispatcher) handleGroupLeave(event world.GroupLeave) {
+	dispatcher.notifyPlayers(
+		event.Members,
+		event.PlayerName,
+		protocol.EVT("GROUP", "LEAVE"),
+	)
 }
