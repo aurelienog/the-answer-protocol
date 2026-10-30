@@ -10,6 +10,7 @@ func RegisterCommands(dispatcher *Dispatcher) {
 	dispatcher.Register(NewTalkCommand())
 	dispatcher.Register(NewAcceptCommand())
 	dispatcher.Register(NewCompleteCommand())
+	dispatcher.Register(NewQuestCommand())
 
 	// Register additional commands as they are implemented:
 	// dispatcher.Register(NewAttackCommand())

@@ -35,3 +35,12 @@ type PlayerQuest struct {
 	QuestID string
 	Status  QuestStatus
 }
+
+// PlayerQuestSummary contains the public information about a quest
+// discovered by a player.
+type PlayerQuestSummary struct {
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Status      QuestStatus `json:"status"`
+}

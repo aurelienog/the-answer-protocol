@@ -115,3 +115,125 @@ func (w *World) GetAvailableQuests(playerName string) ([]Quest, error) {
 
 	return available, nil
 }
+
+// GetPlayerQuests returns the active and completed quests of a player.
+func (w *World) GetPlayerQuests(
+	playerName string,
+) ([]PlayerQuestSummary, error) {
+	if w == nil {
+		return nil, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if playerName == "" {
+		return nil, fmt.Errorf(
+			"%w: player name cannot be empty",
+			ErrInvalidArgument,
+		)
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if _, exists := w.playerRooms[playerName]; !exists {
+		return nil, fmt.Errorf(
+			"%w: %q",
+			ErrPlayerNotFound,
+			playerName,
+		)
+	}
+
+	playerQuests := w.playerQuests[playerName]
+	quests := make([]PlayerQuestSummary, 0)
+
+	for questID, progress := range playerQuests {
+		if progress.Status != QuestStatusActive &&
+			progress.Status != QuestStatusCompleted {
+			continue
+		}
+
+		quest, exists := w.quests[questID]
+		if !exists {
+			return nil, fmt.Errorf(
+				"%w: player %q references nonexistent quest %q",
+				ErrInvalidWorldState,
+				playerName,
+				questID,
+			)
+		}
+
+		quests = append(quests, PlayerQuestSummary{
+			ID:          quest.ID,
+			Name:        quest.Name,
+			Description: quest.Description,
+			Status:      progress.Status,
+		})
+	}
+
+	sort.Slice(quests, func(i, j int) bool {
+		return quests[i].ID < quests[j].ID
+	})
+
+	return quests, nil
+}
+
+// GetPlayerQuestSummary returns a quest's public information only if
+// the player has accepted or completed it.
+func (w *World) GetPlayerQuestSummary(
+	playerName, questID string,
+) (PlayerQuestSummary, error) {
+	if w == nil {
+		return PlayerQuestSummary{}, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if playerName == "" || questID == "" {
+		return PlayerQuestSummary{}, fmt.Errorf(
+			"%w: player name and quest ID cannot be empty",
+			ErrInvalidArgument,
+		)
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if _, exists := w.playerRooms[playerName]; !exists {
+		return PlayerQuestSummary{}, fmt.Errorf(
+			"%w: %q",
+			ErrPlayerNotFound,
+			playerName,
+		)
+	}
+
+	quest, exists := w.quests[questID]
+	if !exists {
+		return PlayerQuestSummary{}, fmt.Errorf(
+			"%w: %q",
+			ErrQuestNotFound,
+			questID,
+		)
+	}
+
+	progress, exists := w.playerQuests[playerName][questID]
+	if !exists ||
+		(progress.Status != QuestStatusActive &&
+			progress.Status != QuestStatusCompleted) {
+		return PlayerQuestSummary{}, fmt.Errorf(
+			"%w: player %q cannot access quest %q",
+			ErrNoQuestAvailable,
+			playerName,
+			questID,
+		)
+	}
+
+	return PlayerQuestSummary{
+		ID:          quest.ID,
+		Name:        quest.Name,
+		Description: quest.Description,
+		Status:      progress.Status,
+	}, nil
+}
