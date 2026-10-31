@@ -6,20 +6,26 @@ import (
 
 // World represents the game world.
 type World struct {
-	mu                 sync.RWMutex
-	rooms              map[string]Room
-	playerRooms        map[string]string
-	items              map[string]Item
-	itemInstances      map[string]ItemInstance
-	roomItemInstances  map[string][]string
-	playerInventories  map[string][]string
-	npcs               map[string]NPC
-	quests             map[string]Quest
-	playerQuests       map[string]map[string]PlayerQuest
-	nextItemInstanceID uint64
-	nextGroupID 	uint64
-	groups         	map[string]Group
-	playerGroups    map[string]string
+    mu sync.RWMutex
+
+    rooms   map[string]Room
+    players map[string]*Player
+
+    items             map[string]Item
+    itemInstances     map[string]ItemInstance
+    roomItemInstances map[string][]string
+
+    playerInventories map[string][]string
+    playerQuests      map[string]map[string]PlayerQuest
+
+    npcs   map[string]NPC
+    quests map[string]Quest
+
+    groups       map[string]Group
+    playerGroups map[string]string
+
+    nextItemInstanceID uint64
+    nextGroupID        uint64
 }
 
 // Room represents a location in the game world.

@@ -23,18 +23,20 @@ func (w *World) SendChat(playerName, scope, message string) (ChatMessage, error)
     w.mu.RLock()
     defer w.mu.RUnlock()
 
-    roomID, exists := w.playerRooms[playerName]
+    player, exists := w.players[playerName]
     if !exists {
         return ChatMessage{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
     }
+
+    roomID := player.RoomID
 
     var recipients []string
 
     switch scope {
     case "GLOBAL":
-        recipients = make([]string, 0, len(w.playerRooms))
+        recipients = make([]string, 0, len(w.players))
 
-        for name := range w.playerRooms {
+        for name := range w.players {
             recipients = append(recipients, name)
         }
 

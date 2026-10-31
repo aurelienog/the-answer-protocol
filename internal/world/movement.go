@@ -40,7 +40,7 @@ func (w *World) MovePlayer(
 	defer w.mu.Unlock()
 
 	// Find the player's current room.
-	currentRoomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return PlayerMoved{}, fmt.Errorf(
 			"%w: %q",
@@ -48,6 +48,8 @@ func (w *World) MovePlayer(
 			playerName,
 		)
 	}
+
+	currentRoomID := player.RoomID
 
 	// Verify that the current room exists.
 	currentRoom, exists := w.rooms[currentRoomID]
@@ -86,7 +88,7 @@ func (w *World) MovePlayer(
 	newRoomPlayers := w.getPlayersInRoomLocked(destinationRoomID)
 
 	// Update the player's location only after all validations succeed.
-	w.playerRooms[playerName] = destinationRoomID
+	player.RoomID = destinationRoomID
 
 	return PlayerMoved{
 		PlayerName:          playerName,

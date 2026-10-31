@@ -12,10 +12,12 @@ func (w *World) TakeItem(playerName, itemID string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
+
+	roomID := player.RoomID
 
 	if _, exists := w.rooms[roomID]; !exists {
 		return fmt.Errorf("%w: room %q does not exist", ErrInvalidWorldState, roomID)
@@ -121,10 +123,12 @@ func (w *World) DropItem(playerName, itemID string) (ItemDropped, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return ItemDropped{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
+
+	roomID := player.RoomID
 
 	if _, exists := w.rooms[roomID]; !exists {
 		return ItemDropped{}, fmt.Errorf("%w: room %q does not exist", ErrInvalidWorldState, roomID)
@@ -188,12 +192,7 @@ func (w *World) DropItem(playerName, itemID string) (ItemDropped, error) {
 
 	// Capture the room occupants before modifying the world.
 	// The world lock prevents concurrent room changes during this operation.
-	roomPlayers := make([]string, 0)
-	for name, playerRoomID := range w.playerRooms {
-		if playerRoomID == roomID {
-			roomPlayers = append(roomPlayers, name)
-		}
-	}
+	roomPlayers := w.getPlayersInRoomLocked(roomID)
 
 	// Remove the instance from the player's inventory.
 	inventory = append(
@@ -231,7 +230,7 @@ func (w *World) GetInventory(playerName string) ([]Item, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 

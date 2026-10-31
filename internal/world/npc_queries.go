@@ -95,7 +95,7 @@ func (w *World) TalkToNPC(
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return NPCConversation{}, fmt.Errorf(
 			"%w: %q",
@@ -103,6 +103,8 @@ func (w *World) TalkToNPC(
 			playerName,
 		)
 	}
+
+	roomID := player.RoomID
 
 	room, exists := w.rooms[roomID]
 	if !exists {
@@ -262,7 +264,7 @@ func (w *World) ResolveNPCID(playerName, identifier string) (string, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return "", fmt.Errorf(
 			"%w: %q",
@@ -270,6 +272,8 @@ func (w *World) ResolveNPCID(playerName, identifier string) (string, error) {
 			playerName,
 		)
 	}
+
+	roomID := player.RoomID
 
 	room, exists := w.rooms[roomID]
 	if !exists {

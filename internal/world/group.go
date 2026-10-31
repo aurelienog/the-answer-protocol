@@ -25,7 +25,7 @@ func (w *World) CreateGroup(playerName, groupName string) (string, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return "", fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -90,11 +90,11 @@ func (w *World) InvitePlayer(inviterName, targetName string) (GroupInvite, error
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, exists := w.playerRooms[inviterName]; !exists {
+	if _, exists := w.players[inviterName]; !exists {
 		return GroupInvite{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, inviterName)
 	}
 
-	if _, exists := w.playerRooms[targetName]; !exists {
+	if _, exists := w.players[targetName]; !exists {
 		return GroupInvite{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, targetName)
 	}
 
@@ -159,7 +159,7 @@ func (w *World) JoinGroup(playerName, groupName string) (string, GroupJoin, erro
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return "", GroupJoin{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -183,7 +183,7 @@ func (w *World) JoinGroup(playerName, groupName string) (string, GroupJoin, erro
 	}
 
 	if !group.Invitations[playerName] {
-		return "", GroupJoin{},  fmt.Errorf(
+		return "", GroupJoin{}, fmt.Errorf(
 			"%w: player %q for group %q",
 			ErrGroupInvitationNotFound,
 			playerName,
@@ -225,7 +225,7 @@ func (w *World) LeaveGroup(playerName string) (GroupLeave, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return GroupLeave{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -331,7 +331,7 @@ func (w *World) GetGroupInvitations(playerName string) ([]GroupInvitation, error
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -367,7 +367,7 @@ func (w *World) GetPlayerGroup(playerName string) (Group, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return Group{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -387,6 +387,11 @@ func (w *World) GetPlayerGroup(playerName string) (Group, error) {
 	}
 
 	group.Members = cloneSlice(group.Members)
+	invitations := make(map[string]bool, len(group.Invitations))
+	for name, invited := range group.Invitations {
+		invitations[name] = invited
+	}
+	group.Invitations = invitations
 
 	return group, nil
 }

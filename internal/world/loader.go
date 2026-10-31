@@ -29,7 +29,7 @@ func Load(path string) (*World, error) {
 		rooms:              definition.Rooms,
 		npcs:               definition.NPCs,
 		quests:             definition.Quests,
-		playerRooms:        make(map[string]string),
+		players:            make(map[string]*Player),
 		items:              definition.Items,
 		itemInstances:      make(map[string]ItemInstance),
 		roomItemInstances:  make(map[string][]string),

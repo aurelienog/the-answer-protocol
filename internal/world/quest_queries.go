@@ -70,7 +70,7 @@ func (w *World) GetAvailableQuests(playerName string) ([]Quest, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -137,7 +137,7 @@ func (w *World) GetPlayerQuests(
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return nil, fmt.Errorf(
 			"%w: %q",
 			ErrPlayerNotFound,
@@ -201,7 +201,7 @@ func (w *World) GetPlayerQuestSummary(
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return PlayerQuestSummary{}, fmt.Errorf(
 			"%w: %q",
 			ErrPlayerNotFound,

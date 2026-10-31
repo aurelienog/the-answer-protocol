@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+type Player struct {
+    Name        string      `json:"name"`
+    RoomID      string      `json:"room_id"`
+    CombatStats CombatStats `json:"combat_stats"`
+}
+
 // AddPlayer places a player in a room.
 // It fails if the player name is empty, the room does not exist,
 // or the player is already registered.
@@ -36,7 +42,7 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 		)
 	}
 
-	if _, exists := w.playerRooms[playerName]; exists {
+	if _, exists := w.players[playerName]; exists {
 		return fmt.Errorf(
 			"%w: player %q is already in the world",
 			ErrPlayerAlreadyExists,
@@ -44,11 +50,20 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 		)
 	}
 
-	if w.playerRooms == nil {
-		w.playerRooms = make(map[string]string)
+	if w.players == nil {
+		w.players = make(map[string]*Player)
 	}
 
-	w.playerRooms[playerName] = roomID
+	w.players[playerName] = &Player{
+		Name:   playerName,
+		RoomID: roomID,
+		CombatStats: CombatStats{
+			HP:      100,
+			MaxHP:   100,
+			Attack:  10,
+			Defense: 5,
+		},
+	}
 
 	return nil
 }
@@ -71,11 +86,12 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return PlayerLeft{}, UniqueItemsReturned{},
 			fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
+	roomID := player.RoomID
 
 	if _, exists := w.rooms[roomID]; !exists {
 		return PlayerLeft{}, UniqueItemsReturned{},
@@ -134,7 +150,7 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 
 	// Remove the player's state only after returning the unique items.
 	delete(w.playerInventories, playerName)
-	delete(w.playerRooms, playerName)
+	delete(w.players, playerName)
 
 	leftEvent := PlayerLeft{
 		PlayerName:  playerName,
@@ -161,10 +177,12 @@ func (w *World) GetPlayerRoom(playerName string) (string, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return "", fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
+
+	roomID := player.RoomID
 
 	if _, exists := w.rooms[roomID]; !exists {
 		return "", fmt.Errorf(
@@ -178,8 +196,6 @@ func (w *World) GetPlayerRoom(playerName string) (string, error) {
 	return roomID, nil
 }
 
-// GetPlayersInRoom returns the names of players in a room.
-// The result is sorted alphabetically for deterministic output.
 // GetPlayersInRoom returns the names of players in a room.
 // The result is sorted alphabetically for deterministic output.
 func (w *World) GetPlayersInRoom(roomID string) ([]string, error) {
@@ -200,8 +216,8 @@ func (w *World) GetPlayersInRoom(roomID string) ([]string, error) {
 
 	players := make([]string, 0)
 
-	for playerName, currentRoom := range w.playerRooms {
-		if currentRoom == roomID {
+	for playerName, player := range w.players {
+		if player.RoomID == roomID {
 			players = append(players, playerName)
 		}
 	}
@@ -216,8 +232,8 @@ func (w *World) GetPlayersInRoom(roomID string) ([]string, error) {
 func (w *World) getPlayersInRoomLocked(roomID string) []string {
 	players := make([]string, 0)
 
-	for playerName, currentRoomID := range w.playerRooms {
-		if currentRoomID == roomID {
+	for playerName, player := range w.players {
+		if player.RoomID == roomID {
 			players = append(players, playerName)
 		}
 	}
@@ -239,5 +255,40 @@ func (w *World) GetPlayerCount() (int, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	return len(w.playerRooms), nil
+	return len(w.players), nil
+}
+
+// GetPlayerCombatStats returns a copy of a player's combat statistics.
+func (w *World) GetPlayerCombatStats(
+	playerName string,
+) (CombatStats, error) {
+	if w == nil {
+		return CombatStats{}, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	playerName = strings.TrimSpace(playerName)
+
+	if playerName == "" {
+		return CombatStats{}, fmt.Errorf(
+			"%w: player name cannot be empty",
+			ErrInvalidArgument,
+		)
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	player, exists := w.players[playerName]
+	if !exists {
+		return CombatStats{}, fmt.Errorf(
+			"%w: %q",
+			ErrPlayerNotFound,
+			playerName,
+		)
+	}
+
+	return player.CombatStats, nil
 }

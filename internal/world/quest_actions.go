@@ -18,7 +18,8 @@ func (w *World) AcceptQuest(playerName, questID string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if _, exists := w.playerRooms[playerName]; !exists {
+	player, exists := w.players[playerName]
+	if !exists {
 		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
@@ -40,7 +41,7 @@ func (w *World) AcceptQuest(playerName, questID string) error {
 	}
 
 	// The quest giver must be present in the player's current room.
-	roomID := w.playerRooms[playerName]
+	roomID := player.RoomID
 	room, exists := w.rooms[roomID]
 	if !exists {
 		return fmt.Errorf(
@@ -173,10 +174,12 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	roomID, exists := w.playerRooms[playerName]
+	player, exists := w.players[playerName]
 	if !exists {
 		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
+
+	roomID := player.RoomID
 
 	room, exists := w.rooms[roomID]
 	if !exists {

@@ -34,14 +34,14 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 		dispatcher.notifyPlayers(
 			event.RoomPlayers,
 			event.PlayerName,
-			protocol.EVT("ROOM_PRESENCE_ENTER", event.PlayerName),
+			protocol.EVT("ROOM", "PRESENCE ENTER "+event.PlayerName),
 		)
 
 	case world.PlayerLeft:
 		dispatcher.notifyPlayers(
 			event.RoomPlayers,
 			event.PlayerName,
-			protocol.EVT("ROOM_PRESENCE_LEAVE", event.PlayerName),
+			protocol.EVT("ROOM", "PRESENCE LEAVE "+event.PlayerName),
 		)
 
 	case world.ItemDropped:
@@ -70,14 +70,14 @@ func (dispatcher *NotificationDispatcher) handlePlayerMoved(event world.PlayerMo
 	dispatcher.notifyPlayers(
 		event.PreviousRoomPlayers,
 		event.PlayerName,
-		protocol.EVT("ROOM_PRESENCE_LEAVE", event.PlayerName),
+		protocol.EVT("ROOM", "PRESENCE LEAVE "+event.PlayerName),
 	)
 
 	// Notify the players who occupied the destination room before the move.
 	dispatcher.notifyPlayers(
 		event.NewRoomPlayers,
 		event.PlayerName,
-		protocol.EVT("ROOM_PRESENCE_ENTER", event.PlayerName),
+		protocol.EVT("ROOM", "PRESENCE ENTER "+event.PlayerName),
 	)
 }
 

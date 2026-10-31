@@ -152,13 +152,3 @@ func (r *Registry) Queue(sessionID string, message protocol.Message) error {
 
 	return nil
 }
-
-// ¿Qué mejora esta versión?
-// - Dos jugadores no pueden ocupar el mismo nombre, aunque intenten conectarse simultáneamente.
-// - Los nombres se comparan sin distinguir mayúsculas y minúsculas: Alice y alice se consideran el mismo nombre.
-// - Broadcast ya no accede a Connection.Write.
-// - Los mensajes se codifican con protocol.Encode, por lo que llevan el formato TAP y el \n final.
-// - Si una cola está llena, no se bloquea el envío a todos los demás jugadores.
-// - Remove libera el nombre del jugador.
-// - El bloqueo de lectura permanece activo mientras se encolan los mensajes, de modo que Remove espera a que terminen los broadcasts en curso.
-// Nota: descartar un evento cuando una cola está llena es una política sencilla para empezar. Más adelante podemos definir una política de desconexión para clientes que no consumen sus mensajes con suficiente rapidez.
