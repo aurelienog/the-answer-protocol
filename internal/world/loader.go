@@ -37,6 +37,7 @@ func Load(path string) (*World, error) {
 		playerQuests:       make(map[string]map[string]PlayerQuest),
 		groups:             make(map[string]Group),
 		playerGroups:       make(map[string]string),
+		combats: 			make(map[string]*Combat),
 	}
 
 	if err := gameWorld.initializeItemInstances(); err != nil {

@@ -1,13 +1,11 @@
 package world
 
 type NPCSummary struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
-	Hostile  bool   `json:"hostile"`
-	HP       int    `json:"hp"`
-	MaxHP    int    `json:"max_hp"`
-	Damage   int    `json:"damage"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Role        string      `json:"role"`
+	Hostile     bool        `json:"hostile"`
+	CombatStats CombatStats `json:"combat_stats"`
 }
 
 // NPCDialogue contains the dialogue lines for each quest state.
@@ -25,12 +23,11 @@ type NPC struct {
 	Name           string                  `json:"name"`
 	Role           string                  `json:"role"`
 	Hostile        bool                    `json:"hostile"`
-	HP             int                     `json:"hp"`
-	MaxHP          int                     `json:"max_hp"`
-	Damage         int                     `json:"damage"`
+	CombatStats    CombatStats             `json:"combat_stats"`
 	QuestID        string                  `json:"quest_id"`
 	Dialogue       NPCDialogue             `json:"dialogue"`
 	QuestDialogues map[string]NPCDialogue  `json:"quest_dialogues"`
+	Rewards 		[]string `json:"rewards,omitempty"`
 }
 
 // NPCConversation represents a conversation between a player and an NPC.

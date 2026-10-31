@@ -126,13 +126,11 @@ func (w *World) TalkToNPC(
 
 	conversation := NPCConversation{
 		NPC: NPCSummary{
-			ID:      npc.ID,
-			Name:    npc.Name,
-			Role:    npc.Role,
-			Hostile: npc.Hostile,
-			HP:      npc.HP,
-			MaxHP:   npc.MaxHP,
-			Damage:  npc.Damage,
+			ID:          npc.ID,
+			Name:        npc.Name,
+			Role:        npc.Role,
+			Hostile:     npc.Hostile,
+			CombatStats: npc.CombatStats,
 		},
 		Dialogue: cloneSlice(npc.Dialogue.Default),
 	}

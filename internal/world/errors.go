@@ -24,4 +24,5 @@ var (
 	ErrGroupInvitationNotFound       = errors.New("group invitation not found")
 	ErrGroupInvitationAlreadyExists  = errors.New("group invitation already exists")
 	ErrGroupAlreadyExists = errors.New("group name already exists")
+	ErrPlayerNotInActiveCombat = errors.New("player is not in an active combat")
 )

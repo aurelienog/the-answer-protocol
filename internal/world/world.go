@@ -4,38 +4,43 @@ import (
 	"sync"
 )
 
+const InitialRoomID = "harbor_square"
+
 // World represents the game world.
 type World struct {
-    mu sync.RWMutex
+	mu sync.RWMutex
 
-    rooms   map[string]Room
-    players map[string]*Player
+	rooms   map[string]Room
+	players map[string]*Player
 
-    items             map[string]Item
-    itemInstances     map[string]ItemInstance
-    roomItemInstances map[string][]string
+	items             map[string]Item
+	itemInstances     map[string]ItemInstance
+	roomItemInstances map[string][]string
 
-    playerInventories map[string][]string
-    playerQuests      map[string]map[string]PlayerQuest
+	playerInventories map[string][]string
+	playerQuests      map[string]map[string]PlayerQuest
 
-    npcs   map[string]NPC
-    quests map[string]Quest
+	npcs   map[string]NPC
+	quests map[string]Quest
 
-    groups       map[string]Group
-    playerGroups map[string]string
+	groups       map[string]Group
+	playerGroups map[string]string
 
-    nextItemInstanceID uint64
-    nextGroupID        uint64
+	nextItemInstanceID uint64
+	nextGroupID        uint64
+	nextCombatID		uint64
+
+	combats map[string]*Combat
 }
 
 // Room represents a location in the game world.
 type Room struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
 	Exits       map[string]string `json:"exits"`
-	Items       map[string]int `json:"items"`
-	NPCs        []string       `json:"npcs"`
+	Items       map[string]int    `json:"items"`
+	NPCs        []string          `json:"npcs"`
 }
 
 type Group struct {

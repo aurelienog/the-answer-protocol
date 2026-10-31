@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	initialRoomID         = "harbor_square"
+	initialRoomID         = world.InitialRoomID
 	authenticationTimeout = 30 * time.Second
 )
 

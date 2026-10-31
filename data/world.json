@@ -218,9 +218,13 @@
       "name": "Captain Eliza",
       "role": "quest_giver",
       "hostile": false,
-      "hp": 100,
-      "max_hp": 100,
-      "damage": 10,
+      "combat_stats": {
+        "hp": 100,
+        "max_hp": 100,
+        "attack": 10,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "quest.expose_smugglers",
       "dialogue": {
         "default": [
@@ -275,9 +279,13 @@
       "name": "Asesor del mercado",
       "role": "asesor",
       "hostile": false,
-      "hp": 60,
-      "max_hp": 60,
-      "damage": 5,
+      "combat_stats": {
+        "hp": 60,
+        "max_hp": 60,
+        "attack": 5,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "quest.gather_herbs",
       "dialogue": {
         "default": [
@@ -312,9 +320,13 @@
       "name": "Town Guide",
       "role": "guide",
       "hostile": false,
-      "hp": 50,
-      "max_hp": 50,
-      "damage": 0,
+      "combat_stats": {
+        "hp": 50,
+        "max_hp": 50,
+        "attack": 0,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
       "dialogue": {
         "default": [
@@ -332,9 +344,13 @@
       "name": "Master Borin",
       "role": "blacksmith",
       "hostile": false,
-      "hp": 80,
-      "max_hp": 80,
-      "damage": 8,
+      "combat_stats": {
+        "hp": 80,
+        "max_hp": 80,
+        "attack": 8,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
       "dialogue": {
         "default": [
@@ -352,9 +368,13 @@
       "name": "Apprentice Elisa",
       "role": "herbalist",
       "hostile": false,
-      "hp": 45,
-      "max_hp": 45,
-      "damage": 2,
+      "combat_stats": {
+        "hp": 45,
+        "max_hp": 45,
+        "attack": 2,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
       "dialogue": {
         "default": [
@@ -372,9 +392,13 @@
       "name": "Mara",
       "role": "tavern_keeper",
       "hostile": false,
-      "hp": 50,
-      "max_hp": 50,
-      "damage": 2,
+      "combat_stats": {
+        "hp": 50,
+        "max_hp": 50,
+        "attack": 2,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
       "dialogue": {
         "default": [
@@ -392,9 +416,13 @@
       "name": "Dock Warden",
       "role": "warden",
       "hostile": false,
-      "hp": 90,
-      "max_hp": 90,
-      "damage": 8,
+      "combat_stats": {
+        "hp": 90,
+        "max_hp": 90,
+        "attack": 8,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
       "dialogue": {
         "default": [
@@ -412,10 +440,17 @@
       "name": "Shadow Smuggler",
       "role": "smuggler",
       "hostile": true,
-      "hp": 70,
-      "max_hp": 70,
-      "damage": 12,
+      "combat_stats": {
+        "hp": 70,
+        "max_hp": 70,
+        "attack": 12,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
+      "rewards": [
+        "item.gold_coins"
+      ],
       "dialogue": {
         "default": [
           "You shouldn't be here. Leave the warehouse before you get into trouble."
@@ -432,9 +467,13 @@
       "name": "North Gate Guard",
       "role": "guard",
       "hostile": false,
-      "hp": 75,
-      "max_hp": 75,
-      "damage": 7,
+      "combat_stats": {
+        "hp": 75,
+        "max_hp": 75,
+        "attack": 7,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
       "dialogue": {
         "default": [
@@ -452,10 +491,17 @@
       "name": "Dire Wolf",
       "role": "beast",
       "hostile": true,
-      "hp": 45,
-      "max_hp": 45,
-      "damage": 10,
+      "combat_stats": {
+        "hp": 45,
+        "max_hp": 45,
+        "attack": 10,
+        "defense": 5,
+        "speed": 10
+      },
       "quest_id": "",
+      "rewards": [
+        "item.herbs"
+      ],
       "dialogue": {
         "default": [
           "The wolf growls and bares its teeth."

@@ -1,6 +1,8 @@
 package server
 
 import (
+	"errors"
+
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
@@ -61,7 +63,17 @@ func authenticatePlayer(
 		return err
 	}
 
-	if err := gameWorld.AddPlayer(session.PlayerName, initialRoomID); err != nil {
+	roomID, err := gameWorld.GetPlayerReconnectRoom(session.PlayerName)
+	if err != nil {
+		if errors.Is(err, world.ErrPlayerNotInActiveCombat) {
+			roomID = initialRoomID
+		} else {
+			registry.Remove(session.ID)
+			return err
+		}
+	}
+
+	if err := gameWorld.AddPlayer(session.PlayerName, roomID); err != nil {
 		registry.Remove(session.ID)
 		return err
 	}

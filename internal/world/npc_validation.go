@@ -21,37 +21,66 @@ func (w *World) validateNPCs() error {
 			return fmt.Errorf("NPC %q has an empty name", key)
 		}
 
-		if npc.HP < 0 {
+		stats := npc.CombatStats
+
+		if stats.HP < 0 {
 			return fmt.Errorf(
 				"NPC %q has negative HP %d",
 				key,
-				npc.HP,
+				stats.HP,
 			)
 		}
 
-		if npc.MaxHP <= 0 {
+		if stats.MaxHP <= 0 {
 			return fmt.Errorf(
 				"NPC %q has invalid max HP %d",
 				key,
-				npc.MaxHP,
+				stats.MaxHP,
 			)
 		}
 
-		if npc.HP > npc.MaxHP {
+		if stats.HP > stats.MaxHP {
 			return fmt.Errorf(
 				"NPC %q has HP %d greater than max HP %d",
 				key,
-				npc.HP,
-				npc.MaxHP,
+				stats.HP,
+				stats.MaxHP,
 			)
 		}
 
-		if npc.Damage < 0 {
+		if stats.Attack < 0 {
 			return fmt.Errorf(
-				"NPC %q has negative damage %d",
+				"NPC %q has negative attack %d",
 				key,
-				npc.Damage,
+				stats.Attack,
 			)
+		}
+
+		if stats.Defense < 0 {
+			return fmt.Errorf(
+				"NPC %q has negative defense %d",
+				key,
+				stats.Defense,
+			)
+		}
+
+		if stats.Speed < 0 {
+			return fmt.Errorf(
+				"NPC %q has negative speed %d",
+				key,
+				stats.Speed,
+			)
+		}
+
+		// Validate NPC reward item references.
+		for _, rewardItemID := range npc.Rewards {
+			if _, exists := w.items[rewardItemID]; !exists {
+				return fmt.Errorf(
+					"NPC %q references nonexistent reward item %q",
+					key,
+					rewardItemID,
+				)
+			}
 		}
 	}
 

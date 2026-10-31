@@ -54,15 +54,60 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 		w.players = make(map[string]*Player)
 	}
 
+	combatStats := CombatStats{
+		HP:      100,
+		MaxHP:   100,
+		Attack:  10,
+		Defense: 5,
+		Speed:   10,
+	}
+
+	// Restore the player's combat state if they reconnect
+	// while participating in an active combat.
+	for _, combat := range w.combats {
+		if combat == nil || !combat.Active {
+			continue
+		}
+
+		for i := range combat.Participants {
+			participant := &combat.Participants[i]
+
+			if !participant.IsPlayer || participant.ID != playerName {
+				continue
+			}
+
+			if participant.Escaped {
+				continue
+			}
+
+			if combat.RoomID != roomID {
+				return fmt.Errorf(
+					"%w: player %q must reconnect in combat room %q",
+					ErrInvalidWorldState,
+					playerName,
+					combat.RoomID,
+				)
+			}
+
+			if participant.Connected {
+				return fmt.Errorf(
+					"%w: player %q is already connected to combat",
+					ErrInvalidWorldState,
+					playerName,
+				)
+			}
+
+			combatStats = participant.Stats
+			participant.Connected = true
+			participant.SpeedPoints = 0
+			break
+		}
+	}
+
 	w.players[playerName] = &Player{
-		Name:   playerName,
-		RoomID: roomID,
-		CombatStats: CombatStats{
-			HP:      100,
-			MaxHP:   100,
-			Attack:  10,
-			Defense: 5,
-		},
+		Name:        playerName,
+		RoomID:      roomID,
+		CombatStats: combatStats,
 	}
 
 	return nil
@@ -142,6 +187,9 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 		return PlayerLeft{}, UniqueItemsReturned{}, err
 	}
 
+	// Remove the player from active combats before disconnecting.
+	w.removePlayerFromCombatsLocked(playerName)
+
 	// Return the existing unique instances to the room.
 	w.roomItemInstances[roomID] = append(
 		w.roomItemInstances[roomID],
@@ -149,7 +197,11 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 	)
 
 	// Remove the player's state only after returning the unique items.
-	delete(w.playerInventories, playerName)
+	// Preserve the inventory while the player remains in an active combat.
+	if !w.playerInActiveCombatLocked(playerName) {
+		delete(w.playerInventories, playerName)
+	}
+
 	delete(w.players, playerName)
 
 	leftEvent := PlayerLeft{
@@ -291,4 +343,75 @@ func (w *World) GetPlayerCombatStats(
 	}
 
 	return player.CombatStats, nil
+}
+
+// GetPlayerReconnectRoom returns the room of an active combat
+// in which the player can reconnect.
+func (w *World) GetPlayerReconnectRoom(
+    playerName string,
+) (string, error) {
+    if w == nil {
+        return "", fmt.Errorf(
+            "%w: world is nil",
+            ErrInvalidWorldState,
+        )
+    }
+
+    playerName = strings.TrimSpace(playerName)
+
+    if playerName == "" {
+        return "", fmt.Errorf(
+            "%w: player name cannot be empty",
+            ErrInvalidArgument,
+        )
+    }
+
+    w.mu.RLock()
+    defer w.mu.RUnlock()
+
+    var reconnectRoom string
+
+    for _, combat := range w.combats {
+        if combat == nil || !combat.Active {
+            continue
+        }
+
+        for _, participant := range combat.Participants {
+            if !participant.IsPlayer ||
+                participant.ID != playerName ||
+                participant.Escaped ||
+                participant.Connected {
+                continue
+            }
+
+            if reconnectRoom != "" {
+                return "", fmt.Errorf(
+                    "%w: player %q belongs to multiple active combats",
+                    ErrInvalidWorldState,
+                    playerName,
+                )
+            }
+
+            if _, exists := w.rooms[combat.RoomID]; !exists {
+                return "", fmt.Errorf(
+                    "%w: combat %q references nonexistent room %q",
+                    ErrInvalidWorldState,
+                    combat.ID,
+                    combat.RoomID,
+                )
+            }
+
+            reconnectRoom = combat.RoomID
+        }
+    }
+
+    if reconnectRoom == "" {
+        return "", fmt.Errorf(
+            "%w: %q",
+            ErrPlayerNotInActiveCombat,
+            playerName,
+        )
+    }
+
+    return reconnectRoom, nil
 }

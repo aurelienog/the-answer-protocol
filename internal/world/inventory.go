@@ -262,3 +262,31 @@ func (w *World) GetInventory(playerName string) ([]Item, error) {
 
 	return items, nil
 }
+
+// createItemInstanceLocked creates a new item instance.
+// The caller must hold w.mu.Lock().
+func (w *World) createItemInstanceLocked(itemID string) (string, error) {
+	if _, exists := w.items[itemID]; !exists {
+		return "", fmt.Errorf("%w: %q", ErrItemNotFound, itemID)
+	}
+
+	for {
+		w.nextItemInstanceID++
+
+		instanceID := fmt.Sprintf(
+			"instance:reward:%d",
+			w.nextItemInstanceID,
+		)
+
+		if _, exists := w.itemInstances[instanceID]; exists {
+			continue
+		}
+
+		w.itemInstances[instanceID] = ItemInstance{
+			ID:     instanceID,
+			ItemID: itemID,
+		}
+
+		return instanceID, nil
+	}
+}
