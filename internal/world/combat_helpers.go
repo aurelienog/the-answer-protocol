@@ -126,3 +126,25 @@ func (w *World) findActiveCombatForPlayerLocked(
 
     return nil
 }
+
+// getCombatRecipientsLocked returns the names of connected players
+// participating in a combat.
+// The caller must hold w.mu.
+func (w *World) getCombatRecipientsLocked(combat *Combat) []string {
+	if combat == nil {
+		return nil
+	}
+
+	recipients := make([]string, 0)
+
+	for _, participant := range combat.Participants {
+		if !participant.IsPlayer ||
+			!participant.Connected {
+			continue
+		}
+
+		recipients = append(recipients, participant.ID)
+	}
+
+	return recipients
+}

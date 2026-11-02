@@ -76,13 +76,21 @@ func (c *CombatCommand) handleAttack(
 	}
 
 	// Resolve the target within the current combat.
-	result, damage, deathEvent, err := ctx.World.AttackCombatParticipant(
+	result, damage, attackEvent, damageEvent, deathEvent, err := ctx.World.AttackCombatParticipant(
 		combat.ID,
 		ctx.PlayerName,
 		targetID,
 	)
 	if err != nil {
 		return mapCombatError(err), nil
+	}
+
+	if attackEvent != nil && ctx.Events != nil {
+		ctx.Events.Publish(*attackEvent)
+	}
+
+	if damageEvent != nil && ctx.Events != nil {
+		ctx.Events.Publish(*damageEvent)
 	}
 
 	if deathEvent != nil && ctx.Events != nil {
@@ -180,11 +188,23 @@ func (c *CombatCommand) processNPCTurns(
 		if participant.IsPlayer {
 			return nil
 		}
-		var deathEvent *world.ParticipantDied
+		var (
+			attackEvent *world.CombatAttack
+			damageEvent *world.CombatDamage
+			deathEvent  *world.ParticipantDied
+		)
 		// Execute the NPC action.
-		combat, _, deathEvent, err = ctx.World.ExecuteNPCCombatTurn(combatID)
+		combat, _, attackEvent, damageEvent, deathEvent, err = ctx.World.ExecuteNPCCombatTurn(combatID)
 		if err != nil {
 			return err
+		}
+
+		if attackEvent != nil && ctx.Events != nil {
+			ctx.Events.Publish(*attackEvent)
+		}
+
+		if damageEvent != nil && ctx.Events != nil {
+			ctx.Events.Publish(*damageEvent)
 		}
 
 		if deathEvent != nil && ctx.Events != nil {

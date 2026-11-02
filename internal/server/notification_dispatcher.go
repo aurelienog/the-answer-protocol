@@ -3,7 +3,7 @@ package server
 import (
 	"log"
 	"strings"
-
+	"strconv"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
@@ -64,6 +64,15 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 
 	case world.ParticipantDied:
     	dispatcher.handleParticipantDied(event)		
+
+	case world.CombatStarted:
+    	dispatcher.handleCombatStarted(event)
+
+	case world.CombatAttack:
+    	dispatcher.handleCombatAttack(event)
+
+	case world.CombatDamage:
+    	dispatcher.handleCombatDamage(event)
 	}
 
 }
@@ -207,4 +216,60 @@ func (dispatcher *NotificationDispatcher) handleParticipantDied(
         "",
         notification,
     )
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatStarted(
+    event world.CombatStarted,
+) {
+    participants := strings.Join(event.Participants, ",")
+
+    notification := protocol.EVT(
+        "COMBAT",
+        "STARTED combat="+event.CombatID+
+            " room="+event.RoomID+
+            " participants="+participants,
+    )
+
+    dispatcher.notifyPlayers(
+        event.Recipients,
+        "",
+        notification,
+    )
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatAttack(
+    event world.CombatAttack,
+) {
+    attackerType := "NPC"
+
+    if event.IsPlayer {
+        attackerType = "PLAYER"
+    }
+
+    notification := protocol.EVT(
+        "COMBAT",
+        "ATTACK attacker_type="+attackerType+
+            " attacker="+event.AttackerName+
+            " target="+event.TargetName,
+    )
+
+    dispatcher.notifyPlayers(
+        event.Recipients,
+        "",
+        notification,
+    )
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatDamage(
+    event world.CombatDamage,
+) {
+    notification := protocol.EVT(
+        "COMBAT",
+        "DAMAGE attacker="+event.AttackerName+
+            " target="+event.TargetName+
+            " amount="+strconv.Itoa(event.Damage)+
+            " remaining_hp="+strconv.Itoa(event.RemainingHP),
+    )
+
+    dispatcher.notifyPlayers(event.Recipients, "", notification)
 }

@@ -9,18 +9,18 @@ import (
 // The initiating player and their group members in the same room
 // become participants.
 func (w *World) StartCombat(
-	playerName string,
-	npcID string,
-) (*Combat, error) {
+    playerName string,
+    npcID string,
+) (*Combat, *CombatStarted, error) {
 	if w == nil {
-		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	playerName = strings.TrimSpace(playerName)
 	npcID = strings.TrimSpace(npcID)
 
 	if playerName == "" || npcID == "" {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player name and NPC ID cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -31,11 +31,11 @@ func (w *World) StartCombat(
 
 	player, exists := w.players[playerName]
 	if !exists {
-		return nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+		return nil, nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	if player.CombatStats.HP <= 0 {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player %q is defeated",
 			ErrInvalidWorldState,
 			playerName,
@@ -44,7 +44,7 @@ func (w *World) StartCombat(
 
 	room, exists := w.rooms[player.RoomID]
 	if !exists {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player %q references nonexistent room %q",
 			ErrInvalidWorldState,
 			playerName,
@@ -54,18 +54,18 @@ func (w *World) StartCombat(
 
 	resolvedNPCID, err := w.resolveNPCIDInRoomLocked(room, npcID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	npcID = resolvedNPCID
 	npc := w.npcs[npcID]
 
 	if !npc.Hostile {
-		return nil, fmt.Errorf("%w: %q", ErrNPCNotHostile, npcID)
+		return nil, nil, fmt.Errorf("%w: %q", ErrNPCNotHostile, npcID)
 	}
 
 	if npc.CombatStats.HP <= 0 {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: NPC %q is defeated",
 			ErrInvalidWorldState,
 			npcID,
@@ -74,7 +74,7 @@ func (w *World) StartCombat(
 
 	// Prevent the initiating player from joining multiple combats.
 	if w.playerInActiveCombatLocked(playerName) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: %q",
 			ErrPlayerAlreadyInCombat,
 			playerName,
@@ -83,7 +83,7 @@ func (w *World) StartCombat(
 
 	// Prevent the target NPC from joining multiple combats.
 	if w.npcInActiveCombatLocked(npcID) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: %q",
 			ErrNPCAlreadyInCombat,
 			npcID,
@@ -138,14 +138,14 @@ func (w *World) StartCombat(
 
 	// Add the player who initiated the combat first.
 	if err := addPlayer(playerName); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Add the other members of the player's group.
 	if groupID != "" {
 		group, exists := w.groups[groupID]
 		if !exists {
-			return nil, ErrGroupNotFound
+			return nil, nil, ErrGroupNotFound
 		}
 
 		for _, member := range group.Members {
@@ -154,7 +154,7 @@ func (w *World) StartCombat(
 			}
 
 			if err := addPlayer(member); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -193,7 +193,20 @@ func (w *World) StartCombat(
 
 	w.combats[combatID] = combat
 
-	return cloneCombat(combat), nil
+	event := &CombatStarted{
+		CombatID:     combat.ID,
+		RoomID:       combat.RoomID,
+		Participants: make([]string, 0),
+		Recipients:   w.getCombatRecipientsLocked(combat),
+	}
+
+	for _, participant := range combat.Participants {
+		if participant.IsPlayer {
+			event.Participants = append(event.Participants, participant.ID)
+		}
+	}
+
+	return cloneCombat(combat), event, nil
 }
 
 // removePlayerFromCombatsLocked marks a player as disconnected

@@ -26,6 +26,13 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		), nil
 	}
 
+	if strings.TrimSpace(ctx.PlayerName) == "" {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_USERNAME",
+		), nil
+	}
+
 	if len(ctx.RawArgs) == 0 {
 		return protocol.ERR(
 			protocol.CodeInvalidArguments,
@@ -41,7 +48,7 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		), nil
 	}
 
-	combat, err := ctx.World.StartCombat(ctx.PlayerName, target)
+	combat, event, err := ctx.World.StartCombat(ctx.PlayerName, target)
 	if err != nil {
 		return mapAttackError(err)
 	}
@@ -52,6 +59,9 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return mapCombatError(err), nil
 	}
 
+	if event != nil && ctx.Events != nil {
+		ctx.Events.Publish(*event)
+	}
 	var attackerHP int
 	var targetHP int
 

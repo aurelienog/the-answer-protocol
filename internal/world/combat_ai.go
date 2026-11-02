@@ -8,10 +8,10 @@ import (
 
 // ExecuteNPCCombatTurn executes the current NPC's combat action.
 func (w *World) ExecuteNPCCombatTurn(
-	combatID string,
-) (*Combat, int, *ParticipantDied, error) {
+    combatID string,
+) (*Combat, int, *CombatAttack, *CombatDamage, *ParticipantDied, error) {
 	if w == nil {
-		return nil, 0, nil, fmt.Errorf(
+		return nil, 0, nil, nil, nil, fmt.Errorf(
 			"%w: world is nil",
 			ErrInvalidWorldState,
 		)
@@ -19,7 +19,7 @@ func (w *World) ExecuteNPCCombatTurn(
 
 	combatID = strings.TrimSpace(combatID)
 	if combatID == "" {
-		return nil, 0, nil, fmt.Errorf(
+		return nil, 0, nil, nil, nil, fmt.Errorf(
 			"%w: combat ID cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -30,16 +30,16 @@ func (w *World) ExecuteNPCCombatTurn(
 
 	combat, err := w.getActiveCombatLocked(combatID)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
 	}
 
 	if len(combat.Participants) == 0 {
-		return nil, 0, nil, ErrInvalidWorldState
+		return nil, 0, nil, nil, nil, ErrInvalidWorldState
 	}
 
 	if combat.TurnIndex < 0 ||
 		combat.TurnIndex >= len(combat.Participants) {
-		return nil, 0, nil, fmt.Errorf(
+		return nil, 0, nil, nil, nil, fmt.Errorf(
 			"%w: invalid combat turn index",
 			ErrInvalidWorldState,
 		)
@@ -50,25 +50,25 @@ func (w *World) ExecuteNPCCombatTurn(
 
 	// Only NPCs can execute this method.
 	if attacker.IsPlayer {
-		return nil, 0, nil, ErrInvalidCombatTurn
+		return nil, 0, nil, nil, nil, ErrInvalidCombatTurn
 	}
 
 	if !attacker.Alive || attacker.Escaped {
-		return nil, 0, nil, ErrInvalidCombatTurn
+		return nil, 0, nil, nil, nil, ErrInvalidCombatTurn
 	}
 
 	if _, exists := w.npcs[attacker.ID]; !exists {
-		return nil, 0, nil, ErrNPCNotFound
+		return nil, 0, nil, nil, nil, ErrNPCNotFound
 	}
 
 	if AvailableActions(*attacker) <= 0 {
-		return nil, 0, nil, ErrInvalidCombatTurn
+		return nil, 0, nil, nil, nil, ErrInvalidCombatTurn
 	}
 
 	// Select a player target using the combat AI priorities.
 	target, err := selectNPCCombatTarget(combat)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
 	}
 
 	// Calculate and apply damage.
@@ -79,24 +79,48 @@ func (w *World) ExecuteNPCCombatTurn(
 
 	damage, err = w.applyCombatDamageLocked(target, damage)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
+	}
+
+	attackEvent := &CombatAttack{
+		CombatID:     combat.ID,
+		AttackerID:   attacker.ID,
+		AttackerName: attacker.Name,
+		TargetID:     target.ID,
+		TargetName:   target.Name,
+		IsPlayer:     attacker.IsPlayer,
+		Recipients:   w.getCombatRecipientsLocked(combat),
+	}
+
+	damageEvent := &CombatDamage{
+		CombatID:     combat.ID,
+		AttackerID:   attacker.ID,
+		AttackerName: attacker.Name,
+		TargetID:     target.ID,
+		TargetName:   target.Name,
+		Damage:       damage,
+		RemainingHP:  target.Stats.HP,
+		Recipients:   w.getCombatRecipientsLocked(combat),
 	}
 
 	// Generate a death event if the target was defeated.
 	var deathEvent *ParticipantDied
 
 	if !target.Alive {
-		deathEvent = w.buildParticipantDiedEventLocked(
-			combat,
-			attacker,
-			target,
-		)
+		deathEvent = &ParticipantDied{
+			CombatID:        combat.ID,
+			ParticipantID:   target.ID,
+			ParticipantName: target.Name,
+			IsPlayer:        target.IsPlayer,
+			KillerID:        attacker.ID,
+			Recipients:      w.getCombatRecipientsLocked(combat),
+		}
 	}
 
 	// Consume one NPC action.
 	w.consumeCombatActionLocked(combat, attacker)
 
-	return cloneCombat(combat), damage, deathEvent, nil
+	return cloneCombat(combat), damage, attackEvent, damageEvent, deathEvent, nil
 }
 
 func selectNPCCombatTarget(combat *Combat) (*CombatParticipant, error) {

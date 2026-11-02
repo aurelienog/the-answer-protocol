@@ -80,6 +80,44 @@ type ChatMessage struct {
     Recipients []string
 }
 
+// CombatStarted represents the beginning of a combat.
+type CombatStarted struct {
+	CombatID    string
+	RoomID      string
+	Participants []string
+	Recipients  []string
+}
+
+// CombatAttack represents an attack performed during combat.
+type CombatAttack struct {
+	CombatID    string
+	AttackerID  string
+	AttackerName string
+	TargetID    string
+	TargetName  string
+	IsPlayer    bool
+	Recipients  []string
+}
+
+// CombatDamage represents damage dealt to a combat participant.
+type CombatDamage struct {
+    CombatID    string
+    AttackerID  string
+    AttackerName string
+    TargetID    string
+    TargetName  string
+    Damage      int
+    RemainingHP int
+    Recipients  []string
+}
+
+// CombatEnded represents the end of a combat.
+type CombatEnded struct {
+	CombatID   string
+	Outcome    string
+	Recipients []string
+}
+
 type ParticipantDied struct {
     CombatID        string
     ParticipantID   string

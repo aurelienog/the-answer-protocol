@@ -6,12 +6,12 @@ import (
 )
 
 func (w *World) AttackCombatParticipant(
-	combatID string,
-	attackerID string,
-	targetID string,
-) (*Combat, int, *ParticipantDied, error) {
+    combatID string,
+    attackerID string,
+    targetID string,
+) (*Combat, int, *CombatAttack, *CombatDamage, *ParticipantDied, error) {
 	if w == nil {
-		return nil, 0, nil, fmt.Errorf(
+		return nil, 0, nil, nil, nil, fmt.Errorf(
 			"%w: world is nil",
 			ErrInvalidWorldState,
 		)
@@ -22,11 +22,11 @@ func (w *World) AttackCombatParticipant(
 	targetID = strings.TrimSpace(targetID)
 
 	if combatID == "" || attackerID == "" || targetID == "" {
-		return nil, 0, nil, ErrInvalidArgument
+		return nil, 0, nil, nil, nil, ErrInvalidArgument
 	}
 
 	if attackerID == targetID {
-		return nil, 0, nil, ErrInvalidCombatTarget
+		return nil, 0, nil, nil, nil, ErrInvalidCombatTarget
 	}
 
 	w.mu.Lock()
@@ -34,17 +34,17 @@ func (w *World) AttackCombatParticipant(
 
 	combat, err := w.getActiveCombatLocked(combatID)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
 	}
 
 	attacker, err := w.getCurrentAttackerLocked(combat, attackerID)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
 	}
 
 	target, err := w.getCombatTargetLocked(combat, targetID, attacker.IsPlayer)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
 	}
 
 	damage := calculateDamage(
@@ -54,22 +54,46 @@ func (w *World) AttackCombatParticipant(
 
 	damage, err = w.applyCombatDamageLocked(target, damage)
 	if err != nil {
-		return nil, 0, nil, err
+		return nil, 0, nil, nil, nil, err
+	}
+
+	attackEvent := &CombatAttack{
+		CombatID:    combat.ID,
+		AttackerID:  attacker.ID,
+		AttackerName: attacker.Name,
+		TargetID:    target.ID,
+		TargetName:  target.Name,
+		IsPlayer:    attacker.IsPlayer,
+		Recipients:  w.getCombatRecipientsLocked(combat),
+	}
+
+	damageEvent := &CombatDamage{
+		CombatID:     combat.ID,
+		AttackerID:   attacker.ID,
+		AttackerName: attacker.Name,
+		TargetID:     target.ID,
+		TargetName:   target.Name,
+		Damage:       damage,
+		RemainingHP:  target.Stats.HP,
+		Recipients:   w.getCombatRecipientsLocked(combat),
 	}
 
 	var deathEvent *ParticipantDied
 
 	if !target.Alive {
-		deathEvent = w.buildParticipantDiedEventLocked(
-			combat,
-			attacker,
-			target,
-		)
+		deathEvent = &ParticipantDied{
+			CombatID:        combat.ID,
+			ParticipantID:   target.ID,
+			ParticipantName: target.Name,
+			IsPlayer:        target.IsPlayer,
+			KillerID:        attacker.ID,
+			Recipients:      w.getCombatRecipientsLocked(combat),
+		}
 	}
 
 	w.consumeCombatActionLocked(combat, attacker)
 
-	return cloneCombat(combat), damage, deathEvent, nil
+	return cloneCombat(combat), damage, attackEvent, damageEvent, deathEvent, nil
 }
 
 func (w *World) getActiveCombatLocked(
@@ -215,27 +239,4 @@ func calculateDamage(attack, defense int) int {
 	}
 
 	return damage
-}
-
-func (w *World) buildParticipantDiedEventLocked(
-	combat *Combat,
-	attacker *CombatParticipant,
-	target *CombatParticipant,
-) *ParticipantDied {
-	recipients := make([]string, 0)
-
-	for _, participant := range combat.Participants {
-		if participant.IsPlayer && participant.Connected {
-			recipients = append(recipients, participant.ID)
-		}
-	}
-
-	return &ParticipantDied{
-		CombatID:        combat.ID,
-		ParticipantID:   target.ID,
-		ParticipantName: target.Name,
-		IsPlayer:        target.IsPlayer,
-		KillerID:        attacker.ID,
-		Recipients:      recipients,
-	}
 }
