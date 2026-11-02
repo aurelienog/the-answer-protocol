@@ -79,3 +79,12 @@ type ChatMessage struct {
     Message    string
     Recipients []string
 }
+
+type ParticipantDied struct {
+    CombatID        string
+    ParticipantID   string
+    ParticipantName string
+    IsPlayer        bool
+    KillerID        string
+    Recipients      []string
+}

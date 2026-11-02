@@ -14,6 +14,7 @@ func RegisterCommands(dispatcher *Dispatcher) {
 	dispatcher.Register(NewGroupCommand())
 	dispatcher.Register(NewChatCommand())
 	dispatcher.Register(NewStatusCommand())
-	// dispatcher.Register(NewAttackCommand())
+	dispatcher.Register(NewAttackCommand())
+	dispatcher.Register(NewCombatCommand())
 	// dispatcher.Register(NewHelpCommand())
 }

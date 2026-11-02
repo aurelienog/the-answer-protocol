@@ -55,11 +55,11 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 	}
 
 	combatStats := CombatStats{
-		HP:      100,
-		MaxHP:   100,
-		Attack:  10,
-		Defense: 5,
-		Speed:   10,
+		HP:      DefaultPlayerHP,
+		MaxHP:   DefaultPlayerHP,
+		Attack:  DefaultPlayerAttack,
+		Defense: DefaultPlayerDefense,
+		Speed:   DefaultPlayerSpeed,
 	}
 
 	// Restore the player's combat state if they reconnect
@@ -343,6 +343,37 @@ func (w *World) GetPlayerCombatStats(
 	}
 
 	return player.CombatStats, nil
+}
+
+// GetActiveCombatForPlayer returns a copy of the player's active combat.
+func (w *World) GetActiveCombatForPlayer(
+    playerName string,
+) (*Combat, error) {
+    if w == nil {
+        return nil, fmt.Errorf(
+            "%w: world is nil",
+            ErrInvalidWorldState,
+        )
+    }
+
+    playerName = strings.TrimSpace(playerName)
+
+    if playerName == "" {
+        return nil, fmt.Errorf(
+            "%w: player name cannot be empty",
+            ErrInvalidArgument,
+        )
+    }
+
+    w.mu.RLock()
+    defer w.mu.RUnlock()
+
+    combat := w.findActiveCombatForPlayerLocked(playerName)
+    if combat == nil {
+        return nil, ErrPlayerNotInActiveCombat
+    }
+
+    return cloneCombat(combat), nil
 }
 
 // GetPlayerReconnectRoom returns the room of an active combat

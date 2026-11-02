@@ -52,10 +52,13 @@ func (w *World) StartCombat(
 		)
 	}
 
-	npc, exists := w.npcs[npcID]
-	if !exists {
-		return nil, fmt.Errorf("%w: %q", ErrNPCNotFound, npcID)
+	resolvedNPCID, err := w.resolveNPCIDInRoomLocked(room, npcID)
+	if err != nil {
+		return nil, err
 	}
+
+	npcID = resolvedNPCID
+	npc := w.npcs[npcID]
 
 	if !npc.Hostile {
 		return nil, fmt.Errorf("%w: %q", ErrNPCNotHostile, npcID)
@@ -69,29 +72,11 @@ func (w *World) StartCombat(
 		)
 	}
 
-	// The target NPC must belong to the player's current room.
-	npcInRoom := false
-	for _, roomNPCID := range room.NPCs {
-		if roomNPCID == npcID {
-			npcInRoom = true
-			break
-		}
-	}
-
-	if !npcInRoom {
-		return nil, fmt.Errorf(
-			"%w: NPC %q is not in room %q",
-			ErrInvalidWorldState,
-			npcID,
-			player.RoomID,
-		)
-	}
-
 	// Prevent the initiating player from joining multiple combats.
 	if w.playerInActiveCombatLocked(playerName) {
 		return nil, fmt.Errorf(
-			"%w: player %q is already in an active combat",
-			ErrInvalidWorldState,
+			"%w: %q",
+			ErrPlayerAlreadyInCombat,
 			playerName,
 		)
 	}
@@ -99,8 +84,8 @@ func (w *World) StartCombat(
 	// Prevent the target NPC from joining multiple combats.
 	if w.npcInActiveCombatLocked(npcID) {
 		return nil, fmt.Errorf(
-			"%w: NPC %q is already in an active combat",
-			ErrInvalidWorldState,
+			"%w: %q",
+			ErrNPCAlreadyInCombat,
 			npcID,
 		)
 	}
@@ -129,7 +114,7 @@ func (w *World) StartCombat(
 			if name == playerName {
 				return fmt.Errorf(
 					"%w: player %q is already in an active combat",
-					ErrInvalidWorldState,
+					ErrPlayerAlreadyInCombat,
 					name,
 				)
 			}
@@ -151,25 +136,26 @@ func (w *World) StartCombat(
 
 	groupID := w.playerGroups[playerName]
 
+	// Add the player who initiated the combat first.
+	if err := addPlayer(playerName); err != nil {
+		return nil, err
+	}
+
+	// Add the other members of the player's group.
 	if groupID != "" {
 		group, exists := w.groups[groupID]
 		if !exists {
-			return nil, fmt.Errorf(
-				"%w: player %q references nonexistent group %q",
-				ErrInvalidWorldState,
-				playerName,
-				groupID,
-			)
+			return nil, ErrGroupNotFound
 		}
 
 		for _, member := range group.Members {
+			if member == playerName {
+				continue
+			}
+
 			if err := addPlayer(member); err != nil {
 				return nil, err
 			}
-		}
-	} else {
-		if err := addPlayer(playerName); err != nil {
-			return nil, err
 		}
 	}
 
@@ -400,4 +386,36 @@ func combatHasActivePlayersLocked(combat *Combat) bool {
 	}
 
 	return false
+}
+
+// GetCombat returns a copy of a combat by ID.
+func (w *World) GetCombat(combatID string) (*Combat, error) {
+	if w == nil {
+		return nil, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	combatID = strings.TrimSpace(combatID)
+	if combatID == "" {
+		return nil, fmt.Errorf(
+			"%w: combat ID cannot be empty",
+			ErrInvalidArgument,
+		)
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	combat, exists := w.combats[combatID]
+	if !exists || combat == nil {
+		return nil, fmt.Errorf(
+			"%w: combat %q not found",
+			ErrInvalidWorldState,
+			combatID,
+		)
+	}
+
+	return cloneCombat(combat), nil
 }

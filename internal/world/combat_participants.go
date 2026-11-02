@@ -89,6 +89,7 @@ func (w *World) JoinCombat(
 			ID:       playerName,
 			Name:     playerName,
 			IsPlayer: true,
+			Connected: true,
 			Stats:    player.CombatStats,
 			Alive:    true,
 		},

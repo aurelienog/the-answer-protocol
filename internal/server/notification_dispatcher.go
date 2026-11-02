@@ -62,7 +62,10 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 	case world.ChatMessage:
     	dispatcher.handleChatMessage(event)
 
+	case world.ParticipantDied:
+    	dispatcher.handleParticipantDied(event)		
 	}
+
 }
 
 func (dispatcher *NotificationDispatcher) handlePlayerMoved(event world.PlayerMoved) {
@@ -182,4 +185,26 @@ func (dispatcher *NotificationDispatcher) handleChatMessage(event world.ChatMess
             )
         }
     }
+}
+
+func (dispatcher *NotificationDispatcher) handleParticipantDied(
+    event world.ParticipantDied,
+) {
+    participantType := "NPC"
+
+    if event.IsPlayer {
+        participantType = "PLAYER"
+    }
+
+    notification := protocol.EVT(
+        "COMBAT",
+        participantType+"_DIED participant="+event.ParticipantName+
+            " killer="+event.KillerID,
+    )
+
+    dispatcher.notifyPlayers(
+        event.Recipients,
+        "",
+        notification,
+    )
 }

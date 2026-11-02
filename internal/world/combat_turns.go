@@ -35,7 +35,7 @@ func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
 		)
 	}
 
-	if combat.Round != 1 {
+	if combat.TurnsInitialized {
 		return nil, fmt.Errorf(
 			"%w: combat turns have already been initialized",
 			ErrInvalidWorldState,
@@ -59,12 +59,17 @@ func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
 	for i := range combat.Participants {
 		participant := &combat.Participants[i]
 
-		if !participant.Alive || participant.Escaped || !participant.Connected {
+		if !participant.Alive || participant.Escaped {
+			continue
+		}
+
+		if participant.IsPlayer && !participant.Connected {
 			continue
 		}
 
 		participant.SpeedPoints += calculateEffectiveSpeed(*participant)
 	}
+	combat.TurnsInitialized = true
 
 	return cloneCombat(combat), nil
 }
@@ -86,6 +91,13 @@ func (w *World) StartCombatRound(combatID string) (*Combat, error) {
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil || !combat.Active {
 		return nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
+	}
+
+	if !combat.TurnsInitialized {
+		return nil, fmt.Errorf(
+			"%w: combat turns have not been initialized",
+			ErrInvalidWorldState,
+		)
 	}
 
 	if !combatHasLivingPlayersLocked(combat) {
@@ -117,7 +129,9 @@ func (w *World) StartCombatRound(combatID string) (*Combat, error) {
 	for i := range combat.Participants {
 		participant := &combat.Participants[i]
 
-		if !participant.Alive || participant.Escaped || !participant.Connected {
+		if !participant.Alive ||
+			participant.Escaped ||
+			(participant.IsPlayer && !participant.Connected) {
 			continue
 		}
 
@@ -135,11 +149,14 @@ func (w *World) StartCombatRound(combatID string) (*Combat, error) {
 
 // AvailableActions returns the number of available actions.
 func AvailableActions(participant CombatParticipant) int {
-    if !participant.Alive || participant.Escaped || !participant.Connected {
-        return 0
-    }
+    if !participant.Alive ||
+		participant.Escaped ||
+		(participant.IsPlayer && !participant.Connected) ||
+		CombatActionCost <= 0 {
+		return 0
+	}
 
-    return participant.SpeedPoints / 10
+    return participant.SpeedPoints / CombatActionCost
 }
 
 // NextCombatTurn finds the next participant with available actions.
@@ -226,7 +243,7 @@ func (w *World) EndCombatTurn(combatID string) (*Combat, error) {
 		)
 	}
 
-	participant.SpeedPoints -= 10
+	participant.SpeedPoints -= CombatActionCost
 
 	// If the participant has no more actions, move to the next participant.
 	if AvailableActions(*participant) == 0 {

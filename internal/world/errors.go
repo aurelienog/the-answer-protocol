@@ -25,4 +25,8 @@ var (
 	ErrGroupInvitationAlreadyExists  = errors.New("group invitation already exists")
 	ErrGroupAlreadyExists = errors.New("group name already exists")
 	ErrPlayerNotInActiveCombat = errors.New("player is not in an active combat")
+	ErrPlayerAlreadyInCombat = errors.New("player is already in an active combat")
+	ErrNPCAlreadyInCombat    = errors.New("NPC is already in an active combat")
+	ErrInvalidCombatTurn = errors.New("invalid combat turn")
+	ErrInvalidCombatTarget = errors.New("invalid combat target")
 )
