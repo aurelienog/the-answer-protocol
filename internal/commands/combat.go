@@ -36,6 +36,9 @@ func (c *CombatCommand) Execute(ctx *Context) (protocol.Message, error) {
 	case "ATTACK":
 		return c.handleAttack(ctx)
 
+	case "FLEE":
+		return c.handleFlee(ctx)
+
 	default:
 		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 	}
@@ -115,6 +118,57 @@ func (c *CombatCommand) handleAttack(
 			" damage=" + strconv.Itoa(damage) +
 			" combat=" + result.ID,
 	), nil
+}
+
+func (c *CombatCommand) handleFlee(
+    ctx *Context,
+) (protocol.Message, error) {
+    if len(ctx.RawArgs) != 1 {
+        return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
+    }
+
+    combat, err := ctx.World.GetActiveCombatForPlayer(ctx.PlayerName)
+    if err != nil {
+        return mapCombatError(err), nil
+    }
+
+    result, fleeEvent, err := ctx.World.FleeCombat(
+        combat.ID,
+        ctx.PlayerName,
+    )
+    if err != nil {
+        return mapCombatError(err), nil
+    }
+
+    if fleeEvent != nil && ctx.Events != nil {
+        ctx.Events.Publish(*fleeEvent)
+    }
+
+    // Check whether the combat should end.
+    if !combatHasLivingPlayers(result) ||
+        !combatHasLivingNPCs(result) {
+        _, err = ctx.World.EndCombat(result.ID)
+        if err != nil {
+            return mapCombatError(err), nil
+        }
+    } else if result.Active {
+        // Process NPC turns automatically.
+        if err := c.processNPCTurns(ctx, result.ID); err != nil {
+            return mapCombatError(err), nil
+        }
+    }
+
+    result, err = ctx.World.GetCombat(result.ID)
+    if err != nil {
+        return mapCombatError(err), nil
+    }
+
+    return protocol.OK(
+        "fled=true" +
+            " damage=" + strconv.Itoa(fleeEvent.Damage) +
+            " hp=" + strconv.Itoa(fleeEvent.RemainingHP) +
+            " combat=" + result.ID,
+    ), nil
 }
 
 func mapCombatError(err error) protocol.Message {

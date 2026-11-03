@@ -126,3 +126,13 @@ type ParticipantDied struct {
     KillerID        string
     Recipients      []string
 }
+
+// PlayerFled represents a player successfully escaping from combat.
+type PlayerFled struct {
+    CombatID   string
+    PlayerID   string
+    PlayerName string
+    Damage     int
+    RemainingHP int
+    Recipients []string
+}

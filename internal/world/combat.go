@@ -47,4 +47,5 @@ const (
 
     CombatActionCost = 10
     MinimumDamage    = 1
+	FleeHealthPenaltyPercent = 15
 )
