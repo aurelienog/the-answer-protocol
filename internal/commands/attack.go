@@ -113,6 +113,12 @@ func mapAttackError(err error) (protocol.Message, error) {
 			"NPC_NOT_FOUND",
 		), nil
 
+	case errors.Is(err, world.ErrNPCRespawning):
+		return protocol.ERR(
+			protocol.CodeNPCRespawning,
+			"NPC_RESPAWNING",
+		), nil
+
 	case errors.Is(err, world.ErrNPCNotHostile):
 		return protocol.ERR(
 			protocol.CodeNPCNotHostile,

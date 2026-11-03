@@ -5,6 +5,7 @@ import (
 )
 
 const InitialRoomID = "harbor_square"
+const DefaultNPCRespawnSeconds = 60
 
 // World represents the game world.
 type World struct {

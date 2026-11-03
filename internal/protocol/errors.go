@@ -18,6 +18,7 @@ const (
 	CodeItemCannotBeDropped = 412
 	CodeItemAlreadyOwned    = 413
 	CodeNPCNotFound         = 414
+	CodeNPCRespawning 		= 415
 	CodeInvalidArguments    = 422
 	CodeInternalError       = 500
 	CodeConnectionFailed    = 900

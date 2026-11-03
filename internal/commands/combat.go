@@ -131,8 +131,10 @@ func mapCombatError(err error) protocol.Message {
 	case errors.Is(err, world.ErrInvalidCombatTarget):
 		return protocol.ERR(protocol.CodeCommandFailed, "INVALID_TARGET")
 
+	case errors.Is(err, world.ErrNPCNotFound):
+		return protocol.ERR(protocol.CodeNPCNotFound, "NPC_NOT_FOUND")
+
 	case errors.Is(err, world.ErrPlayerNotFound),
-		errors.Is(err, world.ErrNPCNotFound),
 		errors.Is(err, world.ErrInvalidWorldState):
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR")
 

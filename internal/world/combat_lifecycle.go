@@ -3,6 +3,7 @@ package world
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // StartCombat starts a combat against a hostile NPC.
@@ -56,6 +57,7 @@ func (w *World) StartCombat(
 	if err != nil {
 		return nil, nil, err
 	}
+	w.refreshNPCRespawnLocked(resolvedNPCID)
 
 	npcID = resolvedNPCID
 	npc := w.npcs[npcID]
@@ -66,8 +68,8 @@ func (w *World) StartCombat(
 
 	if npc.CombatStats.HP <= 0 {
 		return nil, nil, fmt.Errorf(
-			"%w: NPC %q is defeated",
-			ErrInvalidWorldState,
+			"%w: %q",
+			ErrNPCRespawning,
 			npcID,
 		)
 	}
@@ -336,7 +338,7 @@ func (w *World) EndCombat(combatID string) (*Combat, error) {
 		}
 	}
 
-	// Synchronize NPC HP.
+	// Synchronize NPC HP and schedule respawn when defeated.
 	for _, participant := range combat.Participants {
 		if participant.IsPlayer {
 			continue
@@ -344,6 +346,18 @@ func (w *World) EndCombat(combatID string) (*Combat, error) {
 
 		npc := w.npcs[participant.ID]
 		npc.CombatStats.HP = participant.Stats.HP
+
+		if npc.CombatStats.HP <= 0 {
+			respawnSeconds := npc.RespawnSeconds
+			if respawnSeconds <= 0 {
+				respawnSeconds = DefaultNPCRespawnSeconds
+			}
+
+			npc.RespawnAt = time.Now().Add(
+				time.Duration(respawnSeconds) * time.Second,
+			).Unix()
+		}
+
 		w.npcs[participant.ID] = npc
 	}
 
