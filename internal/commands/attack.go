@@ -53,7 +53,7 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return mapAttackError(err)
 	}
 
-	combat, err = ctx.World.InitializeCombatTurns(combat.ID)
+	combat, turnEvent, err := ctx.World.InitializeCombatTurns(combat.ID)
 	if err != nil {
 		_, _ = ctx.World.EndCombat(combat.ID)
 		return mapCombatError(err), nil
@@ -61,6 +61,9 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 
 	if event != nil && ctx.Events != nil {
 		ctx.Events.Publish(*event)
+	}
+	if turnEvent != nil && ctx.Events != nil {
+		ctx.Events.Publish(*turnEvent)
 	}
 	var attackerHP int
 	var targetHP int

@@ -136,3 +136,14 @@ type PlayerFled struct {
     RemainingHP int
     Recipients []string
 }
+
+// CombatTurnChanged is emitted when the active combat participant changes.
+type CombatTurnChanged struct {
+    CombatID         string
+    ParticipantID    string
+    ParticipantName  string
+    IsPlayer          bool
+    Round             int
+    AvailableActions  int
+    Recipients        []string
+}

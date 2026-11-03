@@ -73,6 +73,10 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 
 	case world.CombatDamage:
     	dispatcher.handleCombatDamage(event)
+	case world.PlayerFled:
+    	dispatcher.handlePlayerFled(event)
+	case world.CombatTurnChanged:
+    	dispatcher.handleCombatTurnChanged(event)
 	}
 
 }
@@ -272,4 +276,45 @@ func (dispatcher *NotificationDispatcher) handleCombatDamage(
     )
 
     dispatcher.notifyPlayers(event.Recipients, "", notification)
+}
+
+func (dispatcher *NotificationDispatcher) handlePlayerFled(
+    event world.PlayerFled,
+) {
+    notification := protocol.EVT(
+        "COMBAT",
+        "PLAYER_FLED player="+event.PlayerName+
+            " damage="+strconv.Itoa(event.Damage)+
+            " remaining_hp="+strconv.Itoa(event.RemainingHP),
+    )
+
+    dispatcher.notifyPlayers(
+        event.Recipients,
+        event.PlayerName,
+        notification,
+    )
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatTurnChanged(
+    event world.CombatTurnChanged,
+) {
+    participantType := "NPC"
+
+    if event.IsPlayer {
+        participantType = "PLAYER"
+    }
+
+    notification := protocol.EVT(
+        "COMBAT",
+        "TURN participant_type="+participantType+
+            " participant="+event.ParticipantName+
+            " round="+strconv.Itoa(event.Round)+
+            " actions="+strconv.Itoa(event.AvailableActions),
+    )
+
+    dispatcher.notifyPlayers(
+        event.Recipients,
+        "",
+        notification,
+    )
 }

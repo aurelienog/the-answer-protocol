@@ -6,9 +6,11 @@ import (
 )
 
 // InitializeCombatTurns initializes the first combat round.
-func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
+func (w *World) InitializeCombatTurns(
+    combatID string,
+) (*Combat, *CombatTurnChanged, error) {
 	if w == nil {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: world is nil",
 			ErrInvalidWorldState,
 		)
@@ -17,7 +19,7 @@ func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
 	combatID = strings.TrimSpace(combatID)
 
 	if combatID == "" {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat ID cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -28,7 +30,7 @@ func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
 
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil || !combat.Active {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: active combat %q not found",
 			ErrInvalidWorldState,
 			combatID,
@@ -36,21 +38,21 @@ func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
 	}
 
 	if combat.TurnsInitialized {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat turns have already been initialized",
 			ErrInvalidWorldState,
 		)
 	}
 
 	if !combatHasLivingPlayersLocked(combat) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat has no living players",
 			ErrInvalidWorldState,
 		)
 	}
 
 	if !combatHasLivingNPCsLocked(combat) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: all NPCs have been defeated",
 			ErrInvalidWorldState,
 		)
@@ -71,18 +73,21 @@ func (w *World) InitializeCombatTurns(combatID string) (*Combat, error) {
 	}
 	combat.TurnsInitialized = true
 
-	return cloneCombat(combat), nil
+	event := w.buildCombatTurnChangedLocked(combat)
+	return cloneCombat(combat), event, nil
 }
 
 // StartCombatRound starts the next combat round.
-func (w *World) StartCombatRound(combatID string) (*Combat, error) {
+func (w *World) StartCombatRound(
+    combatID string,
+) (*Combat, *CombatTurnChanged, error) {
 	if w == nil {
-		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	combatID = strings.TrimSpace(combatID)
 	if combatID == "" {
-		return nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
+		return nil, nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
 	}
 
 	w.mu.Lock()
@@ -90,25 +95,25 @@ func (w *World) StartCombatRound(combatID string) (*Combat, error) {
 
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil || !combat.Active {
-		return nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
+		return nil, nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
 	}
 
 	if !combat.TurnsInitialized {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat turns have not been initialized",
 			ErrInvalidWorldState,
 		)
 	}
 
 	if !combatHasLivingPlayersLocked(combat) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat has no living players",
 			ErrInvalidWorldState,
 		)
 	}
 
 	if !combatHasLivingNPCsLocked(combat) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: all NPCs have been defeated",
 			ErrInvalidWorldState,
 		)
@@ -116,7 +121,7 @@ func (w *World) StartCombatRound(combatID string) (*Combat, error) {
 
 	// Prevent advancing while participants still have available actions.
 	if combatHasAvailableActionsLocked(combat) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat still has available actions",
 			ErrInvalidWorldState,
 		)
@@ -140,10 +145,11 @@ func (w *World) StartCombatRound(combatID string) (*Combat, error) {
 
 	// Decrease effect durations after their contribution to this round.
 	if _, err := w.updateCombatEffectsLocked(combat); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return cloneCombat(combat), nil
+	event := w.buildCombatTurnChangedLocked(combat)
+	return cloneCombat(combat), event, nil
 }
 
 
@@ -160,14 +166,16 @@ func AvailableActions(participant CombatParticipant) int {
 }
 
 // NextCombatTurn finds the next participant with available actions.
-func (w *World) NextCombatTurn(combatID string) (*Combat, error) {
+func (w *World) NextCombatTurn(
+    combatID string,
+) (*Combat, *CombatTurnChanged, error) {
 	if w == nil {
-		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	combatID = strings.TrimSpace(combatID)
 	if combatID == "" {
-		return nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
+		return nil, nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
 	}
 
 	w.mu.Lock()
@@ -175,23 +183,23 @@ func (w *World) NextCombatTurn(combatID string) (*Combat, error) {
 
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil || !combat.Active {
-		return nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
+		return nil, nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
 	}
 
 	if len(combat.Participants) == 0 {
-		return nil, fmt.Errorf("%w: combat has no participants", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf("%w: combat has no participants", ErrInvalidWorldState)
 	}
 
 	// Validate the current turn index.
 	if combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
-		return nil, fmt.Errorf("%w: invalid combat turn index", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf("%w: invalid combat turn index", ErrInvalidWorldState)
 	}
 
 	// Keep the current participant if they still have actions available.
 	current := &combat.Participants[combat.TurnIndex]
 
 	if AvailableActions(*current) > 0 {
-		return cloneCombat(combat), nil
+		return cloneCombat(combat), nil, nil
 	}
 
 	// Search circularly for the next participant with available actions.
@@ -201,11 +209,12 @@ func (w *World) NextCombatTurn(combatID string) (*Combat, error) {
 
 		if AvailableActions(*participant) > 0 {
 			combat.TurnIndex = index
-			return cloneCombat(combat), nil
+			event := w.buildCombatTurnChangedLocked(combat)
+			return cloneCombat(combat), event, nil
 		}
 	}
 
-	return cloneCombat(combat), nil
+	return cloneCombat(combat), nil, nil
 }
 
 // EndCombatTurn consumes one action from the current participant.
@@ -305,4 +314,34 @@ func (w *World) IsCombatRoundComplete(combatID string) (bool, error) {
 	}
 
 	return !combatHasAvailableActionsLocked(combat), nil
+}
+
+// buildCombatTurnChangedLocked creates a notification for the current turn.
+// The caller must hold w.mu.
+func (w *World) buildCombatTurnChangedLocked(
+    combat *Combat,
+) *CombatTurnChanged {
+    if combat == nil || len(combat.Participants) == 0 {
+        return nil
+    }
+
+    if combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
+        return nil
+    }
+
+    participant := combat.Participants[combat.TurnIndex]
+
+    if AvailableActions(participant) <= 0 {
+        return nil
+    }
+
+    return &CombatTurnChanged{
+        CombatID:        combat.ID,
+        ParticipantID:  participant.ID,
+        ParticipantName: participant.Name,
+        IsPlayer:         participant.IsPlayer,
+        Round:            combat.Round,
+        AvailableActions: AvailableActions(participant),
+        Recipients:       w.getCombatRecipientsLocked(combat),
+    }
 }

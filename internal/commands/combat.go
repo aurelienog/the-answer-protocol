@@ -221,16 +221,28 @@ func (c *CombatCommand) processNPCTurns(
 		}
 
 		if roundComplete {
-			combat, err = ctx.World.StartCombatRound(combatID)
+			var turnEvent *world.CombatTurnChanged
+
+			combat, turnEvent, err = ctx.World.StartCombatRound(combatID)
 			if err != nil {
 				return err
+			}
+
+			if turnEvent != nil && ctx.Events != nil {
+				ctx.Events.Publish(*turnEvent)
 			}
 		}
 
 		// Find the next participant with available actions.
-		combat, err = ctx.World.NextCombatTurn(combatID)
+		var turnEvent *world.CombatTurnChanged
+
+		combat, turnEvent, err = ctx.World.NextCombatTurn(combatID)
 		if err != nil {
 			return err
+		}
+
+		if turnEvent != nil && ctx.Events != nil {
+			ctx.Events.Publish(*turnEvent)
 		}
 
 		if combat.TurnIndex < 0 ||
