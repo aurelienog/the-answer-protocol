@@ -116,15 +116,17 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 // RemovePlayer returns the player's unique items to their current room
 // and removes the player's state from the world.
 // It is safe to call this method more than once.
-func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned, error) {
+func (w *World) RemovePlayer(
+    playerName string,
+) (PlayerLeft, UniqueItemsReturned, *CombatTurnChanged, error) {
 	if w == nil {
-		return PlayerLeft{}, UniqueItemsReturned{},
+		return PlayerLeft{}, UniqueItemsReturned{}, nil,
 			fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	playerName = strings.TrimSpace(playerName)
 	if playerName == "" {
-		return PlayerLeft{}, UniqueItemsReturned{},
+		return PlayerLeft{}, UniqueItemsReturned{}, nil,
 			fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
 	}
 
@@ -133,13 +135,13 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 
 	player, exists := w.players[playerName]
 	if !exists {
-		return PlayerLeft{}, UniqueItemsReturned{},
+		return PlayerLeft{}, UniqueItemsReturned{}, nil,
 			fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 	roomID := player.RoomID
 
 	if _, exists := w.rooms[roomID]; !exists {
-		return PlayerLeft{}, UniqueItemsReturned{},
+		return PlayerLeft{}, UniqueItemsReturned{}, nil,
 			fmt.Errorf(
 				"%w: player %q references nonexistent room %q",
 				ErrInvalidWorldState,
@@ -158,7 +160,7 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 	for _, instanceID := range inventory {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
-			return PlayerLeft{}, UniqueItemsReturned{},
+			return PlayerLeft{}, UniqueItemsReturned{}, nil,
 				fmt.Errorf(
 					"%w: inventory references nonexistent instance %q",
 					ErrInvalidWorldState,
@@ -168,7 +170,7 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 
 		item, exists := w.items[instance.ItemID]
 		if !exists {
-			return PlayerLeft{}, UniqueItemsReturned{},
+			return PlayerLeft{}, UniqueItemsReturned{}, nil,
 				fmt.Errorf(
 					"%w: instance %q references nonexistent item %q",
 					ErrInvalidWorldState,
@@ -184,11 +186,20 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 
 	// Remove the player from their group before disconnecting them.
 	if err := w.removePlayerFromGroupLocked(playerName); err != nil {
-		return PlayerLeft{}, UniqueItemsReturned{}, err
+		return PlayerLeft{}, UniqueItemsReturned{}, nil, err
 	}
 
-	// Remove the player from active combats before disconnecting.
+	// Find the player's active combat before disconnecting them.
+	combat := w.findActiveCombatForPlayerLocked(playerName)
+
+	// Remove the player from active combats.
 	w.removePlayerFromCombatsLocked(playerName)
+
+	// Capture the new combat turn from the affected combat.
+	var turnEvent *CombatTurnChanged
+	if combat != nil {
+		turnEvent = w.buildCombatTurnChangedLocked(combat)
+	}
 
 	// Return the existing unique instances to the room.
 	w.roomItemInstances[roomID] = append(
@@ -216,7 +227,7 @@ func (w *World) RemovePlayer(playerName string) (PlayerLeft, UniqueItemsReturned
 		ItemIDs:    uniqueInstanceIDs,
 	}
 
-	return leftEvent, returnedEvent, nil
+	return leftEvent, returnedEvent, turnEvent, nil
 }
 
 

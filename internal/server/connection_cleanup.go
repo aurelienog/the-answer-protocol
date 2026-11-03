@@ -19,7 +19,7 @@ func cleanupPlayer(
 	eventPublisher events.Publisher,
 ) {
 	if authenticated && playerEnterBroadcast {
-		playerLeft, uniqueItemsReturned, err := gameWorld.RemovePlayer(session.PlayerName)
+		playerLeft, uniqueItemsReturned, turnEvent, err := gameWorld.RemovePlayer(session.PlayerName)
 		if err != nil {
 			log.Printf(
 				"Failed to remove departing player %q: %v",
@@ -29,23 +29,31 @@ func cleanupPlayer(
 		} else {
 			// The world state has already been updated before publishing.
 			if eventPublisher != nil {
+				
 				if len(uniqueItemsReturned.ItemIDs) > 0 {
 					eventPublisher.Publish(uniqueItemsReturned)
 				}
 
 				eventPublisher.Publish(playerLeft)
+
+				if turnEvent != nil {
+					eventPublisher.Publish(*turnEvent)
+				}
 			}
 		}
 	} else if authenticated {
 		// The player was authenticated but their entry was not broadcast.
 		// Remove their state without publishing departure events.
-		_, _, err := gameWorld.RemovePlayer(session.PlayerName)
+		_, _, turnEvent, err := gameWorld.RemovePlayer(session.PlayerName)
 		if err != nil {
 			log.Printf(
 				"Failed to remove departing player %q: %v",
 				session.PlayerName,
 				err,
 			)
+		}
+		if turnEvent != nil && eventPublisher != nil {
+			eventPublisher.Publish(*turnEvent)
 		}
 	}
 

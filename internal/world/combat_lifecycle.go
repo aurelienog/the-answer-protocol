@@ -215,22 +215,51 @@ func (w *World) StartCombat(
 // without removing them from active combats.
 // The caller must hold w.mu.Lock().
 func (w *World) removePlayerFromCombatsLocked(playerName string) {
-    for _, combat := range w.combats {
-        if combat == nil || !combat.Active {
-            continue
-        }
+	for _, combat := range w.combats {
+		if combat == nil || !combat.Active {
+			continue
+		}
 
-        for i := range combat.Participants {
-            participant := &combat.Participants[i]
+		for i := range combat.Participants {
+			participant := &combat.Participants[i]
 
-            if !participant.IsPlayer || participant.ID != playerName {
-                continue
-            }
+			if !participant.IsPlayer || participant.ID != playerName {
+				continue
+			}
 
-            participant.Connected = false
-            break
-        }
-    }
+			wasCurrentTurn := combat.TurnIndex == i
+
+			participant.Connected = false
+			participant.SpeedPoints = 0
+
+			// End the combat if no living connected players remain.
+			if !combatHasActivePlayersLocked(combat) {
+				combat.Active = false
+				combat.TurnIndex = -1
+				break
+			}
+
+			if wasCurrentTurn {
+				foundNextTurn := false
+
+				for offset := 1; offset < len(combat.Participants); offset++ {
+					index := (i + offset) % len(combat.Participants)
+
+					if AvailableActions(combat.Participants[index]) > 0 {
+						combat.TurnIndex = index
+						foundNextTurn = true
+						break
+					}
+				}
+
+				if !foundNextTurn {
+					combat.TurnIndex = -1
+				}
+			}
+
+			break
+		}
+	}
 }
 
 // EndCombat finishes a combat, synchronizes final HP
@@ -407,6 +436,7 @@ func combatHasActivePlayersLocked(combat *Combat) bool {
 	for _, participant := range combat.Participants {
 		if participant.IsPlayer &&
 			participant.Alive &&
+			participant.Connected &&
 			!participant.Escaped {
 			return true
 		}
