@@ -77,6 +77,8 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
     	dispatcher.handlePlayerFled(event)
 	case world.CombatTurnChanged:
     	dispatcher.handleCombatTurnChanged(event)
+	case world.ItemUsed:
+		dispatcher.handleItemUsed(event)
 	}
 
 }
@@ -317,4 +319,31 @@ func (dispatcher *NotificationDispatcher) handleCombatTurnChanged(
         "",
         notification,
     )
+}
+
+func (dispatcher *NotificationDispatcher) handleItemUsed(
+	event world.ItemUsed,
+) {
+	session, exists := dispatcher.registry.GetByName(event.PlayerName)
+	if !exists {
+		return
+	}
+
+	data := "player=" + event.PlayerName +
+		" item=" + event.ItemID
+
+	if hp, exists := event.StatChanges[world.CombatStatHP]; exists {
+		data += " hp=" + strconv.Itoa(hp)
+	}
+
+	if err := dispatcher.registry.Queue(
+		session.ID,
+		protocol.EVT("ITEM_USED", data),
+	); err != nil {
+		log.Printf(
+			"Failed to queue item used notification for %q: %v",
+			event.PlayerName,
+			err,
+		)
+	}
 }

@@ -147,3 +147,17 @@ type CombatTurnChanged struct {
     AvailableActions  int
     Recipients        []string
 }
+
+// ItemUsed represents the effects of using a consumable item.
+type ItemUsed struct {
+	PlayerName string
+	ItemID     string
+	StatChanges map[string]int
+}
+
+const (
+	CombatStatHP      = "hp"
+	CombatStatAttack  = "attack"
+	CombatStatDefense = "defense"
+	CombatStatSpeed   = "speed"
+)

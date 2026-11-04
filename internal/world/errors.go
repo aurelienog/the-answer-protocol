@@ -30,4 +30,6 @@ var (
 	ErrInvalidCombatTurn = errors.New("invalid combat turn")
 	ErrInvalidCombatTarget = errors.New("invalid combat target")
 	ErrNPCRespawning = errors.New("NPC is waiting to respawn")
+	ErrItemNotConsumable = errors.New("item is not consumable")
+	ErrItemHasNoEffect   = errors.New("item has no usable effect")
 )
