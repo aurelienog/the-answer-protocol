@@ -154,10 +154,3 @@ type ItemUsed struct {
 	ItemID     string
 	StatChanges map[string]int
 }
-
-const (
-	CombatStatHP      = "hp"
-	CombatStatAttack  = "attack"
-	CombatStatDefense = "defense"
-	CombatStatSpeed   = "speed"
-)
