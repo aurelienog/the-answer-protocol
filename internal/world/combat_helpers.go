@@ -148,3 +148,17 @@ func (w *World) getCombatRecipientsLocked(combat *Combat) []string {
 
 	return recipients
 }
+
+func combatHasAvailableActionsLocked(combat *Combat) bool {
+	if combat == nil {
+		return false
+	}
+
+	for _, participant := range combat.Participants {
+		if AvailableActions(participant) > 0 {
+			return true
+		}
+	}
+
+	return false
+}

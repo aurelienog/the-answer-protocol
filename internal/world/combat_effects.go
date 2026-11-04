@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ApplyCombatEffect applies a temporary effect to a combat participant.
+// ApplyCombatEffect applies a generic temporary effect to a combat participant.
 func (w *World) ApplyCombatEffect(
 	combatID string,
 	participantID string,
@@ -22,25 +22,36 @@ func (w *World) ApplyCombatEffect(
 	participantID = strings.TrimSpace(participantID)
 	effect.ID = strings.TrimSpace(effect.ID)
 	effect.Name = strings.TrimSpace(effect.Name)
+	effect.TargetID = strings.TrimSpace(effect.TargetID)
+	effect.Stat = strings.ToLower(strings.TrimSpace(effect.Stat))
 
 	if combatID == "" || participantID == "" ||
-		effect.ID == "" || effect.Name == "" {
+		effect.ID == "" || effect.Name == "" ||
+		effect.TargetID == "" || effect.Stat == "" {
 		return nil, fmt.Errorf(
-			"%w: combat, participant and effect identifiers cannot be empty",
+			"%w: effect identifiers and stat cannot be empty",
 			ErrInvalidArgument,
 		)
 	}
 
-	if effect.RemainingRounds <= 0 {
+	if effect.TargetID != participantID {
 		return nil, fmt.Errorf(
-			"%w: effect duration must be greater than zero",
+			"%w: effect target does not match participant",
 			ErrInvalidArgument,
 		)
 	}
 
-	if effect.SpeedModifier == 0 {
+	if effect.Duration <= 0 || effect.RemainingTurns <= 0 ||
+		effect.RemainingTurns > effect.Duration {
 		return nil, fmt.Errorf(
-			"%w: speed modifier cannot be zero",
+			"%w: invalid effect duration",
+			ErrInvalidArgument,
+		)
+	}
+
+	if effect.Modifier == 0 && effect.ModifierPercent == 0 {
+		return nil, fmt.Errorf(
+			"%w: effect must have a modifier",
 			ErrInvalidArgument,
 		)
 	}
@@ -165,80 +176,112 @@ func (w *World) RemoveCombatEffect(
 	)
 }
 
-// UpdateCombatEffects reduces the remaining duration of active effects.
-// Effects reaching zero rounds are removed.
-func (w *World) UpdateCombatEffects(combatID string) (*Combat, error) {
-	if w == nil {
+// calculateEffectiveStat returns a participant's stat
+// after applying all active effects targeting that stat.
+func calculateEffectiveStat(
+	participant CombatParticipant,
+	stat string,
+) int {
+	stat = strings.ToLower(strings.TrimSpace(stat))
+
+	var baseStat int
+
+	switch stat {
+	case CombatStatHP:
+		baseStat = participant.Stats.HP
+	case CombatStatAttack:
+		baseStat = participant.Stats.Attack
+	case CombatStatDefense:
+		baseStat = participant.Stats.Defense
+	case CombatStatSpeed:
+		baseStat = participant.Stats.Speed
+	default:
+		return 0
+	}
+
+	flatModifier := 0
+	percentModifier := 0
+
+	for _, effect := range participant.Effects {
+		if effect.TargetID != participant.ID ||
+			effect.Stat != stat {
+			continue
+		}
+
+		flatModifier += effect.Modifier
+		percentModifier += effect.ModifierPercent
+	}
+
+	result := baseStat + flatModifier
+	result += result * percentModifier / 100
+
+	if result < 0 {
+		return 0
+	}
+
+	return result
+}
+
+
+// calculateEffectiveSpeed returns the participant's effective speed.
+func calculateEffectiveSpeed(participant CombatParticipant) int {
+	return calculateEffectiveStat(participant, CombatStatSpeed)
+}
+
+// updateCombatEffectsLocked updates effects belonging to the participant
+// whose turn is starting.
+// The caller must hold w.mu.
+func (w *World) updateCombatEffectsLocked(
+	combat *Combat,
+	participantID string,
+) (*Combat, error) {
+	if combat == nil || !combat.Active {
 		return nil, fmt.Errorf(
-			"%w: world is nil",
+			"%w: inactive combat",
 			ErrInvalidWorldState,
 		)
 	}
 
-	combatID = strings.TrimSpace(combatID)
-
-	if combatID == "" {
+	if strings.TrimSpace(participantID) == "" {
 		return nil, fmt.Errorf(
-			"%w: combat ID cannot be empty",
+			"%w: participant ID cannot be empty",
 			ErrInvalidArgument,
 		)
 	}
 
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return nil, fmt.Errorf(
-			"%w: active combat %q not found",
-			ErrInvalidWorldState,
-			combatID,
-		)
-	}
-
-	updatedCombat, err := w.updateCombatEffectsLocked(combat)
-	if err != nil {
-		return nil, err
-	}
-
-	return cloneCombat(updatedCombat), nil
-}
-
-// calculateEffectiveSpeed returns the participant's speed
-// after applying all active speed modifiers.
-func calculateEffectiveSpeed(participant CombatParticipant) int {
-	speed := participant.Stats.Speed
-
-	for _, effect := range participant.Effects {
-		speed += effect.SpeedModifier
-	}
-
-	if speed < 0 {
-		return 0
-	}
-
-	return speed
-}
-
-func (w *World) updateCombatEffectsLocked(combat *Combat) (*Combat, error) {
-	if combat == nil || !combat.Active {
-		return nil, fmt.Errorf("%w: inactive combat", ErrInvalidWorldState)
-	}
-
 	for i := range combat.Participants {
 		participant := &combat.Participants[i]
+
+		if participant.ID != participantID {
+			continue
+		}
+
+		if !participant.Alive || participant.Escaped {
+			return nil, fmt.Errorf(
+				"%w: participant %q cannot update effects",
+				ErrInvalidWorldState,
+				participantID,
+			)
+		}
+
 		activeEffects := participant.Effects[:0]
 
 		for _, effect := range participant.Effects {
-			effect.RemainingRounds--
+			effect.RemainingTurns--
 
-			if effect.RemainingRounds > 0 {
+			if effect.RemainingTurns > 0 {
 				activeEffects = append(activeEffects, effect)
 			}
 		}
 
 		participant.Effects = activeEffects
+
+		return combat, nil
 	}
 
-	return combat, nil
+	return nil, fmt.Errorf(
+		"%w: participant %q not found in combat",
+		ErrInvalidWorldState,
+		participantID,
+	)
 }

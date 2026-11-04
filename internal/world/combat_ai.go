@@ -8,7 +8,7 @@ import (
 
 // ExecuteNPCCombatTurn executes the current NPC's combat action.
 func (w *World) ExecuteNPCCombatTurn(
-    combatID string,
+	combatID string,
 ) (*Combat, int, *CombatAttack, *CombatDamage, *ParticipantDied, error) {
 	if w == nil {
 		return nil, 0, nil, nil, nil, fmt.Errorf(
@@ -19,10 +19,7 @@ func (w *World) ExecuteNPCCombatTurn(
 
 	combatID = strings.TrimSpace(combatID)
 	if combatID == "" {
-		return nil, 0, nil, nil, nil, fmt.Errorf(
-			"%w: combat ID cannot be empty",
-			ErrInvalidArgument,
-		)
+		return nil, 0, nil, nil, nil, ErrInvalidArgument
 	}
 
 	w.mu.Lock()
@@ -33,36 +30,25 @@ func (w *World) ExecuteNPCCombatTurn(
 		return nil, 0, nil, nil, nil, err
 	}
 
-	if len(combat.Participants) == 0 {
-		return nil, 0, nil, nil, nil, ErrInvalidWorldState
-	}
-
-	if combat.TurnIndex < 0 ||
+	if len(combat.Participants) == 0 ||
+		combat.TurnIndex < 0 ||
 		combat.TurnIndex >= len(combat.Participants) {
-		return nil, 0, nil, nil, nil, fmt.Errorf(
-			"%w: invalid combat turn index",
-			ErrInvalidWorldState,
-		)
+		return nil, 0, nil, nil, nil, ErrInvalidWorldState
 	}
 
 	// Get the current participant.
 	attacker := &combat.Participants[combat.TurnIndex]
 
 	// Only NPCs can execute this method.
-	if attacker.IsPlayer {
-		return nil, 0, nil, nil, nil, ErrInvalidCombatTurn
-	}
-
-	if !attacker.Alive || attacker.Escaped {
+	if attacker.IsPlayer ||
+		!attacker.Alive ||
+		attacker.Escaped ||
+		AvailableActions(*attacker) <= 0 {
 		return nil, 0, nil, nil, nil, ErrInvalidCombatTurn
 	}
 
 	if _, exists := w.npcs[attacker.ID]; !exists {
 		return nil, 0, nil, nil, nil, ErrNPCNotFound
-	}
-
-	if AvailableActions(*attacker) <= 0 {
-		return nil, 0, nil, nil, nil, ErrInvalidCombatTurn
 	}
 
 	// Select a player target using the combat AI priorities.
@@ -71,10 +57,36 @@ func (w *World) ExecuteNPCCombatTurn(
 		return nil, 0, nil, nil, nil, err
 	}
 
-	// Calculate and apply damage.
+	// Keep the target index because advancing the turn can restore
+	// the Participants slice during rollback.
+	targetIndex := -1
+
+	for i := range combat.Participants {
+		if combat.Participants[i].ID == target.ID {
+			targetIndex = i
+			break
+		}
+	}
+
+	if targetIndex == -1 {
+		return nil, 0, nil, nil, nil, ErrInvalidCombatTarget
+	}
+
+	// Preserve the target state in case action consumption fails.
+	previousHP := target.Stats.HP
+	previousAlive := target.Alive
+
+	player, exists := w.players[target.ID]
+	if !exists || player == nil {
+		return nil, 0, nil, nil, nil, ErrPlayerNotFound
+	}
+
+	previousEntityHP := player.CombatStats.HP
+
+	// Calculate damage using effective stats.
 	damage := calculateDamage(
-		attacker.Stats.Attack,
-		target.Stats.Defense,
+		calculateEffectiveStat(*attacker, CombatStatAttack),
+		calculateEffectiveStat(*target, CombatStatDefense),
 	)
 
 	damage, err = w.applyCombatDamageLocked(target, damage)
@@ -82,14 +94,16 @@ func (w *World) ExecuteNPCCombatTurn(
 		return nil, 0, nil, nil, nil, err
 	}
 
+	recipients := w.getCombatRecipientsLocked(combat)
+
 	attackEvent := &CombatAttack{
 		CombatID:     combat.ID,
 		AttackerID:   attacker.ID,
 		AttackerName: attacker.Name,
 		TargetID:     target.ID,
 		TargetName:   target.Name,
-		IsPlayer:     attacker.IsPlayer,
-		Recipients:   w.getCombatRecipientsLocked(combat),
+		IsPlayer:     false,
+		Recipients:   recipients,
 	}
 
 	damageEvent := &CombatDamage{
@@ -100,10 +114,9 @@ func (w *World) ExecuteNPCCombatTurn(
 		TargetName:   target.Name,
 		Damage:       damage,
 		RemainingHP:  target.Stats.HP,
-		Recipients:   w.getCombatRecipientsLocked(combat),
+		Recipients:   recipients,
 	}
 
-	// Generate a death event if the target was defeated.
 	var deathEvent *ParticipantDied
 
 	if !target.Alive {
@@ -113,18 +126,40 @@ func (w *World) ExecuteNPCCombatTurn(
 			ParticipantName: target.Name,
 			IsPlayer:        target.IsPlayer,
 			KillerID:        attacker.ID,
-			Recipients:      w.getCombatRecipientsLocked(combat),
+			Recipients:      recipients,
 		}
 	}
 
 	// Consume one NPC action.
-	w.consumeCombatActionLocked(combat, attacker)
+	if err := w.consumeCombatActionLocked(combat); err != nil {
+		// Restore the target participant.
+		combat.Participants[targetIndex].Stats.HP = previousHP
+		combat.Participants[targetIndex].Alive = previousAlive
 
-	return cloneCombat(combat), damage, attackEvent, damageEvent, deathEvent, nil
+		// Restore the player's HP.
+		player := w.players[target.ID]
+		player.CombatStats.HP = previousEntityHP
+
+		return nil, 0, nil, nil, nil, err
+	}
+
+	return cloneCombat(combat), damage,
+		attackEvent, damageEvent, deathEvent, nil
 }
 
-func selectNPCCombatTarget(combat *Combat) (*CombatParticipant, error) {
-	if combat == nil || len(combat.Participants) == 0 {
+// selectNPCCombatTarget selects a connected, living player participant.
+//
+// Priority:
+// 1. Lowest remaining HP.
+// 2. Closest position to the current turn.
+// 3. Random selection when a tie remains.
+func selectNPCCombatTarget(
+	combat *Combat,
+) (*CombatParticipant, error) {
+	if combat == nil ||
+		len(combat.Participants) == 0 ||
+		combat.TurnIndex < 0 ||
+		combat.TurnIndex >= len(combat.Participants) {
 		return nil, ErrInvalidCombatTarget
 	}
 
@@ -178,7 +213,10 @@ func selectNPCCombatTarget(combat *Combat) (*CombatParticipant, error) {
 				}
 
 				if distance == closest {
-					closestCandidates = append(closestCandidates, candidate)
+					closestCandidates = append(
+						closestCandidates,
+						candidate,
+					)
 				}
 
 				break

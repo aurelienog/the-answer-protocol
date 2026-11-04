@@ -5,10 +5,11 @@ import (
 	"strings"
 )
 
+// AttackCombatParticipant executes an attack against another combat participant.
 func (w *World) AttackCombatParticipant(
-    combatID string,
-    attackerID string,
-    targetID string,
+	combatID string,
+	attackerID string,
+	targetID string,
 ) (*Combat, int, *CombatAttack, *CombatDamage, *ParticipantDied, error) {
 	if w == nil {
 		return nil, 0, nil, nil, nil, fmt.Errorf(
@@ -42,29 +43,92 @@ func (w *World) AttackCombatParticipant(
 		return nil, 0, nil, nil, nil, err
 	}
 
-	target, err := w.getCombatTargetLocked(combat, targetID, attacker.IsPlayer)
+	target, err := w.getCombatTargetLocked(
+		combat,
+		targetID,
+		attacker.IsPlayer,
+	)
 	if err != nil {
 		return nil, 0, nil, nil, nil, err
 	}
 
+	// Keep the target index because advancing the turn can restore
+	// the Participants slice during rollback.
+	targetIndex := -1
+
+	for i := range combat.Participants {
+		if combat.Participants[i].ID == targetID {
+			targetIndex = i
+			break
+		}
+	}
+
+	if targetIndex == -1 {
+		return nil, 0, nil, nil, nil, ErrInvalidCombatTarget
+	}
+
+	// Calculate damage using effective stats.
 	damage := calculateDamage(
-		attacker.Stats.Attack,
-		target.Stats.Defense,
+		calculateEffectiveStat(*attacker, CombatStatAttack),
+		calculateEffectiveStat(*target, CombatStatDefense),
 	)
+
+	// Preserve the target state in case action consumption fails.
+	previousHP := target.Stats.HP
+	previousAlive := target.Alive
+
+	var previousEntityHP int
+
+	if target.IsPlayer {
+		player := w.players[target.ID]
+		if player == nil {
+			return nil, 0, nil, nil, nil, ErrPlayerNotFound
+		}
+		previousEntityHP = player.CombatStats.HP
+	} else {
+		npc, exists := w.npcs[target.ID]
+		if !exists {
+			return nil, 0, nil, nil, nil, ErrNPCNotFound
+		}
+		previousEntityHP = npc.CombatStats.HP
+	}
 
 	damage, err = w.applyCombatDamageLocked(target, damage)
 	if err != nil {
 		return nil, 0, nil, nil, nil, err
 	}
 
+	// Consume one action and advance the turn when necessary.
+	if err := w.consumeCombatActionLocked(combat); err != nil {
+		// Restore the target participant.
+		combat.Participants[targetIndex].Stats.HP = previousHP
+		combat.Participants[targetIndex].Alive = previousAlive
+
+		// Restore the entity's HP.
+		if target.IsPlayer {
+			w.players[targetID].CombatStats.HP = previousEntityHP
+		} else {
+			npc := w.npcs[targetID]
+			npc.CombatStats.HP = previousEntityHP
+			w.npcs[targetID] = npc
+		}
+
+		return nil, 0, nil, nil, nil, err
+	}
+
+	// Retrieve the target again after consuming the action.
+	target = &combat.Participants[targetIndex]
+
+	recipients := w.getCombatRecipientsLocked(combat)
+
 	attackEvent := &CombatAttack{
-		CombatID:    combat.ID,
-		AttackerID:  attacker.ID,
+		CombatID:     combat.ID,
+		AttackerID:   attacker.ID,
 		AttackerName: attacker.Name,
-		TargetID:    target.ID,
-		TargetName:  target.Name,
-		IsPlayer:    attacker.IsPlayer,
-		Recipients:  w.getCombatRecipientsLocked(combat),
+		TargetID:     target.ID,
+		TargetName:   target.Name,
+		IsPlayer:     attacker.IsPlayer,
+		Recipients:   recipients,
 	}
 
 	damageEvent := &CombatDamage{
@@ -75,7 +139,7 @@ func (w *World) AttackCombatParticipant(
 		TargetName:   target.Name,
 		Damage:       damage,
 		RemainingHP:  target.Stats.HP,
-		Recipients:   w.getCombatRecipientsLocked(combat),
+		Recipients:   recipients,
 	}
 
 	var deathEvent *ParticipantDied
@@ -87,15 +151,16 @@ func (w *World) AttackCombatParticipant(
 			ParticipantName: target.Name,
 			IsPlayer:        target.IsPlayer,
 			KillerID:        attacker.ID,
-			Recipients:      w.getCombatRecipientsLocked(combat),
+			Recipients:      recipients,
 		}
 	}
 
-	w.consumeCombatActionLocked(combat, attacker)
-
-	return cloneCombat(combat), damage, attackEvent, damageEvent, deathEvent, nil
+	return cloneCombat(combat), damage,
+		attackEvent, damageEvent, deathEvent, nil
 }
 
+// getActiveCombatLocked retrieves an active combat.
+// The caller must hold w.mu.
 func (w *World) getActiveCombatLocked(
 	combatID string,
 ) (*Combat, error) {
@@ -119,11 +184,14 @@ func (w *World) getActiveCombatLocked(
 	return combat, nil
 }
 
+// getCurrentAttackerLocked retrieves the participant whose turn is active.
+// The caller must hold w.mu.
 func (w *World) getCurrentAttackerLocked(
 	combat *Combat,
 	attackerID string,
 ) (*CombatParticipant, error) {
-	if len(combat.Participants) == 0 ||
+	if combat == nil ||
+		len(combat.Participants) == 0 ||
 		combat.TurnIndex < 0 ||
 		combat.TurnIndex >= len(combat.Participants) {
 		return nil, ErrInvalidWorldState
@@ -134,7 +202,6 @@ func (w *World) getCurrentAttackerLocked(
 	if attacker.ID != attackerID ||
 		!attacker.Alive ||
 		attacker.Escaped ||
-		!attacker.Connected ||
 		AvailableActions(*attacker) <= 0 {
 		return nil, ErrInvalidCombatTurn
 	}
@@ -142,6 +209,8 @@ func (w *World) getCurrentAttackerLocked(
 	return attacker, nil
 }
 
+// getCombatTargetLocked retrieves a valid opposing combat participant.
+// The caller must hold w.mu.
 func (w *World) getCombatTargetLocked(
 	combat *Combat,
 	targetID string,
@@ -161,7 +230,8 @@ func (w *World) getCombatTargetLocked(
 		}
 
 		if target.IsPlayer {
-			if _, exists := w.players[target.ID]; !exists {
+			player, exists := w.players[target.ID]
+			if !exists || player == nil {
 				return nil, ErrPlayerNotFound
 			}
 		} else {
@@ -176,6 +246,8 @@ func (w *World) getCombatTargetLocked(
 	return nil, ErrInvalidCombatTarget
 }
 
+// applyCombatDamageLocked applies damage and synchronizes the entity's HP.
+// The caller must hold w.mu.
 func (w *World) applyCombatDamageLocked(
 	target *CombatParticipant,
 	damage int,
@@ -193,6 +265,11 @@ func (w *World) applyCombatDamageLocked(
 		if _, exists := w.npcs[target.ID]; !exists {
 			return 0, ErrNPCNotFound
 		}
+	}
+
+	// Preserve minimum damage.
+	if damage < MinimumDamage {
+		damage = MinimumDamage
 	}
 
 	// Clamp damage to the target's remaining HP.
@@ -218,25 +295,4 @@ func (w *World) applyCombatDamageLocked(
 	w.npcs[target.ID] = npc
 
 	return damage, nil
-}
-
-func (w *World) consumeCombatActionLocked(
-	combat *Combat,
-	attacker *CombatParticipant,
-) {
-	attacker.SpeedPoints -= CombatActionCost
-
-	if AvailableActions(*attacker) == 0 {
-		combat.TurnIndex = (combat.TurnIndex + 1) % len(combat.Participants)
-	}
-}
-
-func calculateDamage(attack, defense int) int {
-	damage := attack - defense
-
-	if damage < MinimumDamage {
-		return MinimumDamage
-	}
-
-	return damage
 }

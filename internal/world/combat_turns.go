@@ -7,7 +7,7 @@ import (
 
 // InitializeCombatTurns initializes the first combat round.
 func (w *World) InitializeCombatTurns(
-    combatID string,
+	combatID string,
 ) (*Combat, *CombatTurnChanged, error) {
 	if w == nil {
 		return nil, nil, fmt.Errorf(
@@ -17,7 +17,6 @@ func (w *World) InitializeCombatTurns(
 	}
 
 	combatID = strings.TrimSpace(combatID)
-
 	if combatID == "" {
 		return nil, nil, fmt.Errorf(
 			"%w: combat ID cannot be empty",
@@ -58,6 +57,9 @@ func (w *World) InitializeCombatTurns(
 		)
 	}
 
+	firstTurnIndex := -1
+	highestSpeed := 0
+
 	for i := range combat.Participants {
 		participant := &combat.Participants[i]
 
@@ -69,25 +71,48 @@ func (w *World) InitializeCombatTurns(
 			continue
 		}
 
-		participant.SpeedPoints += calculateEffectiveSpeed(*participant)
+		effectiveSpeed := calculateEffectiveSpeed(*participant)
+		participant.SpeedPoints += effectiveSpeed
+
+		// Ties preserve the original participant order.
+		if firstTurnIndex == -1 || effectiveSpeed > highestSpeed {
+			highestSpeed = effectiveSpeed
+			firstTurnIndex = i
+		}
 	}
+
+	if firstTurnIndex == -1 {
+		return nil, nil, fmt.Errorf(
+			"%w: combat has no eligible participants",
+			ErrInvalidWorldState,
+		)
+	}
+
+	combat.TurnIndex = firstTurnIndex
 	combat.TurnsInitialized = true
 
 	event := w.buildCombatTurnChangedLocked(combat)
+
 	return cloneCombat(combat), event, nil
 }
 
-// StartCombatRound starts the next combat round.
-func (w *World) StartCombatRound(
-    combatID string,
+// NextCombatTurn advances to the next participant when necessary.
+func (w *World) NextCombatTurn(
+	combatID string,
 ) (*Combat, *CombatTurnChanged, error) {
 	if w == nil {
-		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
 	}
 
 	combatID = strings.TrimSpace(combatID)
 	if combatID == "" {
-		return nil, nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
+		return nil, nil, fmt.Errorf(
+			"%w: combat ID cannot be empty",
+			ErrInvalidArgument,
+		)
 	}
 
 	w.mu.Lock()
@@ -95,7 +120,11 @@ func (w *World) StartCombatRound(
 
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil || !combat.Active {
-		return nil, nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
+		return nil, nil, fmt.Errorf(
+			"%w: active combat %q not found",
+			ErrInvalidWorldState,
+			combatID,
+		)
 	}
 
 	if !combat.TurnsInitialized {
@@ -105,243 +134,249 @@ func (w *World) StartCombatRound(
 		)
 	}
 
-	if !combatHasLivingPlayersLocked(combat) {
+	if len(combat.Participants) == 0 {
 		return nil, nil, fmt.Errorf(
-			"%w: combat has no living players",
+			"%w: combat has no participants",
 			ErrInvalidWorldState,
 		)
 	}
 
-	if !combatHasLivingNPCsLocked(combat) {
+	if combat.TurnIndex < -1 ||
+		combat.TurnIndex >= len(combat.Participants) {
 		return nil, nil, fmt.Errorf(
-			"%w: all NPCs have been defeated",
+			"%w: invalid combat turn index",
 			ErrInvalidWorldState,
 		)
 	}
 
-	// Prevent advancing while participants still have available actions.
-	if combatHasAvailableActionsLocked(combat) {
-		return nil, nil, fmt.Errorf(
-			"%w: combat still has available actions",
-			ErrInvalidWorldState,
-		)
+	// Keep the current turn if the participant can still act.
+	if combat.TurnIndex >= 0 &&
+		AvailableActions(combat.Participants[combat.TurnIndex]) > 0 {
+		return cloneCombat(combat), nil, nil
 	}
 
-	// Advance to the next round.
-	combat.Round++
-
-	// Accumulate speed using the effects active at the start of the round.
-	for i := range combat.Participants {
-		participant := &combat.Participants[i]
-
-		if !participant.Alive ||
-			participant.Escaped ||
-			(participant.IsPlayer && !participant.Connected) {
-			continue
-		}
-
-		participant.SpeedPoints += calculateEffectiveSpeed(*participant)
-	}
-
-	// Decrease effect durations after their contribution to this round.
-	if _, err := w.updateCombatEffectsLocked(combat); err != nil {
+	advanced, err := w.advanceCombatTurnLocked(combat)
+	if err != nil {
 		return nil, nil, err
 	}
 
+	if !advanced {
+		return cloneCombat(combat), nil, nil
+	}
+
 	event := w.buildCombatTurnChangedLocked(combat)
+
 	return cloneCombat(combat), event, nil
 }
 
+// consumeCombatActionLocked consumes one action from the current participant.
+// The caller must hold w.mu.
+func (w *World) consumeCombatActionLocked(
+	combat *Combat,
+) error {
+	if combat == nil || !combat.Active || !combat.TurnsInitialized {
+		return fmt.Errorf(
+			"%w: invalid combat state",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if len(combat.Participants) == 0 ||
+		combat.TurnIndex < 0 ||
+		combat.TurnIndex >= len(combat.Participants) {
+		return fmt.Errorf(
+			"%w: invalid combat turn index",
+			ErrInvalidWorldState,
+		)
+	}
+
+	participantIndex := combat.TurnIndex
+	participant := &combat.Participants[participantIndex]
+
+	if AvailableActions(*participant) <= 0 {
+		return ErrInvalidCombatTurn
+	}
+
+	previousSpeedPoints := participant.SpeedPoints
+	participant.SpeedPoints -= CombatActionCost
+
+	// Advance only when the participant has exhausted their actions.
+	if AvailableActions(*participant) == 0 {
+		if _, err := w.advanceCombatTurnLocked(combat); err != nil {
+			combat.Participants[participantIndex].SpeedPoints = previousSpeedPoints
+			return err
+		}
+	}
+
+	return nil
+}
+
+// skipRemainingCombatActionsLocked consumes all remaining actions
+// from the current participant and advances the turn.
+// The caller must hold w.mu.
+func (w *World) skipRemainingCombatActionsLocked(
+	combat *Combat,
+) (*CombatTurnChanged, error) {
+	if combat == nil || !combat.Active || !combat.TurnsInitialized {
+		return nil, fmt.Errorf(
+			"%w: invalid combat state",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if len(combat.Participants) == 0 ||
+		combat.TurnIndex < 0 ||
+		combat.TurnIndex >= len(combat.Participants) {
+		return nil, fmt.Errorf(
+			"%w: invalid combat turn index",
+			ErrInvalidWorldState,
+		)
+	}
+
+	participantIndex := combat.TurnIndex
+	participant := &combat.Participants[participantIndex]
+
+	if AvailableActions(*participant) <= 0 {
+		return nil, ErrInvalidCombatTurn
+	}
+
+	previousSpeedPoints := participant.SpeedPoints
+	participant.SpeedPoints = 0
+
+	advanced, err := w.advanceCombatTurnLocked(combat)
+	if err != nil {
+		combat.Participants[participantIndex].SpeedPoints = previousSpeedPoints
+		return nil, err
+	}
+
+	if !advanced {
+		return nil, nil
+	}
+
+	return w.buildCombatTurnChangedLocked(combat), nil
+}
+
+// advanceCombatTurnLocked advances to the next participant with available actions.
+// It updates the effects of each eligible participant before checking their actions.
+// If an error occurs, it restores the original combat state.
+// The caller must hold w.mu.
+func (w *World) advanceCombatTurnLocked(
+	combat *Combat,
+) (bool, error) {
+	if combat == nil || len(combat.Participants) == 0 {
+		if combat != nil {
+			combat.TurnIndex = -1
+		}
+		return false, nil
+	}
+
+	if combat.TurnIndex < -1 ||
+		combat.TurnIndex >= len(combat.Participants) {
+		return false, fmt.Errorf(
+			"%w: invalid combat turn index",
+			ErrInvalidWorldState,
+		)
+	}
+
+	// Preserve the state in case advancing the turn fails.
+	previousParticipants := make(
+		[]CombatParticipant,
+		len(combat.Participants),
+	)
+
+	for i, participant := range combat.Participants {
+		previousParticipants[i] = participant
+		previousParticipants[i].Effects = append(
+			[]CombatEffect(nil),
+			participant.Effects...,
+		)
+	}
+
+	previousTurnIndex := combat.TurnIndex
+
+	rollback := func() {
+		combat.Participants = previousParticipants
+		combat.TurnIndex = previousTurnIndex
+	}
+
+	currentIndex := combat.TurnIndex
+
+	for offset := 1; offset <= len(combat.Participants); offset++ {
+		index := (currentIndex + offset) % len(combat.Participants)
+		participant := &combat.Participants[index]
+
+		if !participant.Alive || participant.Escaped {
+			continue
+		}
+
+		if participant.IsPlayer && !participant.Connected {
+			continue
+		}
+
+		participantID := participant.ID
+		combat.TurnIndex = index
+
+		// Effects expire at the beginning of the participant's next turn.
+		if _, err := w.updateCombatEffectsLocked(combat, participantID); err != nil {
+			rollback()
+			return false, err
+		}
+
+		// Refresh the pointer after updating effects.
+		participant = &combat.Participants[index]
+
+		if AvailableActions(*participant) <= 0 {
+			continue
+		}
+
+		return true, nil
+	}
+
+	combat.TurnIndex = -1
+
+	return false, nil
+}
+
+// buildCombatTurnChangedLocked creates a notification for the current turn.
+// The caller must hold w.mu.
+func (w *World) buildCombatTurnChangedLocked(
+	combat *Combat,
+) *CombatTurnChanged {
+	if combat == nil || len(combat.Participants) == 0 {
+		return nil
+	}
+
+	if combat.TurnIndex < 0 ||
+		combat.TurnIndex >= len(combat.Participants) {
+		return nil
+	}
+
+	participant := combat.Participants[combat.TurnIndex]
+	availableActions := AvailableActions(participant)
+
+	if availableActions <= 0 {
+		return nil
+	}
+
+	return &CombatTurnChanged{
+		CombatID:         combat.ID,
+		ParticipantID:   participant.ID,
+		ParticipantName: participant.Name,
+		IsPlayer:         participant.IsPlayer,
+		Round:            combat.Round,
+		AvailableActions: availableActions,
+		Recipients:       w.getCombatRecipientsLocked(combat),
+	}
+}
 
 // AvailableActions returns the number of available actions.
 func AvailableActions(participant CombatParticipant) int {
-    if !participant.Alive ||
+	if !participant.Alive ||
 		participant.Escaped ||
 		(participant.IsPlayer && !participant.Connected) ||
 		CombatActionCost <= 0 {
 		return 0
 	}
 
-    return participant.SpeedPoints / CombatActionCost
-}
-
-// NextCombatTurn finds the next participant with available actions.
-func (w *World) NextCombatTurn(
-    combatID string,
-) (*Combat, *CombatTurnChanged, error) {
-	if w == nil {
-		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
-	}
-
-	combatID = strings.TrimSpace(combatID)
-	if combatID == "" {
-		return nil, nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return nil, nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
-	}
-
-	if len(combat.Participants) == 0 {
-		return nil, nil, fmt.Errorf("%w: combat has no participants", ErrInvalidWorldState)
-	}
-
-	// Validate the current turn index.
-	if combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
-		return nil, nil, fmt.Errorf("%w: invalid combat turn index", ErrInvalidWorldState)
-	}
-
-	// Keep the current participant if they still have actions available.
-	current := &combat.Participants[combat.TurnIndex]
-
-	if AvailableActions(*current) > 0 {
-		return cloneCombat(combat), nil, nil
-	}
-
-	// Search circularly for the next participant with available actions.
-	for offset := 1; offset <= len(combat.Participants); offset++ {
-		index := (combat.TurnIndex + offset) % len(combat.Participants)
-		participant := &combat.Participants[index]
-
-		if AvailableActions(*participant) > 0 {
-			combat.TurnIndex = index
-			event := w.buildCombatTurnChangedLocked(combat)
-			return cloneCombat(combat), event, nil
-		}
-	}
-
-	return cloneCombat(combat), nil, nil
-}
-
-// EndCombatTurn consumes one action from the current participant.
-func (w *World) EndCombatTurn(combatID string) (*Combat, error) {
-	if w == nil {
-		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
-	}
-
-	combatID = strings.TrimSpace(combatID)
-	if combatID == "" {
-		return nil, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return nil, fmt.Errorf("%w: active combat %q not found", ErrInvalidWorldState, combatID)
-	}
-
-	if len(combat.Participants) == 0 ||
-		combat.TurnIndex < 0 ||
-		combat.TurnIndex >= len(combat.Participants) {
-		return nil, fmt.Errorf("%w: invalid combat turn index", ErrInvalidWorldState)
-	}
-
-	participant := &combat.Participants[combat.TurnIndex]
-
-	if AvailableActions(*participant) <= 0 {
-		return nil, fmt.Errorf(
-			"%w: participant %q has no available actions",
-			ErrInvalidWorldState,
-			participant.ID,
-		)
-	}
-
-	participant.SpeedPoints -= CombatActionCost
-
-	// If the participant has no more actions, move to the next participant.
-	if AvailableActions(*participant) == 0 {
-		combat.TurnIndex = (combat.TurnIndex + 1) % len(combat.Participants)
-	}
-
-	return cloneCombat(combat), nil
-}
-
-func combatHasAvailableActionsLocked(combat *Combat) bool {
-	if combat == nil {
-		return false
-	}
-
-	for _, participant := range combat.Participants {
-		if AvailableActions(participant) > 0 {
-			return true
-		}
-	}
-
-	return false
-}
-
-// IsCombatRoundComplete reports whether all active participants have exhausted their actions.
-func (w *World) IsCombatRoundComplete(combatID string) (bool, error) {
-	if w == nil {
-		return false, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
-	}
-
-	combatID = strings.TrimSpace(combatID)
-	if combatID == "" {
-		return false, fmt.Errorf("%w: combat ID cannot be empty", ErrInvalidArgument)
-	}
-
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return false, fmt.Errorf(
-			"%w: active combat %q not found",
-			ErrInvalidWorldState,
-			combatID,
-		)
-	}
-
-	if !combatHasLivingPlayersLocked(combat) {
-		return false, fmt.Errorf(
-			"%w: combat has no living players",
-			ErrInvalidWorldState,
-		)
-	}
-
-	if !combatHasLivingNPCsLocked(combat) {
-		return false, fmt.Errorf(
-			"%w: all NPCs have been defeated",
-			ErrInvalidWorldState,
-		)
-	}
-
-	return !combatHasAvailableActionsLocked(combat), nil
-}
-
-// buildCombatTurnChangedLocked creates a notification for the current turn.
-// The caller must hold w.mu.
-func (w *World) buildCombatTurnChangedLocked(
-    combat *Combat,
-) *CombatTurnChanged {
-    if combat == nil || len(combat.Participants) == 0 {
-        return nil
-    }
-
-    if combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
-        return nil
-    }
-
-    participant := combat.Participants[combat.TurnIndex]
-
-    if AvailableActions(participant) <= 0 {
-        return nil
-    }
-
-    return &CombatTurnChanged{
-        CombatID:        combat.ID,
-        ParticipantID:  participant.ID,
-        ParticipantName: participant.Name,
-        IsPlayer:         participant.IsPlayer,
-        Round:            combat.Round,
-        AvailableActions: AvailableActions(participant),
-        Recipients:       w.getCombatRecipientsLocked(combat),
-    }
+	return participant.SpeedPoints / CombatActionCost
 }

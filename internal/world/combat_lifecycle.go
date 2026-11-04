@@ -476,3 +476,136 @@ func (w *World) GetCombat(combatID string) (*Combat, error) {
 
 	return cloneCombat(combat), nil
 }
+
+// StartCombatRound starts the next combat round.
+func (w *World) StartCombatRound(
+	combatID string,
+) (*Combat, *CombatTurnChanged, error) {
+	if w == nil {
+		return nil, nil, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	combatID = strings.TrimSpace(combatID)
+	if combatID == "" {
+		return nil, nil, ErrInvalidArgument
+	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	combat, exists := w.combats[combatID]
+	if !exists || combat == nil || !combat.Active {
+		return nil, nil, fmt.Errorf(
+			"%w: active combat %q not found",
+			ErrInvalidWorldState,
+			combatID,
+		)
+	}
+
+	if !combat.TurnsInitialized {
+		return nil, nil, fmt.Errorf(
+			"%w: combat turns have not been initialized",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if !combatHasLivingPlayersLocked(combat) {
+		return nil, nil, fmt.Errorf(
+			"%w: combat has no living players",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if !combatHasLivingNPCsLocked(combat) {
+		return nil, nil, fmt.Errorf(
+			"%w: all NPCs have been defeated",
+			ErrInvalidWorldState,
+		)
+	}
+
+	// A new round can only start after all available actions are exhausted.
+	if combatHasAvailableActionsLocked(combat) {
+		return nil, nil, fmt.Errorf(
+			"%w: combat still has available actions",
+			ErrInvalidWorldState,
+		)
+	}
+
+	// Advance to the next round.
+	combat.Round++
+
+	// Accumulate speed using the effects currently active.
+	for i := range combat.Participants {
+		participant := &combat.Participants[i]
+
+		if !participant.Alive ||
+			participant.Escaped ||
+			(participant.IsPlayer && !participant.Connected) {
+			continue
+		}
+
+		participant.SpeedPoints += calculateEffectiveSpeed(*participant)
+	}
+
+	// Effects are not updated here.
+	// Their duration is reduced when their owner starts their next turn.
+
+	event := w.buildCombatTurnChangedLocked(combat)
+
+	return cloneCombat(combat), event, nil
+}
+
+// IsCombatRoundComplete reports whether all active participants have exhausted their actions.
+func (w *World) IsCombatRoundComplete(
+	combatID string,
+) (bool, error) {
+	if w == nil {
+		return false, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	combatID = strings.TrimSpace(combatID)
+	if combatID == "" {
+		return false, ErrInvalidArgument
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	combat, exists := w.combats[combatID]
+	if !exists || combat == nil || !combat.Active {
+		return false, fmt.Errorf(
+			"%w: active combat %q not found",
+			ErrInvalidWorldState,
+			combatID,
+		)
+	}
+
+	if !combat.TurnsInitialized {
+		return false, fmt.Errorf(
+			"%w: combat turns have not been initialized",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if !combatHasLivingPlayersLocked(combat) {
+		return false, fmt.Errorf(
+			"%w: combat has no living players",
+			ErrInvalidWorldState,
+		)
+	}
+
+	if !combatHasLivingNPCsLocked(combat) {
+		return false, fmt.Errorf(
+			"%w: all NPCs have been defeated",
+			ErrInvalidWorldState,
+		)
+	}
+
+	return !combatHasAvailableActionsLocked(combat), nil
+}
