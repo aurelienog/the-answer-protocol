@@ -120,8 +120,13 @@ func (w *World) StartCombat(
 					name,
 				)
 			}
-			// A group member already fighting elsewhere is excluded.
+
 			return nil
+		}
+
+		effectiveStats, err := w.calculatePlayerCombatStatsLocked(name)
+		if err != nil {
+			return err
 		}
 
 		participants = append(participants, CombatParticipant{
@@ -129,7 +134,7 @@ func (w *World) StartCombat(
 			Name:      name,
 			IsPlayer:  true,
 			Connected: true,
-			Stats:     groupPlayer.CombatStats,
+			Stats:     effectiveStats,
 			Alive:     true,
 		})
 
@@ -609,3 +614,4 @@ func (w *World) IsCombatRoundComplete(
 
 	return !combatHasAvailableActionsLocked(combat), nil
 }
+
