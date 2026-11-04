@@ -1,0 +1,89 @@
+el servidor debería validar toda la configuración del mundo antes de empezar a aceptar conexiones.
+
+Lo que nos ocurrió con las misiones es un buen ejemplo: el JSON podía contener una configuración sintácticamente válida, pero semánticamente inconsistente.
+
+Yo separaría la validación en dos niveles.
+1. Validación estructural del JSON
+Comprobar que:
+- El JSON tiene una estructura válida.
+- Los campos obligatorios están presentes.
+- Los tipos de datos son correctos.
+- No existen claves duplicadas.
+- No se permiten campos desconocidos (usando DisallowUnknownFields()).
+2. Validación semántica del mundo
+Una vez deserializado, comprobar las relaciones entre entidades.
+Elemento	Validación
+Rooms	Los IDs coinciden con sus claves y las salidas apuntan a salas existentes.
+Items	Los IDs coinciden con sus claves y los tipos son válidos.
+NPCs	Los IDs coinciden con sus claves y sus salas existen.
+NPC quests	Cada quest_id referencia una misión existente.
+Quest giver	Cada giver_npc_id referencia un NPC existente.
+Quest consistency	El quest_id del NPC coincide con el giver_npc_id de la misión.
+Quest items	Los objetos requeridos y las recompensas existen.
+Quest chains	Los next_quest_id apuntan a misiones existentes y no generan ciclos.
+Quest dialogues	Las claves de quest_dialogues corresponden a misiones válidas.
+Combat stats	Los valores de HP, MaxHP, Attack, Defense y Speed cumplen las restricciones del juego.
+
+
+Por ejemplo, esta inconsistencia debería impedir iniciar el servidor:
+{
+  "quest_id": "quest.gather_herbs"
+}
+
+Si quest.gather_herbs no existe en quests, la configuración debe rechazarse.
+
+Y también debería rechazarse si la misión tiene:
+{
+  "giver_npc_id": "quest_advisor"
+}
+
+pero el NPC que la referencia es herbalist.
+3. Dónde implementarlo
+Mi propuesta sería separar la validación de la carga:
+internal/
+└── world/
+    ├── world.go
+    ├── loader.go
+    ├── validation.go
+    └── validation_errors.go
+
+Responsabilidades:
+- loader.go: leer y deserializar world.json.
+- validation.go: comprobar la consistencia de los datos.
+- validation_errors.go: definir errores específicos de configuración.
+- world.go: mantener el estado y la lógica del mundo.
+El flujo de inicialización sería:
+        world.json
+             |
+             v
+       JSON Decoder
+             |
+             v
+    Structural Validation
+             |
+             v
+     Semantic Validation
+             |
+       +-----+-----+
+       |           |
+     Valid       Invalid
+       |           |
+       v           v
+ Initialize      Return Error
+   World         Stop Server
+       |
+       v
+  Start TCP Server
+
+4. Errores descriptivos
+Evitaría devolver simplemente invalid world configuration.
+
+Por ejemplo:
+world configuration error:
+npcs.herbalist.quest_id references quest "quest.gather_herbs",
+but quest.gather_herbs.giver_npc_id references "quest_advisor".
+
+Así sabremos inmediatamente qué campo hay que corregir.
+Mi recomendación: implementar primero un ValidateWorld() que reciba la configuración deserializada y devuelva errores descriptivos. Después lo conectamos al loader para que el servidor nunca arranque con un mundo inconsistente.
+
+Es importante mantener esta validación independiente de la lógica de gameplay: no debería modificar el mundo, solo comprobarlo.
