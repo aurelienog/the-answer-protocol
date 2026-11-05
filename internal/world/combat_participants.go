@@ -8,18 +8,18 @@ import (
 // JoinCombat allows an external player to join a combat
 // when help has been requested.
 func (w *World) JoinCombat(
-	playerName string,
-	combatID string,
-) (*Combat, error) {
+    playerName string,
+    combatID string,
+) (*Combat, *CombatPlayerJoined, error) {
 	if w == nil {
-		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	playerName = strings.TrimSpace(playerName)
 	combatID = strings.TrimSpace(combatID)
 
 	if playerName == "" || combatID == "" {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player name and combat ID cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -30,12 +30,12 @@ func (w *World) JoinCombat(
 
 	player, exists := w.players[playerName]
 	if !exists {
-		return nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+		return nil, nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat %q does not exist",
 			ErrInvalidWorldState,
 			combatID,
@@ -43,23 +43,40 @@ func (w *World) JoinCombat(
 	}
 
 	if !combat.Active {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat %q is not active",
 			ErrInvalidWorldState,
 			combatID,
 		)
 	}
 
-	if !combat.HelpRequested {
-		return nil, fmt.Errorf(
-			"%w: combat %q has not requested help",
-			ErrInvalidWorldState,
+	// Prevent players from rejoining a combat they previously participated in.
+	if w.playerAlreadyParticipatedInCombatLocked(playerName, combat) {
+		return nil, nil, fmt.Errorf(
+			"%w: player %q has already participated in combat %q",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+			combatID,
+		)
+	}
+
+	// Members of the initiating group can always join.
+    // Other players require a help request.
+    playerGroupID, inGroup := w.playerGroups[playerName]
+    isGroupMember := combat.GroupID != "" &&
+        inGroup &&
+        playerGroupID == combat.GroupID
+
+    if !isGroupMember && !combat.HelpRequested {
+		return nil, nil, fmt.Errorf(
+			"%w: combat %q",
+			ErrCombatHelpNotRequested,
 			combatID,
 		)
 	}
 
 	if player.RoomID != combat.RoomID {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player %q is not in combat room %q",
 			ErrInvalidWorldState,
 			playerName,
@@ -68,7 +85,7 @@ func (w *World) JoinCombat(
 	}
 
 	if player.CombatStats.HP <= 0 {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player %q is defeated",
 			ErrInvalidWorldState,
 			playerName,
@@ -76,24 +93,57 @@ func (w *World) JoinCombat(
 	}
 
 	if w.playerInActiveCombatLocked(playerName) {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: player %q is already in an active combat",
 			ErrInvalidWorldState,
 			playerName,
 		)
 	}
 
-	combat.Participants = append(
-		combat.Participants,
-		CombatParticipant{
-			ID:       playerName,
-			Name:     playerName,
-			IsPlayer: true,
-			Connected: true,
-			Stats:    player.CombatStats,
-			Alive:    true,
-		},
-	)
+	// Calculate effective stats, including equipment bonuses.
+    effectiveStats, err := w.calculatePlayerCombatStatsLocked(playerName)
+    if err != nil {
+        return nil, nil, err
+    }
 
-	return cloneCombat(combat), nil
+    combat.Participants = append(
+        combat.Participants,
+        CombatParticipant{
+            ID:          playerName,
+            Name:        playerName,
+            IsPlayer:    true,
+            Connected:   true,
+            Stats:       effectiveStats,
+            SpeedPoints: 0,
+            Alive:       true,
+        },
+    )
+
+	event := &CombatPlayerJoined{
+        CombatID:   combat.ID,
+        PlayerName: playerName,
+        Recipients: w.getCombatRecipientsLocked(combat),
+    }
+
+    return cloneCombat(combat), event, nil
+}
+
+// playerAlreadyParticipatedInCombatLocked reports whether a player
+// has already participated in the specified combat.
+// The caller must hold at least a read lock on w.mu.
+func (w *World) playerAlreadyParticipatedInCombatLocked(
+	playerName string,
+	combat *Combat,
+) bool {
+	if combat == nil {
+		return false
+	}
+
+	for _, participant := range combat.Participants {
+		if participant.IsPlayer && participant.ID == playerName {
+			return true
+		}
+	}
+
+	return false
 }

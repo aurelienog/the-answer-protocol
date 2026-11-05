@@ -154,3 +154,17 @@ type ItemUsed struct {
 	ItemID     string
 	StatChanges map[string]int
 }
+
+// CombatPlayerJoined represents a player joining an active combat.
+type CombatPlayerJoined struct {
+    CombatID   string
+    PlayerName string
+    Recipients []string
+}
+
+type CombatHelpRequested struct {
+	CombatID   string
+	PlayerName string
+	RoomID     string
+	Recipients []string
+}

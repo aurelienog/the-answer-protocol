@@ -146,21 +146,8 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	player, exists := w.players[playerName]
-	if !exists {
+	if _, exists := w.players[playerName]; !exists {
 		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
-	}
-
-	roomID := player.RoomID
-
-	room, exists := w.rooms[roomID]
-	if !exists {
-		return fmt.Errorf(
-			"%w: player %q references nonexistent room %q",
-			ErrInvalidWorldState,
-			playerName,
-			roomID,
-		)
 	}
 
 	quest, exists := w.quests[questID]
@@ -168,8 +155,7 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 		return fmt.Errorf("%w: %q", ErrQuestNotFound, questID)
 	}
 
-	playerQuests := w.playerQuests[playerName]
-	progress, exists := playerQuests[questID]
+	progress, exists := w.playerQuests[playerName][questID]
 	if !exists || progress.Status != QuestStatusActive {
 		return fmt.Errorf(
 			"%w: quest %q is not active for player %q",
@@ -179,7 +165,15 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 		)
 	}
 
-	// The quest giver must be in the player's current room.
+	room, exists := w.rooms[w.players[playerName].RoomID]
+	if !exists {
+		return fmt.Errorf(
+			"%w: player %q references nonexistent room",
+			ErrInvalidWorldState,
+			playerName,
+		)
+	}
+
 	giverPresent := false
 	for _, npcID := range room.NPCs {
 		if npcID == quest.GiverNPCID {
@@ -196,7 +190,36 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 		)
 	}
 
-	// Find the required item in the player's inventory, if any.
+	resolved, err := w.resolveQuestLocked(playerName, quest)
+	if err != nil {
+		return err
+	}
+
+	if !resolved {
+		return fmt.Errorf(
+			"%w: player %q does not have required item %q",
+			ErrItemNotInInventory,
+			playerName,
+			quest.RequiredItemID,
+		)
+	}
+
+	return nil
+}
+
+// resolveQuestLocked completes an active quest and grants its rewards.
+// The caller must already hold w.mu.Lock().
+func (w *World) resolveQuestLocked(
+	playerName string,
+	quest Quest,
+) (bool, error) {
+	playerQuests := w.playerQuests[playerName]
+	progress, exists := playerQuests[quest.ID]
+
+	if !exists || progress.Status != QuestStatusActive {
+		return false, nil
+	}
+
 	inventory := w.playerInventories[playerName]
 	requiredItemIndex := -1
 
@@ -204,7 +227,7 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 		for i, instanceID := range inventory {
 			instance, exists := w.itemInstances[instanceID]
 			if !exists {
-				return fmt.Errorf(
+				return false, fmt.Errorf(
 					"%w: inventory references nonexistent instance %q",
 					ErrInvalidWorldState,
 					instanceID,
@@ -212,7 +235,7 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 			}
 
 			if _, exists := w.items[instance.ItemID]; !exists {
-				return fmt.Errorf(
+				return false, fmt.Errorf(
 					"%w: instance %q references nonexistent item %q",
 					ErrInvalidWorldState,
 					instanceID,
@@ -227,28 +250,23 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 		}
 
 		if requiredItemIndex == -1 {
-			return fmt.Errorf(
-				"%w: player %q does not have required item %q",
-				ErrItemNotInInventory,
-				playerName,
-				quest.RequiredItemID,
-			)
+			return false, nil
 		}
 	}
 
-	// Validate all reward definitions before changing the world.
+	// Validate all reward definitions before modifying the world.
 	for _, rewardItemID := range quest.RewardItemIDs {
 		if _, exists := w.items[rewardItemID]; !exists {
-			return fmt.Errorf(
+			return false, fmt.Errorf(
 				"%w: quest %q references nonexistent reward item %q",
 				ErrInvalidWorldState,
-				questID,
+				quest.ID,
 				rewardItemID,
 			)
 		}
 	}
 
-	// Prepare unique reward instance IDs without registering instances yet.
+	// Prepare reward instances before applying changes.
 	rewardInstances := make([]ItemInstance, 0, len(quest.RewardItemIDs))
 	nextID := w.nextItemInstanceID
 
@@ -270,7 +288,7 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 		})
 	}
 
-	// Apply the changes only after validation succeeds.
+	// Apply changes after validation succeeds.
 	if quest.ConsumeRequiredItem && requiredItemIndex >= 0 {
 		inventory = append(
 			inventory[:requiredItemIndex],
@@ -290,8 +308,9 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 	}
 
 	w.nextItemInstanceID = nextID
-	progress.Status = QuestStatusCompleted
-	w.playerQuests[playerName][questID] = progress
 
-	return nil
+	progress.Status = QuestStatusCompleted
+	w.playerQuests[playerName][quest.ID] = progress
+
+	return true, nil
 }

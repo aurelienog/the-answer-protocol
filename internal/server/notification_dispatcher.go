@@ -2,8 +2,8 @@ package server
 
 import (
 	"log"
-	"strings"
 	"strconv"
+	"strings"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
@@ -51,7 +51,7 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 		dispatcher.handleUniqueItemsReturned(event)
 
 	case world.GroupInvite:
-    	dispatcher.handleGroupInvite(event)
+		dispatcher.handleGroupInvite(event)
 
 	case world.GroupJoin:
 		dispatcher.handleGroupJoin(event)
@@ -60,23 +60,32 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 		dispatcher.handleGroupLeave(event)
 
 	case world.ChatMessage:
-    	dispatcher.handleChatMessage(event)
+		dispatcher.handleChatMessage(event)
 
 	case world.ParticipantDied:
-    	dispatcher.handleParticipantDied(event)		
+		dispatcher.handleParticipantDied(event)
 
 	case world.CombatStarted:
-    	dispatcher.handleCombatStarted(event)
+		dispatcher.handleCombatStarted(event)
 
 	case world.CombatAttack:
-    	dispatcher.handleCombatAttack(event)
+		dispatcher.handleCombatAttack(event)
 
 	case world.CombatDamage:
-    	dispatcher.handleCombatDamage(event)
+		dispatcher.handleCombatDamage(event)
+
+	case world.CombatHelpRequested:
+		dispatcher.handleCombatHelpRequested(event)
+
 	case world.PlayerFled:
-    	dispatcher.handlePlayerFled(event)
+		dispatcher.handlePlayerFled(event)
+
 	case world.CombatTurnChanged:
-    	dispatcher.handleCombatTurnChanged(event)
+		dispatcher.handleCombatTurnChanged(event)
+
+	case world.CombatPlayerJoined:
+		dispatcher.handleCombatPlayerJoined(event)
+
 	case world.ItemUsed:
 		dispatcher.handleItemUsed(event)
 	}
@@ -183,142 +192,142 @@ func (dispatcher *NotificationDispatcher) handleGroupLeave(event world.GroupLeav
 }
 
 func (dispatcher *NotificationDispatcher) handleChatMessage(event world.ChatMessage) {
-    data := "CHAT player=" + event.PlayerName + " message=" + event.Message
-    notification := protocol.EVT(event.Scope, data)
+	data := "CHAT player=" + event.PlayerName + " message=" + event.Message
+	notification := protocol.EVT(event.Scope, data)
 
-    for _, playerName := range event.Recipients {
-        session, exists := dispatcher.registry.GetByName(playerName)
-        if !exists {
-            continue
-        }
+	for _, playerName := range event.Recipients {
+		session, exists := dispatcher.registry.GetByName(playerName)
+		if !exists {
+			continue
+		}
 
-        if err := dispatcher.registry.Queue(session.ID, notification); err != nil {
-            log.Printf(
-                "Failed to queue chat message for %q: %v",
-                playerName,
-                err,
-            )
-        }
-    }
+		if err := dispatcher.registry.Queue(session.ID, notification); err != nil {
+			log.Printf(
+				"Failed to queue chat message for %q: %v",
+				playerName,
+				err,
+			)
+		}
+	}
 }
 
 func (dispatcher *NotificationDispatcher) handleParticipantDied(
-    event world.ParticipantDied,
+	event world.ParticipantDied,
 ) {
-    participantType := "NPC"
+	participantType := "NPC"
 
-    if event.IsPlayer {
-        participantType = "PLAYER"
-    }
+	if event.IsPlayer {
+		participantType = "PLAYER"
+	}
 
-    notification := protocol.EVT(
-        "COMBAT",
-        participantType+"_DIED participant="+event.ParticipantName+
-            " killer="+event.KillerID,
-    )
+	notification := protocol.EVT(
+		"COMBAT",
+		participantType+"_DIED participant="+event.ParticipantName+
+			" killer="+event.KillerID,
+	)
 
-    dispatcher.notifyPlayers(
-        event.Recipients,
-        "",
-        notification,
-    )
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		"",
+		notification,
+	)
 }
 
 func (dispatcher *NotificationDispatcher) handleCombatStarted(
-    event world.CombatStarted,
+	event world.CombatStarted,
 ) {
-    participants := strings.Join(event.Participants, ",")
+	participants := strings.Join(event.Participants, ",")
 
-    notification := protocol.EVT(
-        "COMBAT",
-        "STARTED combat="+event.CombatID+
-            " room="+event.RoomID+
-            " participants="+participants,
-    )
+	notification := protocol.EVT(
+		"COMBAT",
+		"STARTED combat="+event.CombatID+
+			" room="+event.RoomID+
+			" participants="+participants,
+	)
 
-    dispatcher.notifyPlayers(
-        event.Recipients,
-        "",
-        notification,
-    )
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		"",
+		notification,
+	)
 }
 
 func (dispatcher *NotificationDispatcher) handleCombatAttack(
-    event world.CombatAttack,
+	event world.CombatAttack,
 ) {
-    attackerType := "NPC"
+	attackerType := "NPC"
 
-    if event.IsPlayer {
-        attackerType = "PLAYER"
-    }
+	if event.IsPlayer {
+		attackerType = "PLAYER"
+	}
 
-    notification := protocol.EVT(
-        "COMBAT",
-        "ATTACK attacker_type="+attackerType+
-            " attacker="+event.AttackerName+
-            " target="+event.TargetName,
-    )
+	notification := protocol.EVT(
+		"COMBAT",
+		"ATTACK attacker_type="+attackerType+
+			" attacker="+event.AttackerName+
+			" target="+event.TargetName,
+	)
 
-    dispatcher.notifyPlayers(
-        event.Recipients,
-        "",
-        notification,
-    )
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		"",
+		notification,
+	)
 }
 
 func (dispatcher *NotificationDispatcher) handleCombatDamage(
-    event world.CombatDamage,
+	event world.CombatDamage,
 ) {
-    notification := protocol.EVT(
-        "COMBAT",
-        "DAMAGE attacker="+event.AttackerName+
-            " target="+event.TargetName+
-            " amount="+strconv.Itoa(event.Damage)+
-            " remaining_hp="+strconv.Itoa(event.RemainingHP),
-    )
+	notification := protocol.EVT(
+		"COMBAT",
+		"DAMAGE attacker="+event.AttackerName+
+			" target="+event.TargetName+
+			" amount="+strconv.Itoa(event.Damage)+
+			" remaining_hp="+strconv.Itoa(event.RemainingHP),
+	)
 
-    dispatcher.notifyPlayers(event.Recipients, "", notification)
+	dispatcher.notifyPlayers(event.Recipients, "", notification)
 }
 
 func (dispatcher *NotificationDispatcher) handlePlayerFled(
-    event world.PlayerFled,
+	event world.PlayerFled,
 ) {
-    notification := protocol.EVT(
-        "COMBAT",
-        "PLAYER_FLED player="+event.PlayerName+
-            " damage="+strconv.Itoa(event.Damage)+
-            " remaining_hp="+strconv.Itoa(event.RemainingHP),
-    )
+	notification := protocol.EVT(
+		"COMBAT",
+		"PLAYER_FLED player="+event.PlayerName+
+			" damage="+strconv.Itoa(event.Damage)+
+			" remaining_hp="+strconv.Itoa(event.RemainingHP),
+	)
 
-    dispatcher.notifyPlayers(
-        event.Recipients,
-        event.PlayerName,
-        notification,
-    )
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		event.PlayerName,
+		notification,
+	)
 }
 
 func (dispatcher *NotificationDispatcher) handleCombatTurnChanged(
-    event world.CombatTurnChanged,
+	event world.CombatTurnChanged,
 ) {
-    participantType := "NPC"
+	participantType := "NPC"
 
-    if event.IsPlayer {
-        participantType = "PLAYER"
-    }
+	if event.IsPlayer {
+		participantType = "PLAYER"
+	}
 
-    notification := protocol.EVT(
-        "COMBAT",
-        "TURN participant_type="+participantType+
-            " participant="+event.ParticipantName+
-            " round="+strconv.Itoa(event.Round)+
-            " actions="+strconv.Itoa(event.AvailableActions),
-    )
+	notification := protocol.EVT(
+		"COMBAT",
+		"TURN participant_type="+participantType+
+			" participant="+event.ParticipantName+
+			" round="+strconv.Itoa(event.Round)+
+			" actions="+strconv.Itoa(event.AvailableActions),
+	)
 
-    dispatcher.notifyPlayers(
-        event.Recipients,
-        "",
-        notification,
-    )
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		"",
+		notification,
+	)
 }
 
 func (dispatcher *NotificationDispatcher) handleItemUsed(
@@ -346,4 +355,37 @@ func (dispatcher *NotificationDispatcher) handleItemUsed(
 			err,
 		)
 	}
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatHelpRequested(
+	event world.CombatHelpRequested,
+) {
+	notification := protocol.EVT(
+		"COMBAT",
+		"HELP_REQUESTED player="+event.PlayerName+
+			" combat="+event.CombatID+
+			" room="+event.RoomID,
+	)
+
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		event.PlayerName,
+		notification,
+	)
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatPlayerJoined(
+	event world.CombatPlayerJoined,
+) {
+	notification := protocol.EVT(
+		"COMBAT",
+		"PLAYER_JOINED player="+event.PlayerName+
+			" combat="+event.CombatID,
+	)
+
+	dispatcher.notifyPlayers(
+		event.Recipients,
+		"",
+		notification,
+	)
 }

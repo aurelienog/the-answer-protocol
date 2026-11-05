@@ -29,6 +29,7 @@ var (
 	ErrNPCAlreadyInCombat    = errors.New("NPC is already in an active combat")
 	ErrInvalidCombatTurn = errors.New("invalid combat turn")
 	ErrInvalidCombatTarget = errors.New("invalid combat target")
+	ErrCombatHelpNotRequested = errors.New("combat help has not been requested")
 	ErrNPCRespawning = errors.New("NPC is waiting to respawn")
 	ErrItemNotConsumable = errors.New("item is not consumable")
 	ErrItemHasNoEffect   = errors.New("item has no usable effect")

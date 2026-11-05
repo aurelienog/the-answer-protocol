@@ -177,6 +177,17 @@ func (w *World) TalkToNPC(
 		playerQuests := w.playerQuests[playerName]
 		progress, hasProgress := playerQuests[quest.ID]
 
+		if hasProgress && progress.Status == QuestStatusActive {
+			resolved, err := w.resolveQuestLocked(playerName, quest)
+			if err != nil {
+				return NPCConversation{}, err
+			}
+
+			if resolved {
+				progress = w.playerQuests[playerName][quest.ID]
+			}
+		}
+
 		var status QuestStatus
 
 		if hasProgress {

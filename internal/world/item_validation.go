@@ -22,13 +22,43 @@ func (w *World) validateItems() error {
 		}
 
 		switch item.Type {
-		case ItemTypeCommon, ItemTypeQuest, ItemTypeUnique:
+		case ItemTypeCommon,
+			ItemTypeQuest,
+			ItemTypeUnique,
+			ItemTypeEquipment,
+			ItemTypeConsumable:
 		default:
 			return fmt.Errorf(
 				"item %q has invalid type %q",
 				key,
 				item.Type,
 			)
+		}
+
+		// Validate combat attributes.
+		if item.Attack < 0 ||
+			item.Defense < 0 ||
+			item.Speed < 0 ||
+			item.HP < 0 {
+			return fmt.Errorf(
+				"item %q has negative combat attributes",
+				key,
+			)
+		}
+
+		// Equipment and consumables must provide at least one attribute.
+		if item.Type == ItemTypeEquipment ||
+			item.Type == ItemTypeConsumable {
+			if item.Attack == 0 &&
+				item.Defense == 0 &&
+				item.Speed == 0 &&
+				item.HP == 0 {
+				return fmt.Errorf(
+					"item %q of type %q has no combat attributes",
+					key,
+					item.Type,
+				)
+			}
 		}
 	}
 

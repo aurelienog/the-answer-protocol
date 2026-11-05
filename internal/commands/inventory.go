@@ -23,7 +23,7 @@ func (c *InventoryCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
-	items, err := ctx.World.GetInventory(ctx.PlayerName)
+	items, err := ctx.World.GetInventoryWithQuantities(ctx.PlayerName)
 	if err != nil {
 		switch {
 		case errors.Is(err, world.ErrPlayerNotFound),
@@ -35,12 +35,7 @@ func (c *InventoryCommand) Execute(ctx *Context) (protocol.Message, error) {
 		}
 	}
 
-	itemIDs := make([]string, 0, len(items))
-	for _, item := range items {
-		itemIDs = append(itemIDs, item.ID)
-	}
-
-	payload, err := json.Marshal(itemIDs)
+	payload, err := json.Marshal(items)
 	if err != nil {
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}

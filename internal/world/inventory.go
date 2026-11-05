@@ -2,6 +2,11 @@ package world
 
 import "fmt"
 
+type InventoryItem struct {
+    ID       string `json:"id"`
+    Quantity int    `json:"quantity"`
+}
+
 // TakeItem moves one concrete item instance from the player's current room
 // to their inventory.
 func (w *World) TakeItem(playerName, itemID string) error {
@@ -180,8 +185,9 @@ func (w *World) DropItem(playerName, itemID string) (ItemDropped, error) {
 		)
 	}
 
-	// Only common items can be dropped.
-	if item.Type != ItemTypeCommon {
+	// Only common items and consumables can be dropped.
+	if item.Type != ItemTypeCommon &&
+		item.Type != ItemTypeConsumable {
 		return ItemDropped{}, fmt.Errorf(
 			"%w: item %q has type %q",
 			ErrItemCannotBeDropped,
@@ -289,4 +295,31 @@ func (w *World) createItemInstanceLocked(itemID string) (string, error) {
 
 		return instanceID, nil
 	}
+}
+
+// GetInventoryWithQuantities returns the inventory grouped by item ID.
+func (w *World) GetInventoryWithQuantities(
+    playerName string,
+) ([]InventoryItem, error) {
+    items, err := w.GetInventory(playerName)
+    if err != nil {
+        return nil, err
+    }
+
+    quantities := make(map[string]int)
+
+    for _, item := range items {
+        quantities[item.ID]++
+    }
+
+    result := make([]InventoryItem, 0, len(quantities))
+
+    for id, quantity := range quantities {
+        result = append(result, InventoryItem{
+            ID:       id,
+            Quantity: quantity,
+        })
+    }
+
+    return result, nil
 }

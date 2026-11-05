@@ -42,8 +42,15 @@ func (c *CombatCommand) Execute(ctx *Context) (protocol.Message, error) {
 	
 	case "DEFEND":
     	return c.handleDefend(ctx)
+
 	case "USE":
     	return c.handleUse(ctx)
+
+	case "HELP":
+		return c.handleHelp(ctx)
+
+	case "JOIN":
+		return c.handleJoin(ctx)
 
 	default:
 		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
@@ -236,6 +243,12 @@ func mapCombatError(err error) protocol.Message {
 		return protocol.ERR(
 			protocol.CodeInvalidArguments,
 			"AMBIGUOUS_ITEM_NAME",
+		)
+
+	case errors.Is(err, world.ErrCombatHelpNotRequested):
+		return protocol.ERR(
+			protocol.CodeCombatHelpRequired,
+			"COMBAT_HELP_REQUIRED",
 		)
 
 	default:
@@ -501,4 +514,63 @@ func (c *CombatCommand) handleUse(
 	response += " combat=" + result.ID
 
 	return protocol.OK(response), nil
+}
+
+func (c *CombatCommand) handleHelp(
+	ctx *Context,
+) (protocol.Message, error) {
+	if len(ctx.RawArgs) != 1 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
+	combat, event, err := ctx.World.RequestCombatHelp(ctx.PlayerName)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
+
+	if event != nil && ctx.Events != nil {
+		ctx.Events.Publish(*event)
+	}
+
+	return protocol.OK(
+		"help_requested=true combat=" + combat.ID,
+	), nil
+}
+
+func (c *CombatCommand) handleJoin(
+	ctx *Context,
+) (protocol.Message, error) {
+	if len(ctx.RawArgs) != 2 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
+	combatID := strings.TrimSpace(ctx.RawArgs[1])
+	if combatID == "" {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
+	combat, event, err := ctx.World.JoinCombat(
+		ctx.PlayerName,
+		combatID,
+	)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
+
+	if event != nil && ctx.Events != nil {
+		ctx.Events.Publish(*event)
+	}
+
+	return protocol.OK(
+		"joined=true combat=" + combat.ID,
+	), nil
 }
