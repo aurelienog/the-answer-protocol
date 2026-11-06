@@ -32,7 +32,7 @@ func createTestWorld(t *testing.T) *world.World {
 				Name:        "Harbor Square",
 				Description: "A small harbor square.",
 				Exits:       map[string]string{},
-				Items:       []string{},
+				Items:       map[string]int{},
 				NPCs:        []string{},
 			},
 		},
