@@ -1,8 +1,10 @@
 package world
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -21,27 +23,51 @@ func Load(path string) (*World, error) {
 		Quests map[string]Quest `json:"quests"`
 	}
 
-	if err := json.Unmarshal(data, &definition); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&definition); err != nil {
 		return nil, fmt.Errorf("decode world file %q: %w", path, err)
 	}
 
+	// Reject additional JSON values after the world definition.
+	var extra interface{}
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err == nil {
+			return nil, fmt.Errorf(
+				"decode world file %q: multiple JSON values are not allowed",
+				path,
+			)
+		}
+
+		return nil, fmt.Errorf(
+			"decode world file %q: unexpected trailing content: %w",
+			path,
+			err,
+		)
+	}
+
 	gameWorld := &World{
-		rooms:              definition.Rooms,
-		npcs:               definition.NPCs,
-		quests:             definition.Quests,
-		players:            make(map[string]*Player),
-		items:              definition.Items,
-		itemInstances:      make(map[string]ItemInstance),
-		roomItemInstances:  make(map[string][]string),
-		playerInventories:  make(map[string][]string),
-		playerQuests:       make(map[string]map[string]PlayerQuest),
-		groups:             make(map[string]Group),
-		playerGroups:       make(map[string]string),
-		combats: 			make(map[string]*Combat),
+		rooms:             definition.Rooms,
+		npcs:              definition.NPCs,
+		quests:            definition.Quests,
+		players:           make(map[string]*Player),
+		items:             definition.Items,
+		itemInstances:     make(map[string]ItemInstance),
+		roomItemInstances: make(map[string][]string),
+		playerInventories: make(map[string][]string),
+		playerQuests:      make(map[string]map[string]PlayerQuest),
+		groups:            make(map[string]Group),
+		playerGroups:      make(map[string]string),
+		combats:           make(map[string]*Combat),
 	}
 
 	if err := gameWorld.initializeItemInstances(); err != nil {
-		return nil, fmt.Errorf("initialize item instances in world file %q: %w", path, err)
+		return nil, fmt.Errorf(
+			"initialize item instances in world file %q: %w",
+			path,
+			err,
+		)
 	}
 
 	if err := gameWorld.Validate(); err != nil {
