@@ -3,7 +3,6 @@ package world
 import (
 	"fmt"
 	"strings"
-	"time"
 )
 
 // StartCombat starts a combat against a hostile NPC.
@@ -267,176 +266,6 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) {
 	}
 }
 
-// EndCombat finishes a combat, synchronizes final HP
-// and distributes rewards if the players win.
-func (w *World) EndCombat(combatID string) (*Combat, error) {
-	if w == nil {
-		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
-	}
-
-	combatID = strings.TrimSpace(combatID)
-	if combatID == "" {
-		return nil, fmt.Errorf(
-			"%w: combat ID cannot be empty",
-			ErrInvalidArgument,
-		)
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return nil, fmt.Errorf(
-			"%w: active combat %q not found",
-			ErrInvalidWorldState,
-			combatID,
-		)
-	}
-
-	// Collect NPC participants and determine whether any remain alive.
-	defeatedNPCs := make([]NPC, 0)
-	hasNPC := false
-	hasLivingNPC := false
-
-	for _, participant := range combat.Participants {
-		if participant.IsPlayer {
-			continue
-		}
-
-		hasNPC = true
-
-		npc, exists := w.npcs[participant.ID]
-		if !exists {
-			return nil, fmt.Errorf(
-				"%w: NPC %q not found",
-				ErrInvalidWorldState,
-				participant.ID,
-			)
-		}
-
-		if participant.Alive && participant.Stats.HP > 0 {
-			hasLivingNPC = true
-		} else {
-			defeatedNPCs = append(defeatedNPCs, npc)
-		}
-	}
-
-	if !hasNPC {
-		return nil, fmt.Errorf(
-			"%w: combat has no NPC participants",
-			ErrInvalidWorldState,
-		)
-	}
-
-	// Determine the combat outcome.
-	playersActive := combatHasActivePlayersLocked(combat)
-
-	if hasLivingNPC && playersActive {
-		return nil, fmt.Errorf(
-			"%w: combat is still ongoing",
-			ErrInvalidWorldState,
-		)
-	}
-
-	victory := !hasLivingNPC
-
-	// Validate connected players before modifying their state.
-	for _, participant := range combat.Participants {
-		if !participant.IsPlayer || !participant.Connected {
-			continue
-		}
-
-		if _, exists := w.players[participant.ID]; !exists {
-			return nil, fmt.Errorf(
-				"%w: player %q not found",
-				ErrInvalidWorldState,
-				participant.ID,
-			)
-		}
-	}
-
-	// Validate rewards before modifying the world.
-	if victory {
-		if err := w.validateCombatRewardsLocked(combat, defeatedNPCs); err != nil {
-			return nil, err
-		}
-	} else {
-		// Validate the respawn room before modifying the world.
-		if _, exists := w.rooms[InitialRoomID]; !exists {
-			return nil, fmt.Errorf(
-				"%w: initial room %q not found",
-				ErrInvalidWorldState,
-				InitialRoomID,
-			)
-		}
-	}
-
-	// Synchronize NPC HP and schedule respawn when defeated.
-	for _, participant := range combat.Participants {
-		if participant.IsPlayer {
-			continue
-		}
-
-		npc := w.npcs[participant.ID]
-		npc.CombatStats.HP = participant.Stats.HP
-
-		if npc.CombatStats.HP <= 0 {
-			respawnSeconds := npc.RespawnSeconds
-			if respawnSeconds <= 0 {
-				respawnSeconds = DefaultNPCRespawnSeconds
-			}
-
-			npc.RespawnAt = time.Now().Add(
-				time.Duration(respawnSeconds) * time.Second,
-			).Unix()
-		}
-
-		w.npcs[participant.ID] = npc
-	}
-
-	// Synchronize connected players.
-	for _, participant := range combat.Participants {
-		if !participant.IsPlayer || !participant.Connected {
-			continue
-		}
-
-		player := w.players[participant.ID]
-
-		if victory || participant.Escaped {
-			player.CombatStats.HP = participant.Stats.HP
-			continue
-		}
-
-		// Defeat: respawn connected players who did not escape.
-		player.RoomID = InitialRoomID
-		player.CombatStats.HP = player.CombatStats.MaxHP / 4
-	}
-
-	if victory {
-		// Distribute rewards to every participant who did not escape.
-		if err := w.distributeCombatRewardsLocked(combat, defeatedNPCs); err != nil {
-			return nil, err
-		}
-	} else {
-		// Defeat: discard inventories of disconnected participants.
-		for _, participant := range combat.Participants {
-			if !participant.IsPlayer ||
-				participant.Connected ||
-				participant.Escaped {
-				continue
-			}
-
-			delete(w.playerInventories, participant.ID)
-			delete(w.players, participant.ID)
-		}
-	}
-
-	combat.Active = false
-
-	return cloneCombat(combat), nil
-}
-
 func combatHasActivePlayersLocked(combat *Combat) bool {
 	for _, participant := range combat.Participants {
 		if participant.IsPlayer &&
@@ -558,9 +387,34 @@ func (w *World) StartCombatRound(
 	// Effects are not updated here.
 	// Their duration is reduced when their owner starts their next turn.
 
+	// Select the participant with the highest available speed points.
+	// Ties preserve the participant order.
+	combat.TurnIndex = -1
+	highestSpeedPoints := -1
+
+	for i := range combat.Participants {
+		participant := combat.Participants[i]
+
+		if AvailableActions(participant) <= 0 {
+			continue
+		}
+
+		if participant.SpeedPoints > highestSpeedPoints {
+			highestSpeedPoints = participant.SpeedPoints
+			combat.TurnIndex = i
+		}
+	}
+	if combat.TurnIndex == -1 {
+		return nil, nil, fmt.Errorf(
+			"%w: no participants have available actions",
+			ErrInvalidWorldState,
+		)
+	}
+
 	event := w.buildCombatTurnChangedLocked(combat)
 
 	return cloneCombat(combat), event, nil
+
 }
 
 // IsCombatRoundComplete reports whether all active participants have exhausted their actions.
