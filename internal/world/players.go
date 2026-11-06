@@ -115,18 +115,19 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 
 // RemovePlayer returns the player's unique items to their current room
 // and removes the player's state from the world.
+// It also returns the IDs of active combats that must be ended.
 // It is safe to call this method more than once.
 func (w *World) RemovePlayer(
-    playerName string,
-) (PlayerLeft, UniqueItemsReturned, *CombatTurnChanged, error) {
+	playerName string,
+) (PlayerLeft, UniqueItemsReturned, *CombatTurnChanged, []string, error) {
 	if w == nil {
-		return PlayerLeft{}, UniqueItemsReturned{}, nil,
+		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil,
 			fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	playerName = strings.TrimSpace(playerName)
 	if playerName == "" {
-		return PlayerLeft{}, UniqueItemsReturned{}, nil,
+		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil,
 			fmt.Errorf("%w: player name cannot be empty", ErrInvalidArgument)
 	}
 
@@ -135,13 +136,14 @@ func (w *World) RemovePlayer(
 
 	player, exists := w.players[playerName]
 	if !exists {
-		return PlayerLeft{}, UniqueItemsReturned{}, nil,
+		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil,
 			fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
+
 	roomID := player.RoomID
 
 	if _, exists := w.rooms[roomID]; !exists {
-		return PlayerLeft{}, UniqueItemsReturned{}, nil,
+		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil,
 			fmt.Errorf(
 				"%w: player %q references nonexistent room %q",
 				ErrInvalidWorldState,
@@ -160,7 +162,7 @@ func (w *World) RemovePlayer(
 	for _, instanceID := range inventory {
 		instance, exists := w.itemInstances[instanceID]
 		if !exists {
-			return PlayerLeft{}, UniqueItemsReturned{}, nil,
+			return PlayerLeft{}, UniqueItemsReturned{}, nil, nil,
 				fmt.Errorf(
 					"%w: inventory references nonexistent instance %q",
 					ErrInvalidWorldState,
@@ -170,7 +172,7 @@ func (w *World) RemovePlayer(
 
 		item, exists := w.items[instance.ItemID]
 		if !exists {
-			return PlayerLeft{}, UniqueItemsReturned{}, nil,
+			return PlayerLeft{}, UniqueItemsReturned{}, nil, nil,
 				fmt.Errorf(
 					"%w: instance %q references nonexistent item %q",
 					ErrInvalidWorldState,
@@ -186,18 +188,25 @@ func (w *World) RemovePlayer(
 
 	// Remove the player from their group before disconnecting them.
 	if err := w.removePlayerFromGroupLocked(playerName); err != nil {
-		return PlayerLeft{}, UniqueItemsReturned{}, nil, err
+		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil, err
 	}
 
 	// Find the player's active combat before disconnecting them.
 	combat := w.findActiveCombatForPlayerLocked(playerName)
 
-	// Remove the player from active combats.
+	// Mark the player as disconnected from active combats.
 	w.removePlayerFromCombatsLocked(playerName)
 
-	// Capture the new combat turn from the affected combat.
+	// Identify combats that no longer have active players.
+	combatsToEnd := make([]string, 0)
+
+	if combat != nil && !w.combatHasActivePlayersLocked(combat) {
+		combatsToEnd = append(combatsToEnd, combat.ID)
+	}
+
+	// Capture the new combat turn if the combat still has active players.
 	var turnEvent *CombatTurnChanged
-	if combat != nil {
+	if combat != nil && len(combatsToEnd) == 0 {
 		turnEvent = w.buildCombatTurnChangedLocked(combat)
 	}
 
@@ -207,10 +216,28 @@ func (w *World) RemovePlayer(
 		uniqueInstanceIDs...,
 	)
 
-	// Remove the player's state only after returning the unique items.
-	// Preserve the inventory while the player remains in an active combat.
+	// Remove returned unique items from the player's inventory.
+	if len(uniqueInstanceIDs) > 0 {
+		uniqueSet := make(map[string]bool, len(uniqueInstanceIDs))
+
+		for _, instanceID := range uniqueInstanceIDs {
+			uniqueSet[instanceID] = true
+		}
+
+		remainingInventory := make([]string, 0, len(inventory))
+
+		for _, instanceID := range inventory {
+			if !uniqueSet[instanceID] {
+				remainingInventory = append(remainingInventory, instanceID)
+			}
+		}
+
+		w.playerInventories[playerName] = remainingInventory
+	}
+
+	// Preserve the remaining inventory while the player remains in an active combat.
 	if !w.playerInActiveCombatLocked(playerName) {
-		delete(w.playerInventories, playerName)
+		w.deletePlayerInventoryLocked(playerName)
 	}
 
 	delete(w.players, playerName)
@@ -227,9 +254,8 @@ func (w *World) RemovePlayer(
 		ItemIDs:    uniqueInstanceIDs,
 	}
 
-	return leftEvent, returnedEvent, turnEvent, nil
+	return leftEvent, returnedEvent, turnEvent, combatsToEnd, nil
 }
-
 
 // GetPlayerRoom returns the ID of the room occupied by a player.
 func (w *World) GetPlayerRoom(playerName string) (string, error) {
@@ -456,4 +482,13 @@ func (w *World) GetPlayerReconnectRoom(
     }
 
     return reconnectRoom, nil
+}
+// deletePlayerInventoryLocked removes a player's inventory and its item instances.
+// The caller must hold w.mu.Lock().
+func (w *World) deletePlayerInventoryLocked(playerName string) {
+	for _, instanceID := range w.playerInventories[playerName] {
+		delete(w.itemInstances, instanceID)
+	}
+
+	delete(w.playerInventories, playerName)
 }

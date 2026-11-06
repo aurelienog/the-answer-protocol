@@ -238,7 +238,6 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) {
 
 			// End the combat if no living connected players remain.
 			if !combatHasActivePlayersLocked(combat) {
-				combat.Active = false
 				combat.TurnIndex = -1
 				break
 			}

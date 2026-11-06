@@ -28,7 +28,9 @@ func (w *World) distributeCombatRewardsLocked(
 	createdInstances := make([]string, 0)
 
 	for _, participant := range combat.Participants {
-		if !participant.IsPlayer || participant.Escaped {
+		if !participant.IsPlayer ||
+			participant.Escaped ||
+			!participant.Connected {
 			continue
 		}
 

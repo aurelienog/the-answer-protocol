@@ -61,16 +61,17 @@ func (w *World) EndCombat(combatID string) (*Combat, error) {
 	w.synchronizeCombatPlayersLocked(combat, victory)
 
 	if victory {
-		// Distribute rewards to every participant who did not escape.
+		// Distribute rewards only to connected participants who did not escape.
 		if err := w.distributeCombatRewardsLocked(
 			combat,
 			defeatedNPCs,
 		); err != nil {
 			return nil, err
 		}
-	} else {
-		w.cleanupDisconnectedCombatPlayersLocked(combat)
 	}
+
+	// Remove disconnected players after rewards have been distributed.
+	w.cleanupDisconnectedCombatPlayersLocked(combat)
 
 	combat.Active = false
 
@@ -236,7 +237,7 @@ func (w *World) synchronizeCombatPlayersLocked(
 }
 
 // cleanupDisconnectedCombatPlayersLocked removes disconnected players
-// who did not escape after a combat defeat.
+// who did not escape after combat.
 // The caller must hold w.mu.Lock().
 func (w *World) cleanupDisconnectedCombatPlayersLocked(
 	combat *Combat,
@@ -248,7 +249,7 @@ func (w *World) cleanupDisconnectedCombatPlayersLocked(
 			continue
 		}
 
-		delete(w.playerInventories, participant.ID)
+		w.deletePlayerInventoryLocked(participant.ID)
 		delete(w.players, participant.ID)
 	}
 }
