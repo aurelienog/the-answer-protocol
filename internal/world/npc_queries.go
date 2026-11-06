@@ -198,6 +198,13 @@ func (w *World) TalkToNPC(
 				questID = quest.NextQuestID
 				continue
 			}
+
+			// Rediscover completed repeatable quests.
+			if status == QuestStatusCompleted && quest.Repeatable {
+				progress.Status = QuestStatusAvailable
+				w.playerQuests[playerName][quest.ID] = progress
+				status = QuestStatusAvailable
+			}
 		} else {
 			// Check whether this quest's prerequisites are satisfied.
 			canAccept, _ := w.canAcceptQuestLocked(playerName, quest.ID)
@@ -223,10 +230,17 @@ func (w *World) TalkToNPC(
 			}
 		}
 
+		questProgress := ""
+
+		if status == QuestStatusActive {
+			questProgress = w.getQuestProgressLocked(playerName, quest)
+		}
+
 		conversation.Quest = &QuestSummary{
 			ID:          quest.ID,
 			Name:        quest.Name,
 			Description: quest.Description,
+			Progress:    questProgress,
 		}
 		conversation.QuestStatus = status
 

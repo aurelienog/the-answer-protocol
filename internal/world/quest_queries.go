@@ -81,7 +81,7 @@ func (w *World) GetAvailableQuests(playerName string) ([]Quest, error) {
 		// Skip quests that have already been accepted or completed.
 		if progress, exists := playerQuests[questID]; exists {
 			if progress.Status == QuestStatusActive ||
-				progress.Status == QuestStatusCompleted {
+				(progress.Status == QuestStatusCompleted && !quest.Repeatable) {
 				continue
 			}
 		}
@@ -164,11 +164,18 @@ func (w *World) GetPlayerQuests(
 			)
 		}
 
+		questProgress := ""
+
+		if progress.Status == QuestStatusActive {
+			questProgress = w.getQuestProgressLocked(playerName, quest)
+		}
+
 		quests = append(quests, PlayerQuestSummary{
 			ID:          quest.ID,
 			Name:        quest.Name,
 			Description: quest.Description,
 			Status:      progress.Status,
+			Progress:    questProgress,
 		})
 	}
 
@@ -230,10 +237,45 @@ func (w *World) GetPlayerQuestSummary(
 		)
 	}
 
+	questProgress := ""
+
+	if progress.Status == QuestStatusActive {
+		questProgress = w.getQuestProgressLocked(playerName, quest)
+	}
+
 	return PlayerQuestSummary{
 		ID:          quest.ID,
 		Name:        quest.Name,
 		Description: quest.Description,
 		Status:      progress.Status,
+		Progress:    questProgress,
 	}, nil
+}
+
+func (w *World) getQuestProgressLocked(
+	playerName string,
+	quest Quest,
+) string {
+	if quest.RequiredItemID == "" || quest.RequiredItemQuantity <= 0 {
+		return ""
+	}
+
+	quantity := 0
+
+	for _, instanceID := range w.playerInventories[playerName] {
+		instance, exists := w.itemInstances[instanceID]
+		if !exists {
+			continue
+		}
+
+		if instance.ItemID == quest.RequiredItemID {
+			quantity++
+		}
+	}
+
+	if quantity > quest.RequiredItemQuantity {
+		quantity = quest.RequiredItemQuantity
+	}
+
+	return fmt.Sprintf("%d/%d", quantity, quest.RequiredItemQuantity)
 }

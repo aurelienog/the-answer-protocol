@@ -98,13 +98,20 @@ func (w *World) AcceptQuest(playerName, questID string) error {
 // canAcceptQuestLocked checks whether a player can accept a quest.
 // The caller must hold w.mu.Lock() or w.mu.RLock().
 func (w *World) canAcceptQuestLocked(playerName, questID string) (bool, string) {
+	quest, exists := w.quests[questID]
+	if !exists {
+		return false, "quest does not exist"
+	}
+
 	if playerQuests, exists := w.playerQuests[playerName]; exists {
 		if progress, exists := playerQuests[questID]; exists {
 			switch progress.Status {
 			case QuestStatusActive:
 				return false, "quest is already active"
 			case QuestStatusCompleted:
-				return false, "quest is already completed"
+				if !quest.Repeatable {
+					return false, "quest is already completed"
+				}
 			}
 		}
 	}
@@ -197,9 +204,10 @@ func (w *World) CompleteQuest(playerName, questID string) error {
 
 	if !resolved {
 		return fmt.Errorf(
-			"%w: player %q does not have required item %q",
+			"%w: player %q does not have %d instances of required item %q",
 			ErrItemNotInInventory,
 			playerName,
+			quest.RequiredItemQuantity,
 			quest.RequiredItemID,
 		)
 	}
@@ -220,8 +228,24 @@ func (w *World) resolveQuestLocked(
 		return false, nil
 	}
 
+	if quest.RequiredItemID != "" && quest.RequiredItemQuantity <= 0 {
+		return false, fmt.Errorf(
+			"%w: quest %q has an invalid required item quantity",
+			ErrInvalidWorldState,
+			quest.ID,
+		)
+	}
+
+	if quest.RequiredItemID == "" && quest.RequiredItemQuantity != 0 {
+		return false, fmt.Errorf(
+			"%w: quest %q has a quantity without a required item",
+			ErrInvalidWorldState,
+			quest.ID,
+		)
+	}
+
 	inventory := w.playerInventories[playerName]
-	requiredItemIndex := -1
+	requiredItemIndexes := make([]int, 0, quest.RequiredItemQuantity)
 
 	if quest.RequiredItemID != "" {
 		for i, instanceID := range inventory {
@@ -244,12 +268,15 @@ func (w *World) resolveQuestLocked(
 			}
 
 			if instance.ItemID == quest.RequiredItemID {
-				requiredItemIndex = i
-				break
+				requiredItemIndexes = append(requiredItemIndexes, i)
+
+				if len(requiredItemIndexes) == quest.RequiredItemQuantity {
+					break
+				}
 			}
 		}
 
-		if requiredItemIndex == -1 {
+		if len(requiredItemIndexes) < quest.RequiredItemQuantity {
 			return false, nil
 		}
 	}
@@ -289,11 +316,22 @@ func (w *World) resolveQuestLocked(
 	}
 
 	// Apply changes after validation succeeds.
-	if quest.ConsumeRequiredItem && requiredItemIndex >= 0 {
-		inventory = append(
-			inventory[:requiredItemIndex],
-			inventory[requiredItemIndex+1:]...,
-		)
+	if quest.ConsumeRequiredItem && len(requiredItemIndexes) > 0 {
+		requiredIndexes := make(map[int]bool, len(requiredItemIndexes))
+
+		for _, index := range requiredItemIndexes {
+			requiredIndexes[index] = true
+		}
+
+		remainingInventory := make([]string, 0, len(inventory)-len(requiredItemIndexes))
+
+		for i, instanceID := range inventory {
+			if !requiredIndexes[i] {
+				remainingInventory = append(remainingInventory, instanceID)
+			}
+		}
+
+		inventory = remainingInventory
 	}
 
 	for _, instance := range rewardInstances {
