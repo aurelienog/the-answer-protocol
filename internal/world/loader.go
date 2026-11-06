@@ -103,6 +103,10 @@ func (w *World) Validate() error {
 		return err
 	}
 
+	if err := w.validateWorldRelations(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
