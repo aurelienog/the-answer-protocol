@@ -15,7 +15,7 @@ import (
 
 func createCommandTestWorld(t *testing.T) *world.World {
 	t.Helper()
-	
+
 	worldData := `{
 		"rooms": {
 			"harbor_square": {
@@ -25,7 +25,9 @@ func createCommandTestWorld(t *testing.T) *world.World {
 				"exits": {
 					"north": "market"
 				},
-				"items": ["map"],
+				"items": {
+					"map": 1
+				},
 				"npcs": ["guard"]
 			},
 			"market": {
@@ -35,7 +37,7 @@ func createCommandTestWorld(t *testing.T) *world.World {
 				"exits": {
 					"south": "harbor_square"
 				},
-				"items": [],
+				"items": {},
 				"npcs": []
 			}
 		},
@@ -46,9 +48,17 @@ func createCommandTestWorld(t *testing.T) *world.World {
 				"description": "A map of the surrounding area.",
 				"type": "common"
 			}
+		},
+		"npcs": {
+			"guard": {
+				"id": "guard",
+				"name": "Harbor Guard",
+				"combat_stats": {
+					"max_hp": 1
+				}
+			}
 		}
 	}`
-
 
 	worldFile := filepath.Join(t.TempDir(), "world.json")
 
@@ -69,6 +79,32 @@ func addTestPlayer(t *testing.T, gameWorld *world.World, name string) {
 
 	if err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
 		t.Fatalf("add test player: %v", err)
+	}
+}
+
+func assertProtocolError(
+	t *testing.T,
+	message protocol.Message,
+	err error,
+	code int,
+	name string,
+) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatalf("expected protocol error without Go error, got %v", err)
+	}
+
+	if message.Kind != protocol.KindERR {
+		t.Fatalf("expected ERR message, got kind %v", message.Kind)
+	}
+
+	if message.Code != code {
+		t.Errorf("expected error code %d, got %d", code, message.Code)
+	}
+
+	if message.Name != name {
+		t.Errorf("expected error name %q, got %q", name, message.Name)
 	}
 }
 
@@ -134,24 +170,28 @@ func TestLookCommandReturnsCurrentRoom(t *testing.T) {
 		t.Errorf("expected item type %q, got %q", world.ItemTypeCommon, item.Type)
 	}
 
-	if len(response.NPCs) != 1 || response.NPCs[0] != "guard" {
-		t.Errorf("expected guard in room NPCs, got %v", response.NPCs)
+	if len(response.NPCs) != 1 || response.NPCs[0] != "Harbor Guard" {
+		t.Errorf("expected Harbor Guard in room NPCs, got %v", response.NPCs)
 	}
 
 }
 
-// TestLookCommandRejectsNilWorld checks missing world configuration.
-func TestLookCommandRejectsNilWorld(t *testing.T) {
+// TestLookCommandReturnsProtocolErrorForNilWorld checks missing world configuration.
+func TestLookCommandReturnsProtocolErrorForNilWorld(t *testing.T) {
 	command := commands.NewLookCommand()
 
-	_, err := command.Execute(&commands.Context{
+	message, err := command.Execute(&commands.Context{
 		PlayerName: "Alice",
 		World:      nil,
 	})
 
-	if err == nil {
-		t.Fatal("expected an error when world is nil")
-	}
+	assertProtocolError(
+		t,
+		message,
+		err,
+		protocol.CodeInternalError,
+		"INTERNAL_ERROR",
+	)
 }
 
 // TestMoveCommandChangesRoom checks successful movement.
@@ -242,22 +282,9 @@ func TestMoveCommandRejectsMissingExit(t *testing.T) {
 		PlayerName: "Alice",
 		World:      gameWorld,
 		RawArgs:    []string{"west"},
+		Events:     eventBus,
 	})
-	if err != nil {
-		t.Fatalf("expected protocol error without Go error, got %v", err)
-	}
-
-	if message.Kind != protocol.KindERR {
-		t.Fatalf("expected ERR message, got kind %v", message.Kind)
-	}
-
-	if message.Code != 301 {
-		t.Errorf("expected error code 301, got %d", message.Code)
-	}
-
-	if message.Name != "NO_EXIT" {
-		t.Errorf("expected error name NO_EXIT, got %q", message.Name)
-	}
+	assertProtocolError(t, message, err, protocol.CodeNoExit, "NO_EXIT")
 
 	roomID, err := gameWorld.GetPlayerRoom("Alice")
 	if err != nil {
@@ -291,34 +318,42 @@ func TestMoveCommandRejectsIncorrectArguments(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := command.Execute(&commands.Context{
+			message, err := command.Execute(&commands.Context{
 				PlayerName: "Alice",
 				World:      gameWorld,
 				RawArgs:    test.args,
 			})
 
-			if err == nil {
-				t.Fatal("expected an error for invalid arguments")
-			}
+			assertProtocolError(
+				t,
+				message,
+				err,
+				protocol.CodeInvalidArguments,
+				"INVALID_ARGUMENTS",
+			)
 		})
 	}
 }
 
-// TestMoveCommandRejectsNilContext checks nil context handling.
-func TestMoveCommandRejectsNilContext(t *testing.T) {
+// TestMoveCommandReturnsProtocolErrorForNilContext checks nil context handling.
+func TestMoveCommandReturnsProtocolErrorForNilContext(t *testing.T) {
 	command := commands.NewMoveCommand()
 
-	_, err := command.Execute(nil)
-	if err == nil {
-		t.Fatal("expected an error when context is nil")
-	}
+	message, err := command.Execute(nil)
+	assertProtocolError(
+		t,
+		message,
+		err,
+		protocol.CodeInternalError,
+		"INTERNAL_ERROR",
+	)
 }
 
 // TestQuitCommandReturnsBye checks the disconnect contract.
 func TestQuitCommandReturnsBye(t *testing.T) {
 	command := commands.NewQuitCommand()
 
-	message, err := command.Execute(nil)
+	message, err := command.Execute(&commands.Context{})
 
 	if !errors.Is(err, commands.ErrQuit) {
 		t.Fatalf("expected commands.ErrQuit, got %v", err)
@@ -331,4 +366,17 @@ func TestQuitCommandReturnsBye(t *testing.T) {
 	if message.Payload != "bye" {
 		t.Errorf("expected payload %q, got %q", "bye", message.Payload)
 	}
+}
+
+func TestQuitCommandReturnsProtocolErrorForNilContext(t *testing.T) {
+	command := commands.NewQuitCommand()
+
+	message, err := command.Execute(nil)
+	assertProtocolError(
+		t,
+		message,
+		err,
+		protocol.CodeInternalError,
+		"INTERNAL_ERROR",
+	)
 }

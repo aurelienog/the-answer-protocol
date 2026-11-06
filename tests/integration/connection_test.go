@@ -14,6 +14,8 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
+const connectionTestTimeout = 2 * time.Second
+
 // connectionTestEnv contains the resources needed to test a connection.
 type connectionTestEnv struct {
 	client     net.Conn
@@ -33,7 +35,7 @@ func newConnectionTestEnv(t *testing.T) *connectionTestEnv {
 
 	registry := server.NewRegistry()
 
-	gameWorld, err := world.Load("../../../data/world.json")
+	gameWorld, err := world.Load("../../data/world.json")
 	if err != nil {
 		client.Close()
 		serverConn.Close()
@@ -60,7 +62,7 @@ func newConnectionTestEnv(t *testing.T) *connectionTestEnv {
 		_ = serverConn.Close()
 	})
 
-	if err := client.SetDeadline(time.Now().Add(testTimeout)); err != nil {
+	if err := client.SetDeadline(time.Now().Add(connectionTestTimeout)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
 	}
 
@@ -127,8 +129,8 @@ func TestHandleConnectionRequiresConnectBeforeCommands(t *testing.T) {
 	env.sendRequest(t, "LOOK")
 
 	got := env.readResponse(t)
-	if !strings.HasPrefix(got, "ERR 403 CONNECT_REQUIRED") {
-		t.Fatalf("response = %q, want CONNECT_REQUIRED error", got)
+	if got != "ERR 403 CONNECT_REQUIRED" {
+		t.Fatalf("response = %q, want %q", got, "ERR 403 CONNECT_REQUIRED")
 	}
 }
 
@@ -139,8 +141,8 @@ func TestHandleConnectionRejectsInvalidUsername(t *testing.T) {
 	env.sendRequest(t, "CONNECT invalid-name")
 
 	got := env.readResponse(t)
-	if !strings.HasPrefix(got, "ERR 407 INVALID_USERNAME") {
-		t.Fatalf("response = %q, want INVALID_USERNAME error", got)
+	if got != "ERR 407 INVALID_USERNAME" {
+		t.Fatalf("response = %q, want %q", got, "ERR 407 INVALID_USERNAME")
 	}
 }
 
@@ -157,8 +159,13 @@ func TestHandleConnectionRejectsUnknownCommand(t *testing.T) {
 	env.sendRequest(t, "DANCE")
 
 	got := env.readResponse(t)
-	if !strings.HasPrefix(got, "ERR 408 UNKNOWN_COMMAND") {
-		t.Fatalf("response = %q, want UNKNOWN_COMMAND error", got)
+	if got != "ERR 408 UNKNOWN_COMMAND" {
+		t.Fatalf("response = %q, want %q", got, "ERR 408 UNKNOWN_COMMAND")
+	}
+
+	env.sendRequest(t, "WHO")
+	if got := env.readResponse(t); got != "OK players=1" {
+		t.Fatalf("response after recoverable error = %q, want %q", got, "OK players=1")
 	}
 }
 
@@ -233,7 +240,7 @@ func newSharedConnectionTestEnv(
 		_ = serverConn.Close()
 	})
 
-	if err := client.SetDeadline(time.Now().Add(testTimeout)); err != nil {
+	if err := client.SetDeadline(time.Now().Add(connectionTestTimeout)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
 	}
 
@@ -271,8 +278,65 @@ func TestHandleConnectionRejectsDuplicateUsername(t *testing.T) {
 	second.sendRequest(t, "CONNECT Alice")
 
 	got := second.readResponse(t)
-	if !strings.HasPrefix(got, "ERR 201 NAME_IN_USE") {
-		t.Fatalf("duplicate username response = %q, want NAME_IN_USE error", got)
+	if got != "ERR 201 NAME_IN_USE" {
+		t.Fatalf("duplicate username response = %q, want %q", got, "ERR 201 NAME_IN_USE")
+	}
+}
+
+func TestHandleConnectionAllowsOnlyOneConcurrentDuplicateUsername(t *testing.T) {
+	first := newConnectionTestEnv(t)
+	if got := first.readResponse(t); got != "OK hello proto=1" {
+		t.Fatalf("first greeting = %q", got)
+	}
+
+	second := newSharedConnectionTestEnv(
+		t,
+		first.registry,
+		first.dispatcher,
+		first.gameWorld,
+		first.eventBus,
+		"concurrent-connection",
+	)
+	if got := second.readResponse(t); got != "OK hello proto=1" {
+		t.Fatalf("second greeting = %q", got)
+	}
+
+	start := make(chan struct{})
+	sendResults := make(chan error, 2)
+	for _, env := range []*connectionTestEnv{first, second} {
+		go func(env *connectionTestEnv) {
+			<-start
+			_, err := fmt.Fprintln(env.client, "CONNECT Alice")
+			sendResults <- err
+		}(env)
+	}
+	close(start)
+
+	for i := 0; i < 2; i++ {
+		if err := <-sendResults; err != nil {
+			t.Fatalf("send concurrent CONNECT request: %v", err)
+		}
+	}
+
+	responses := []string{first.readResponse(t), second.readResponse(t)}
+	successes := 0
+	duplicates := 0
+	for _, response := range responses {
+		switch response {
+		case "OK connected":
+			successes++
+		case "ERR 201 NAME_IN_USE":
+			duplicates++
+		default:
+			t.Errorf("unexpected concurrent CONNECT response %q", response)
+		}
+	}
+
+	if successes != 1 || duplicates != 1 {
+		t.Fatalf(
+			"concurrent CONNECT responses = %v, want one success and one NAME_IN_USE",
+			responses,
+		)
 	}
 }
 
@@ -304,9 +368,9 @@ func TestHandleConnectionBroadcastsPlayerLeave(t *testing.T) {
 
 	// Bob receives the event announcing Alice's arrival.
 	enterEvent := observer.readResponse(t)
-	if enterEvent != "EVT ROOM_PRESENCE_ENTER Alice" {
+	if enterEvent != "EVT ROOM PRESENCE ENTER Alice" {
 		t.Fatalf("enter event = %q, want %q",
-			enterEvent, "EVT ROOM_PRESENCE_ENTER Alice")
+			enterEvent, "EVT ROOM PRESENCE ENTER Alice")
 	}
 
 	player.sendRequest(t, "QUIT")
@@ -317,9 +381,9 @@ func TestHandleConnectionBroadcastsPlayerLeave(t *testing.T) {
 
 	// Bob should be notified when Alice leaves.
 	leaveEvent := observer.readResponse(t)
-	if leaveEvent != "EVT ROOM_PRESENCE_LEAVE Alice" {
+	if leaveEvent != "EVT ROOM PRESENCE LEAVE Alice" {
 		t.Fatalf("leave event = %q, want %q",
-			leaveEvent, "EVT ROOM_PRESENCE_LEAVE Alice")
+			leaveEvent, "EVT ROOM PRESENCE LEAVE Alice")
 	}
 }
 
