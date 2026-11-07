@@ -727,6 +727,21 @@ For example, a failed notification queue operation is reported with the affected
 
 Logging helps identify problems in asynchronous message delivery without requiring notification handlers to write directly to client connections.
 
+## Abuse Controls
+
+The server's `internal/abuse` package applies connection admission and request-rate policies independently of game rules. By default, it allows up to 100 active connections globally, 5 simultaneous connections per IP address, 10 connection attempts per IP per minute, and 20 unauthenticated connections globally. Authenticated connections no longer count against the unauthenticated limit.
+
+The limits can be configured with server flags or environment variables:
+
+| Flag | Environment variable | Default |
+|---|---|---:|
+| `-max-connections` | `TAP_MAX_CONNECTIONS` | 100 |
+| `-max-connections-per-ip` | `TAP_MAX_CONNECTIONS_PER_IP` | 5 |
+| `-max-connection-attempts-per-ip` | `TAP_MAX_CONNECTION_ATTEMPTS_PER_IP` | 10 per minute |
+| `-max-unauthenticated-connections` | `TAP_MAX_UNAUTHENTICATED_CONNECTIONS` | 20 |
+
+Per authenticated player, the server allows up to 30 commands and 5 `CHAT` commands in each rolling 10-second window. A rate-limited command receives `ERR 429 RATE_LIMITED`; this is an implementation extension because RFC 42TAP does not define a rate-limit error code. Rejected connections are closed, and expired per-IP and rate-limit records are periodically removed.
+
 ## Group Contributions
 
 ---  
