@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/server"
@@ -53,12 +54,18 @@ func newConnectionTestEnvWithWorld(t *testing.T, gameWorld *world.World) *connec
 	notificationDispatcher := server.NewNotificationDispatcher(registry)
 	eventBus.Subscribe(notificationDispatcher.Handle)
 
-	go server.HandleConnection(
+	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
 		registry,
 		gameWorld,
 		eventBus,
+		lease,
 	)
 
 	t.Cleanup(func() {
@@ -175,12 +182,18 @@ func newSharedConnectionTestEnv(
 		remoteAddr: connectionTestAddr(id),
 	}
 
-	go server.HandleConnection(
+	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
+	lease, rejection := guard.AcquireConnection(wrappedConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit shared test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
 		wrappedConn,
 		dispatcher,
 		registry,
 		gameWorld,
 		eventBus,
+		lease,
 	)
 
 	t.Cleanup(func() {

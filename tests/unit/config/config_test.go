@@ -32,17 +32,22 @@ func TestLoadConfigReadsEnvironmentAndFlags(t *testing.T) {
 
 	t.Setenv("TAP_SERVER_HOST", "env.example")
 	t.Setenv("TAP_SERVER_PORT", "8100")
+	t.Setenv("TAP_MAX_CONNECTIONS", "75")
 	flag.CommandLine = flag.NewFlagSet("config-test", flag.ContinueOnError)
 	os.Args = []string{
 		"config-test",
 		"-host=flag.example",
 		"-port=8200",
 		"-world=/tmp/test-world.json",
+		"-max-connections=80",
+		"-max-connections-per-ip=4",
 	}
 
 	cfg := config.LoadConfig()
 	if cfg.ServerHost != "flag.example" || cfg.ServerPort != "8200" ||
-		cfg.WorldPath != "/tmp/test-world.json" {
+		cfg.WorldPath != "/tmp/test-world.json" || cfg.MaxConnections != 80 ||
+		cfg.MaxConnectionsPerIP != 4 || cfg.MaxConnectionAttemptsPerIP != 10 ||
+		cfg.MaxUnauthenticatedConnections != 20 {
 		t.Fatalf("LoadConfig() = %+v, want flag overrides", cfg)
 	}
 }

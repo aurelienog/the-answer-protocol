@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/server"
@@ -70,10 +71,23 @@ func startTestConnection(
 	commands.RegisterCommands(dispatcher)
 
 	handlerDone := make(chan struct{})
+	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		clientConn.Close()
+		t.Fatalf("admit test connection: %v", rejection)
+	}
 
 	go func() {
 		defer close(handlerDone)
-		server.HandleConnection(serverConn, dispatcher, registry, gameWorld, eventBus)
+		server.HandleAdmittedConnection(
+			serverConn,
+			dispatcher,
+			registry,
+			gameWorld,
+			eventBus,
+			lease,
+		)
 	}()
 
 	if err := clientConn.SetDeadline(time.Now().Add(testTimeout)); err != nil {

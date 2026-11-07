@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/server"
 	"the-answer-protocol/internal/world"
@@ -37,12 +38,18 @@ func TestHandleConnectionClosesUnauthenticatedSessionOnTimeout(t *testing.T) {
 	commands.RegisterCommands(dispatcher)
 	registry := server.NewRegistry()
 
-	go server.HandleConnection(
+	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
 		registry,
 		gameWorld,
 		nil,
+		lease,
 	)
 
 	if err := client.SetDeadline(time.Now().Add(35 * time.Second)); err != nil {
