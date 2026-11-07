@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -287,6 +288,101 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 					tt.expectedInError,
 					err,
 				)
+			}
+		})
+	}
+}
+
+func TestLoadWorldRejectsAdditionalInvalidDefinitions(t *testing.T) {
+	const validDefinition = `{
+		"rooms":{"harbor_square":{"id":"harbor_square","name":"Room","npcs":["npc"],"exits":{},"items":{}}},
+		"items":{"item":{"id":"item","name":"Item","type":"common"}},
+		"npcs":{"npc":{"id":"npc","name":"NPC","quest_id":"quest","combat_stats":{"hp":1,"max_hp":1,"attack":1,"defense":0,"speed":1}}},
+		"quests":{"quest":{"id":"quest","name":"Quest","giver_npc_id":"npc"}}
+	}`
+	tests := []struct {
+		name            string
+		path            []string
+		value           interface{}
+		expectedInError string
+	}{
+		{name: "room ID mismatch", path: []string{"rooms", "harbor_square", "id"}, value: "different", expectedInError: `does not match room ID`},
+		{name: "empty room name", path: []string{"rooms", "harbor_square", "name"}, value: " ", expectedInError: `has an empty name`},
+		{name: "invalid exit direction", path: []string{"rooms", "harbor_square", "exits"}, value: map[string]interface{}{"up": "harbor_square"}, expectedInError: `invalid exit direction "up"`},
+		{name: "empty exit destination", path: []string{"rooms", "harbor_square", "exits"}, value: map[string]interface{}{"north": " "}, expectedInError: `empty destination for exit "north"`},
+		{name: "unknown room NPC", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{"missing"}, expectedInError: `references unknown NPC "missing"`},
+		{name: "duplicate room NPC", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{"npc", "npc"}, expectedInError: `contains duplicate NPC "npc"`},
+		{name: "empty room NPC", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{""}, expectedInError: `contains an empty NPC ID`},
+		{name: "unknown room item", path: []string{"rooms", "harbor_square", "items"}, value: map[string]interface{}{"missing": 1}, expectedInError: `references nonexistent item "missing"`},
+		{name: "negative room item quantity", path: []string{"rooms", "harbor_square", "items"}, value: map[string]interface{}{"item": -1}, expectedInError: `invalid quantity -1 for item "item"`},
+		{name: "multiple unique items in room", path: []string{"rooms", "harbor_square", "items"}, value: map[string]interface{}{"item": 2}, expectedInError: `contains multiple instances of unique item "item"`},
+		{name: "unique item in multiple rooms", path: []string{"rooms"}, value: map[string]interface{}{"harbor_square": map[string]interface{}{"id": "harbor_square", "name": "Room", "npcs": []interface{}{"npc"}, "items": map[string]interface{}{"item": 1}}, "other": map[string]interface{}{"id": "other", "name": "Other", "items": map[string]interface{}{"item": 1}}}, expectedInError: `duplicate item instance ID`},
+		{name: "item ID mismatch", path: []string{"items", "item", "id"}, value: "different", expectedInError: `does not match item ID`},
+		{name: "empty item name", path: []string{"items", "item", "name"}, value: "", expectedInError: `has an empty name`},
+		{name: "invalid item type", path: []string{"items", "item", "type"}, value: "invalid", expectedInError: `has invalid type "invalid"`},
+		{name: "negative item combat attribute", path: []string{"items", "item", "attack"}, value: -1, expectedInError: `has negative combat attributes`},
+		{name: "equipment without attributes", path: []string{"items", "item", "type"}, value: "equipment", expectedInError: `has no combat attributes`},
+		{name: "empty NPC ID", path: []string{"npcs", "npc", "id"}, value: "", expectedInError: `NPC ID cannot be empty`},
+		{name: "negative NPC HP", path: []string{"npcs", "npc", "combat_stats", "hp"}, value: -1, expectedInError: `has negative HP -1`},
+		{name: "NPC HP exceeds maximum", path: []string{"npcs", "npc", "combat_stats", "hp"}, value: 2, expectedInError: `has HP 2 greater than max HP 1`},
+		{name: "NPC attack is zero", path: []string{"npcs", "npc", "combat_stats", "attack"}, value: 0, expectedInError: `invalid attack 0`},
+		{name: "negative NPC defense", path: []string{"npcs", "npc", "combat_stats", "defense"}, value: -1, expectedInError: `negative defense -1`},
+		{name: "invalid NPC speed", path: []string{"npcs", "npc", "combat_stats", "speed"}, value: 0, expectedInError: `invalid speed 0`},
+		{name: "empty NPC name", path: []string{"npcs", "npc", "name"}, value: " ", expectedInError: `has an empty name`},
+		{name: "unknown NPC reward", path: []string{"npcs", "npc", "rewards"}, value: []interface{}{"missing"}, expectedInError: `references nonexistent reward item "missing"`},
+		{name: "empty NPC reward", path: []string{"npcs", "npc", "rewards"}, value: []interface{}{""}, expectedInError: `has an empty reward item ID`},
+		{name: "empty quest name", path: []string{"quests", "quest", "name"}, value: "", expectedInError: `has an empty name`},
+		{name: "quest quantity without item", path: []string{"quests", "quest", "required_item_quantity"}, value: 1, expectedInError: `has required item quantity 1 but no required item ID`},
+		{name: "quest item quantity is zero", path: []string{"quests", "quest", "required_item_id"}, value: "item", expectedInError: `invalid required item quantity 0`},
+		{name: "unknown quest item", path: []string{"quests", "quest", "required_item_id"}, value: "missing", expectedInError: `references nonexistent required item "missing"`},
+		{name: "empty quest reward", path: []string{"quests", "quest", "reward_item_ids"}, value: []interface{}{""}, expectedInError: `has an empty reward item ID`},
+		{name: "unknown quest reward", path: []string{"quests", "quest", "reward_item_ids"}, value: []interface{}{"missing"}, expectedInError: `references nonexistent reward item "missing"`},
+		{name: "empty quest giver", path: []string{"quests", "quest", "giver_npc_id"}, value: "", expectedInError: `has an empty giver NPC ID`},
+		{name: "unknown next quest", path: []string{"quests", "quest", "next_quest_id"}, value: "missing", expectedInError: `references nonexistent next quest "missing"`},
+		{name: "quest chain cycle", path: []string{"quests", "quest", "next_quest_id"}, value: "quest", expectedInError: `quest chain contains a cycle`},
+		{name: "unknown quest dialogue", path: []string{"npcs", "npc", "quest_dialogues"}, value: map[string]interface{}{"missing": map[string]interface{}{}}, expectedInError: `references nonexistent quest "missing" in quest dialogues`},
+		{name: "NPC references unknown quest", path: []string{"npcs", "npc", "quest_id"}, value: "missing", expectedInError: `references nonexistent quest "missing"`},
+		{name: "quest giver disagrees with NPC chain", path: []string{"quests", "quest", "giver_npc_id"}, value: "other", expectedInError: `references nonexistent giver NPC "other"`},
+		{name: "NPC has no room", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{}, expectedInError: `is not assigned to any room`},
+		{name: "unknown exit destination", path: []string{"rooms", "harbor_square", "exits"}, value: map[string]interface{}{"north": "missing"}, expectedInError: `references unknown destination room "missing"`},
+		{name: "room disconnected from initial room", path: []string{"rooms"}, value: map[string]interface{}{"harbor_square": map[string]interface{}{"id": "harbor_square", "name": "Room", "npcs": []interface{}{"npc"}}, "isolated": map[string]interface{}{"id": "isolated", "name": "Isolated"}}, expectedInError: `rooms are not reachable from initial room`},
+		{name: "missing initial room", path: []string{"rooms"}, value: map[string]interface{}{"other": map[string]interface{}{"id": "other", "name": "Other", "npcs": []interface{}{"npc"}}}, expectedInError: `initial room "harbor_square" does not exist`},
+		{name: "exit missing reverse connection", path: []string{"rooms"}, value: map[string]interface{}{"harbor_square": map[string]interface{}{"id": "harbor_square", "name": "Room", "npcs": []interface{}{"npc"}, "exits": map[string]interface{}{"north": "other"}}, "other": map[string]interface{}{"id": "other", "name": "Other"}}, expectedInError: `reverse exit "south" is missing`},
+		{name: "quest ID mismatch", path: []string{"quests", "quest", "id"}, value: "different", expectedInError: `does not match quest ID`},
+		{name: "NPC key mismatch", path: []string{"npcs"}, value: map[string]interface{}{"different": map[string]interface{}{"id": "npc", "name": "NPC", "quest_id": "quest", "combat_stats": map[string]interface{}{"hp": 1, "max_hp": 1, "attack": 1, "defense": 0, "speed": 1}}}, expectedInError: `NPC key "different" does not match NPC ID "npc"`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var definition map[string]interface{}
+			if err := json.Unmarshal([]byte(validDefinition), &definition); err != nil {
+				t.Fatalf("unmarshal valid definition: %v", err)
+			}
+			if test.name == "multiple unique items in room" {
+				definition["items"].(map[string]interface{})["item"].(map[string]interface{})["type"] = "unique"
+			}
+			if test.name == "unique item in multiple rooms" {
+				definition["items"].(map[string]interface{})["item"].(map[string]interface{})["type"] = "unique"
+			}
+			if test.name == "unknown quest item" {
+				definition["quests"].(map[string]interface{})["quest"].(map[string]interface{})["required_item_quantity"] = 1
+			}
+			current := definition
+			for _, key := range test.path[:len(test.path)-1] {
+				current = current[key].(map[string]interface{})
+			}
+			current[test.path[len(test.path)-1]] = test.value
+
+			encoded, err := json.Marshal(definition)
+			if err != nil {
+				t.Fatalf("marshal invalid definition: %v", err)
+			}
+			_, err = world.Load(writeWorldDefinition(t, string(encoded)))
+			if err == nil {
+				t.Fatal("world.Load() succeeded for an invalid definition")
+			}
+			if !strings.Contains(err.Error(), test.expectedInError) {
+				t.Fatalf("error = %q, want it to contain %q", err, test.expectedInError)
 			}
 		})
 	}

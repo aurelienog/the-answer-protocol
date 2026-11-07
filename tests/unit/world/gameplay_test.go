@@ -203,6 +203,86 @@ func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	}
 }
 
+func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+
+	conversation, err := gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(herbalist) returned an error: %v", err)
+	}
+	if conversation.QuestStatus != world.QuestStatusAvailable ||
+		conversation.Quest == nil || conversation.Quest.ID != "quest.gather_herbs" {
+		t.Fatalf("initial herbalist conversation = %+v, want first quest available", conversation)
+	}
+	if err := gameWorld.AcceptQuest("Alice", "quest.gather_herbs"); err != nil {
+		t.Fatalf("AcceptQuest(gather herbs) returned an error: %v", err)
+	}
+	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(active herb quest) returned an error: %v", err)
+	}
+	if conversation.QuestStatus != world.QuestStatusActive {
+		t.Fatalf("active herb quest conversation status = %q", conversation.QuestStatus)
+	}
+
+	for _, direction := range []string{"west", "north", "north"} {
+		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
+			t.Fatalf("MovePlayer(%s) toward forest returned an error: %v", direction, err)
+		}
+	}
+	if err := gameWorld.TakeItem("Alice", "item.herbs"); err != nil {
+		t.Fatalf("TakeItem(first herbs) returned an error: %v", err)
+	}
+	for _, direction := range []string{"south", "south", "east"} {
+		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
+			t.Fatalf("MovePlayer(%s) back to apothecary returned an error: %v", direction, err)
+		}
+	}
+	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(completed first quest) returned an error: %v", err)
+	}
+	if conversation.QuestStatus != world.QuestStatusAvailable ||
+		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
+		t.Fatalf("quest-chain conversation = %+v, want repeatable quest available", conversation)
+	}
+	if err := gameWorld.AcceptQuest("Alice", "quest.repeatable_herbs"); err != nil {
+		t.Fatalf("AcceptQuest(repeatable herbs) returned an error: %v", err)
+	}
+	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(active repeatable quest) returned an error: %v", err)
+	}
+	if conversation.QuestStatus != world.QuestStatusActive {
+		t.Fatalf("active repeatable quest conversation status = %q", conversation.QuestStatus)
+	}
+
+	for _, direction := range []string{"west", "north", "north"} {
+		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
+			t.Fatalf("MovePlayer(%s) toward forest returned an error: %v", direction, err)
+		}
+	}
+	if err := gameWorld.TakeItem("Alice", "item.herbs"); err != nil {
+		t.Fatalf("TakeItem(second herbs) returned an error: %v", err)
+	}
+	for _, direction := range []string{"south", "south", "east"} {
+		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
+			t.Fatalf("MovePlayer(%s) back to apothecary returned an error: %v", direction, err)
+		}
+	}
+	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(completed repeatable quest) returned an error: %v", err)
+	}
+	if conversation.QuestStatus != world.QuestStatusAvailable ||
+		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
+		t.Fatalf("repeatable quest conversation = %+v, want quest rediscovered", conversation)
+	}
+}
+
 func TestWorldCombatEffectsAndDefendAction(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
