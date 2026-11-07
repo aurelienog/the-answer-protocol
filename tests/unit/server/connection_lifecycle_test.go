@@ -50,6 +50,7 @@ func TestHandleConnectionClosesUnauthenticatedSessionOnTimeout(t *testing.T) {
 		gameWorld,
 		nil,
 		lease,
+		0,
 	)
 
 	if err := client.SetDeadline(time.Now().Add(35 * time.Second)); err != nil {

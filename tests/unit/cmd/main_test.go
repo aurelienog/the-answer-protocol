@@ -87,6 +87,7 @@ func startTestConnection(
 			gameWorld,
 			eventBus,
 			lease,
+			0,
 		)
 	}()
 

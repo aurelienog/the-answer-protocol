@@ -110,6 +110,34 @@ func TestAllowCommandAppliesGeneralAndChatPoliciesPerPlayer(t *testing.T) {
 	}
 }
 
+func TestCleanupExpiredRemovesCommandAndChatRateLimitEvents(t *testing.T) {
+	guard := abuse.NewAbuseGuard(abuse.Config{})
+	for i := 0; i < 5; i++ {
+		if !guard.AllowCommand("Alice", "CHAT GLOBAL hello") {
+			t.Fatalf("chat %d was unexpectedly rejected", i+1)
+		}
+	}
+	if guard.AllowCommand("Alice", "CHAT GLOBAL too-fast") {
+		t.Fatal("sixth chat was not rate-limited before expiration")
+	}
+	for i := 0; i < 30; i++ {
+		if !guard.AllowCommand("Bob", "LOOK") {
+			t.Fatalf("command %d was unexpectedly rejected", i+1)
+		}
+	}
+	if guard.AllowCommand("Bob", "LOOK") {
+		t.Fatal("31st command was not rate-limited before expiration")
+	}
+
+	guard.CleanupExpired(time.Now().Add(11 * time.Second))
+	if !guard.AllowCommand("Alice", "CHAT GLOBAL hello again") {
+		t.Fatal("chat remained rate-limited after its window expired")
+	}
+	if !guard.AllowCommand("Bob", "LOOK") {
+		t.Fatal("command remained rate-limited after its window expired")
+	}
+}
+
 func TestConnectionAdmissionIsConcurrencySafe(t *testing.T) {
 	const maxConnections = 12
 	guard := abuse.NewAbuseGuard(abuse.Config{

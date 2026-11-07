@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"testing"
+	"time"
 
 	"the-answer-protocol/internal/config"
 )
@@ -33,6 +34,8 @@ func TestLoadConfigReadsEnvironmentAndFlags(t *testing.T) {
 	t.Setenv("TAP_SERVER_HOST", "env.example")
 	t.Setenv("TAP_SERVER_PORT", "8100")
 	t.Setenv("TAP_MAX_CONNECTIONS", "75")
+	t.Setenv("TAP_IDLE_TIMEOUT", "45m")
+	t.Setenv("TAP_COMBAT_TURN_TIMEOUT", "20s")
 	flag.CommandLine = flag.NewFlagSet("config-test", flag.ContinueOnError)
 	os.Args = []string{
 		"config-test",
@@ -41,13 +44,17 @@ func TestLoadConfigReadsEnvironmentAndFlags(t *testing.T) {
 		"-world=/tmp/test-world.json",
 		"-max-connections=80",
 		"-max-connections-per-ip=4",
+		"-idle-timeout=2m",
+		"-combat-turn-timeout=15s",
 	}
 
 	cfg := config.LoadConfig()
 	if cfg.ServerHost != "flag.example" || cfg.ServerPort != "8200" ||
 		cfg.WorldPath != "/tmp/test-world.json" || cfg.MaxConnections != 80 ||
 		cfg.MaxConnectionsPerIP != 4 || cfg.MaxConnectionAttemptsPerIP != 10 ||
-		cfg.MaxUnauthenticatedConnections != 20 {
+		cfg.MaxUnauthenticatedConnections != 20 ||
+		cfg.IdleTimeout != 2*time.Minute ||
+		cfg.CombatTurnTimeout != 15*time.Second {
 		t.Fatalf("LoadConfig() = %+v, want flag overrides", cfg)
 	}
 }

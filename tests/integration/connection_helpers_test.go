@@ -28,6 +28,37 @@ type connectionTestEnv struct {
 	eventBus   *events.Bus
 }
 
+func captureCombatEnded(env *connectionTestEnv) <-chan world.CombatEnded {
+	ended := make(chan world.CombatEnded, 1)
+	env.eventBus.Subscribe(func(event any) {
+		switch value := event.(type) {
+		case world.CombatEnded:
+			ended <- value
+		case *world.CombatEnded:
+			if value != nil {
+				ended <- *value
+			}
+		}
+	})
+	return ended
+}
+
+func assertCombatEndedEvent(
+	t *testing.T,
+	ended <-chan world.CombatEnded,
+	combatID string,
+) {
+	t.Helper()
+	select {
+	case event := <-ended:
+		if event.CombatID != combatID {
+			t.Fatalf("CombatEnded combat ID = %q, want %q", event.CombatID, combatID)
+		}
+	case <-time.After(connectionTestTimeout):
+		t.Fatalf("no CombatEnded event received for combat %q", combatID)
+	}
+}
+
 // newConnectionTestEnv creates a client/server connection pair and starts
 // the connection handler.
 
@@ -66,6 +97,7 @@ func newConnectionTestEnvWithWorld(t *testing.T, gameWorld *world.World) *connec
 		gameWorld,
 		eventBus,
 		lease,
+		0,
 	)
 
 	t.Cleanup(func() {
@@ -194,6 +226,7 @@ func newSharedConnectionTestEnv(
 		gameWorld,
 		eventBus,
 		lease,
+		0,
 	)
 
 	t.Cleanup(func() {

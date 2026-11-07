@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -25,6 +26,7 @@ func TestHandleAdmittedConnectionRequiresLease(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		0,
 	)
 	if _, err := bufio.NewReader(client).ReadString('\n'); !errors.Is(err, io.EOF) {
 		t.Fatalf("read from connection without admission lease returned %v, want EOF", err)
@@ -47,7 +49,7 @@ func TestAdmissionRejectsWhenUnauthenticatedCapacityIsFull(t *testing.T) {
 	if rejection != "" {
 		t.Fatalf("admit first connection: %v", rejection)
 	}
-	go server.HandleAdmittedConnection(firstServer, dispatcher, registry, gameWorld, nil, firstLease)
+	go server.HandleAdmittedConnection(firstServer, dispatcher, registry, gameWorld, nil, firstLease, 0)
 	if err := firstClient.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
 		t.Fatalf("set first client deadline: %v", err)
 	}
@@ -77,6 +79,115 @@ func TestAdmissionRejectsWhenUnauthenticatedCapacityIsFull(t *testing.T) {
 	}
 }
 
+func TestAuthenticatedConnectionClosesAfterIdleTimeout(t *testing.T) {
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+	registry := server.NewRegistry()
+	guard := abuse.NewAbuseGuard(abuse.Config{MaxConnections: 1})
+
+	client, serverConn := net.Pipe()
+	defer client.Close()
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit idle-timeout connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
+		serverConn,
+		dispatcher,
+		registry,
+		gameWorld,
+		nil,
+		lease,
+		25*time.Millisecond,
+	)
+	if err := client.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set client deadline: %v", err)
+	}
+	reader := bufio.NewReader(client)
+	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
+		t.Fatalf("greeting = (%q, %v)", greeting, err)
+	}
+	if _, err := client.Write([]byte("CONNECT IdlePlayer\n")); err != nil {
+		t.Fatalf("send CONNECT: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {
+		t.Fatalf("CONNECT response = (%q, %v)", response, err)
+	}
+	if _, err := reader.ReadString('\n'); !errors.Is(err, io.EOF) {
+		t.Fatalf("read after idle timeout = %v, want EOF", err)
+	}
+
+	deadline := time.Now().Add(time.Second)
+	for {
+		replacement, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+		if rejection == "" {
+			replacement.Release()
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("connection capacity was not released after idle timeout: %v", rejection)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func TestAuthenticatedConnectionActivityResetsIdleTimeout(t *testing.T) {
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+	client, serverConn := net.Pipe()
+	defer client.Close()
+
+	guard := abuse.NewAbuseGuard(abuse.Config{})
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit idle-reset test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
+		serverConn,
+		dispatcher,
+		server.NewRegistry(),
+		gameWorld,
+		nil,
+		lease,
+		400*time.Millisecond,
+	)
+	if err := client.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatalf("set client deadline: %v", err)
+	}
+	reader := bufio.NewReader(client)
+	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
+		t.Fatalf("greeting = (%q, %v)", greeting, err)
+	}
+	if _, err := client.Write([]byte("CONNECT ActivePlayer\n")); err != nil {
+		t.Fatalf("send CONNECT: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {
+		t.Fatalf("CONNECT response = (%q, %v)", response, err)
+	}
+
+	for i := 0; i < 2; i++ {
+		time.Sleep(200 * time.Millisecond)
+		if _, err := client.Write([]byte("LOOK\n")); err != nil {
+			t.Fatalf("send activity %d: %v", i+1, err)
+		}
+		if response, err := reader.ReadString('\n'); err != nil || len(response) < 3 || response[:3] != "OK " {
+			t.Fatalf("LOOK response %d = (%q, %v)", i+1, response, err)
+		}
+	}
+
+	if _, err := reader.ReadString('\n'); !errors.Is(err, io.EOF) {
+		t.Fatalf("connection after final idle period = %v, want EOF", err)
+	}
+}
+
 func TestAdmittedConnectionRateLimitsChatAndKeepsSessionOpen(t *testing.T) {
 	gameWorld, err := world.Load("../../../data/world.json")
 	if err != nil {
@@ -99,6 +210,7 @@ func TestAdmittedConnectionRateLimitsChatAndKeepsSessionOpen(t *testing.T) {
 		gameWorld,
 		nil,
 		lease,
+		0,
 	)
 	if err := client.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
@@ -134,5 +246,199 @@ func TestAdmittedConnectionRateLimitsChatAndKeepsSessionOpen(t *testing.T) {
 	}
 	if response, err := reader.ReadString('\n'); err != nil || len(response) < 3 || response[:3] != "OK " {
 		t.Fatalf("response after rate limit = (%q, %v), want session to continue", response, err)
+	}
+}
+
+func TestAdmittedConnectionRateLimitsGeneralCommands(t *testing.T) {
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+	client, serverConn := net.Pipe()
+	defer client.Close()
+	defer serverConn.Close()
+	guard := abuse.NewAbuseGuard(abuse.Config{})
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit command-limit test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
+		serverConn,
+		dispatcher,
+		server.NewRegistry(),
+		gameWorld,
+		nil,
+		lease,
+		0,
+	)
+	if err := client.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatalf("set client deadline: %v", err)
+	}
+	reader := bufio.NewReader(client)
+	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
+		t.Fatalf("greeting = (%q, %v)", greeting, err)
+	}
+	if _, err := client.Write([]byte("CONNECT CommandTester\n")); err != nil {
+		t.Fatalf("send CONNECT: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {
+		t.Fatalf("CONNECT response = (%q, %v)", response, err)
+	}
+
+	for i := 0; i < 30; i++ {
+		if _, err := client.Write([]byte("LOOK\n")); err != nil {
+			t.Fatalf("send command %d: %v", i+1, err)
+		}
+		if response, err := reader.ReadString('\n'); err != nil || len(response) < 3 || response[:3] != "OK " {
+			t.Fatalf("command %d response = (%q, %v), want OK", i+1, response, err)
+		}
+	}
+	if _, err := client.Write([]byte("LOOK\n")); err != nil {
+		t.Fatalf("send rate-limited command: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "ERR 429 RATE_LIMITED\n" {
+		t.Fatalf("31st command response = (%q, %v), want rate limit", response, err)
+	}
+}
+
+func TestCombatTurnTimeoutSkipsPlayerTurnAndProcessesNPC(t *testing.T) {
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+		t.Fatalf("AddPlayer(Alice): %v", err)
+	}
+	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
+	if err != nil {
+		t.Fatalf("StartCombat(): %v", err)
+	}
+	combat, turn, err := gameWorld.InitializeCombatTurns(combat.ID)
+	if err != nil {
+		t.Fatalf("InitializeCombatTurns(): %v", err)
+	}
+	if turn == nil || !turn.IsPlayer {
+		t.Fatalf("initial combat turn = %+v, want Alice's turn", turn)
+	}
+
+	manager := server.NewCombatTurnTimeoutManager(
+		10*time.Millisecond,
+		commands.NewCombatTurnTimeoutHandler(gameWorld, nil),
+	)
+	defer manager.Stop()
+	manager.Handle(*turn)
+
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		combat, err = gameWorld.GetCombat(combat.ID)
+		if err != nil {
+			t.Fatalf("GetCombat(): %v", err)
+		}
+		if combat.Round >= 2 {
+			if combat.TurnIndex < 0 || !combat.Participants[combat.TurnIndex].IsPlayer {
+				t.Fatalf("round 2 turn = %+v, want a player turn after NPC action", combat)
+			}
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("combat turn timeout did not advance through the NPC turn")
+}
+
+func TestCombatTurnTimeoutIsCancelledWhenTurnChanges(t *testing.T) {
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+		t.Fatalf("AddPlayer(Alice): %v", err)
+	}
+	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
+	if err != nil {
+		t.Fatalf("StartCombat(): %v", err)
+	}
+	combat, turn, err := gameWorld.InitializeCombatTurns(combat.ID)
+	if err != nil {
+		t.Fatalf("InitializeCombatTurns(): %v", err)
+	}
+	if turn == nil || !turn.IsPlayer {
+		t.Fatalf("initial combat turn = %+v, want Alice's turn", turn)
+	}
+
+	manager := server.NewCombatTurnTimeoutManager(
+		20*time.Millisecond,
+		commands.NewCombatTurnTimeoutHandler(gameWorld, nil),
+	)
+	defer manager.Stop()
+	manager.Handle(*turn)
+	manager.Handle(world.CombatTurnChanged{
+		CombatID:      combat.ID,
+		ParticipantID: "dock_warden",
+		IsPlayer:      false,
+	})
+	time.Sleep(40 * time.Millisecond)
+
+	combat, err = gameWorld.GetCombat(combat.ID)
+	if err != nil {
+		t.Fatalf("GetCombat(): %v", err)
+	}
+	if combat.Round != 1 || combat.TurnIndex < 0 ||
+		combat.Participants[combat.TurnIndex].ID != "Alice" {
+		t.Fatalf("combat changed after obsolete timer was cancelled: %+v", combat)
+	}
+}
+
+func TestCombatTurnTimeoutIsCancelledWhenCombatEnds(t *testing.T) {
+	timeoutExpired := make(chan world.CombatTurnChanged, 1)
+	manager := server.NewCombatTurnTimeoutManager(20*time.Millisecond, func(turn world.CombatTurnChanged) {
+		timeoutExpired <- turn
+	})
+	defer manager.Stop()
+
+	turn := world.CombatTurnChanged{
+		CombatID:      "combat-1",
+		ParticipantID: "Alice",
+		IsPlayer:      true,
+	}
+	manager.Handle(turn)
+	manager.Handle(world.CombatEnded{CombatID: turn.CombatID})
+
+	select {
+	case expired := <-timeoutExpired:
+		t.Fatalf("expired turn callback ran after combat ended: %+v", expired)
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestCombatTurnTimeoutManagerStopAndRunCancelTimers(t *testing.T) {
+	for _, mode := range []string{"stop", "run"} {
+		t.Run(mode, func(t *testing.T) {
+			expired := make(chan struct{}, 1)
+			manager := server.NewCombatTurnTimeoutManager(
+				40*time.Millisecond,
+				func(world.CombatTurnChanged) { expired <- struct{}{} },
+			)
+			manager.Handle(world.CombatTurnChanged{
+				CombatID:      "combat-1",
+				ParticipantID: "Alice",
+				IsPlayer:      true,
+			})
+
+			if mode == "stop" {
+				manager.Stop()
+			} else {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				manager.Run(ctx)
+			}
+
+			select {
+			case <-expired:
+				t.Fatal("timeout callback ran after manager shutdown")
+			case <-time.After(80 * time.Millisecond):
+			}
+		})
 	}
 }

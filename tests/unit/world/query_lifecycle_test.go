@@ -212,6 +212,42 @@ func TestWorldCombatRoundQueriesAndTurnAdvancement(t *testing.T) {
 	}
 }
 
+func TestWorldSkipPlayerCombatTurnRequiresCurrentParticipant(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
+	if err != nil {
+		t.Fatalf("StartCombat() returned an error: %v", err)
+	}
+	combat, turnEvent, err := gameWorld.InitializeCombatTurns(combat.ID)
+	if err != nil {
+		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+	}
+	if turnEvent == nil || !turnEvent.IsPlayer {
+		t.Fatalf("initial turn event = %+v, want Alice's turn", turnEvent)
+	}
+	if _, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "dock_warden"); !errors.Is(err, world.ErrInvalidCombatTurn) {
+		t.Fatalf("SkipPlayerCombatTurn(other participant) error = %v, want ErrInvalidCombatTurn", err)
+	}
+
+	nextTurn, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice")
+	if err != nil {
+		t.Fatalf("SkipPlayerCombatTurn(Alice) returned an error: %v", err)
+	}
+	if nextTurn == nil || nextTurn.IsPlayer || nextTurn.ParticipantID != "dock_warden" {
+		t.Fatalf("next turn after skipping Alice = %+v, want Dock Warden", nextTurn)
+	}
+	combat, err = gameWorld.GetCombat(combat.ID)
+	if err != nil {
+		t.Fatalf("GetCombat() returned an error: %v", err)
+	}
+	if combat.Participants[0].SpeedPoints != 0 {
+		t.Fatalf("Alice's remaining speed points = %d, want 0", combat.Participants[0].SpeedPoints)
+	}
+}
+
 func TestWorldUseItemReportsMissingAndNonConsumableItems(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {

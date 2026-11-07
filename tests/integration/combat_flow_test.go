@@ -210,6 +210,7 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 
 func TestHandleConnectionCombatContinuesWhenParticipantDisconnects(t *testing.T) {
 	alice, bob := newGroupAtDocks(t)
+	ended := captureCombatEnded(alice)
 
 	alice.sendRequest(t, "ATTACK Dock Warden")
 	aliceStarted := alice.readResponse(t)
@@ -284,10 +285,12 @@ func TestHandleConnectionCombatContinuesWhenParticipantDisconnects(t *testing.T)
 	if combat.Active {
 		t.Fatal("combat remains active after the only connected participant flees")
 	}
+	assertCombatEndedEvent(t, ended, result.CombatID)
 }
 
 func TestHandleConnectionCombatEndsWhenAllParticipantsDisconnect(t *testing.T) {
 	alice := newConnectionTestEnv(t)
+	ended := captureCombatEnded(alice)
 	connectTestPlayer(t, alice, "Alice")
 	alice.sendRequest(t, "MOVE south")
 	if got := alice.readResponse(t); got != "OK room=docks" {
@@ -316,6 +319,7 @@ func TestHandleConnectionCombatEndsWhenAllParticipantsDisconnect(t *testing.T) {
 	for time.Now().Before(deadline) {
 		combat, err := alice.gameWorld.GetCombat(result.CombatID)
 		if err == nil && !combat.Active {
+			assertCombatEndedEvent(t, ended, result.CombatID)
 			assertPlayerRemoved(t, alice, "Alice")
 			if _, err := alice.gameWorld.GetActiveCombatForPlayer("Alice"); err == nil {
 				t.Fatal("disconnected Alice still has an active combat")
@@ -330,6 +334,7 @@ func TestHandleConnectionCombatEndsWhenAllParticipantsDisconnect(t *testing.T) {
 func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 	alice := newConnectionTestEnv(t)
 	connectTestPlayer(t, alice, "Alice")
+	ended := captureCombatEnded(alice)
 	for _, step := range []struct {
 		direction string
 		room      string
@@ -394,6 +399,7 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 	if !wolfDefeated {
 		t.Fatalf("Dire Wolf was not defeated: %+v", combat.Participants)
 	}
+	assertCombatEndedEvent(t, ended, start.CombatID)
 	inventory, err := alice.gameWorld.GetInventory("Alice")
 	if err != nil {
 		t.Fatalf("GetInventory() returned an error: %v", err)
@@ -412,6 +418,7 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 func TestHandleConnectionCombatDefeatRespawnsPlayer(t *testing.T) {
 	alice := newConnectionTestEnv(t)
 	connectTestPlayer(t, alice, "Alice")
+	ended := captureCombatEnded(alice)
 	alice.sendRequest(t, "MOVE south")
 	if got := alice.readResponse(t); got != "OK room=docks" {
 		t.Fatalf("Alice's move to docks = %q", got)
@@ -464,11 +471,13 @@ func TestHandleConnectionCombatDefeatRespawnsPlayer(t *testing.T) {
 	if _, err := alice.gameWorld.GetActiveCombatForPlayer("Alice"); err == nil {
 		t.Fatal("defeated Alice still has an active combat")
 	}
+	assertCombatEndedEvent(t, ended, start.CombatID)
 }
 
 func TestHandleConnectionCombatFleeEndsSoloEncounter(t *testing.T) {
 	alice := newConnectionTestEnv(t)
 	connectTestPlayer(t, alice, "Alice")
+	ended := captureCombatEnded(alice)
 	alice.sendRequest(t, "MOVE south")
 	if got := alice.readResponse(t); got != "OK room=docks" {
 		t.Fatalf("Alice's move to docks = %q", got)
@@ -503,6 +512,7 @@ func TestHandleConnectionCombatFleeEndsSoloEncounter(t *testing.T) {
 	if combat.Active {
 		t.Fatal("combat remains active after the only participant flees")
 	}
+	assertCombatEndedEvent(t, ended, start.CombatID)
 	if got, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || got != "docks" {
 		t.Fatalf("Alice's room after fleeing = (%q, %v), want docks", got, err)
 	}
