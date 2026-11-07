@@ -3,6 +3,7 @@ package internal_test
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"testing"
@@ -184,6 +185,58 @@ func TestHandleConnectionQuit(t *testing.T) {
 	got := env.readResponse(t)
 	if got != "OK bye" {
 		t.Fatalf("quit response = %q, want %q", got, "OK bye")
+	}
+
+	assertPlayerRemoved(t, env, "Alice")
+
+	if _, err := env.reader.ReadString('\n'); err != io.EOF {
+		t.Fatalf("read after QUIT response error = %v, want EOF", err)
+	}
+}
+
+func TestHandleConnectionCleansUpAfterAbruptDisconnect(t *testing.T) {
+	env := newConnectionTestEnv(t)
+
+	_ = env.readResponse(t) // greeting
+	env.sendRequest(t, "CONNECT Alice")
+	if got := env.readResponse(t); got != "OK connected" {
+		t.Fatalf("connect response = %q, want %q", got, "OK connected")
+	}
+
+	if _, ok := env.registry.GetByName("Alice"); !ok {
+		t.Fatal("connected player is missing from the registry")
+	}
+	if roomID, err := env.gameWorld.GetPlayerRoom("Alice"); err != nil || roomID == "" {
+		t.Fatalf("GetPlayerRoom(Alice) = (%q, %v), want an active player", roomID, err)
+	}
+
+	if err := env.client.Close(); err != nil {
+		t.Fatalf("close client connection: %v", err)
+	}
+
+	deadline := time.Now().Add(connectionTestTimeout)
+	for time.Now().Before(deadline) {
+		_, registered := env.registry.GetByName("Alice")
+		_, roomErr := env.gameWorld.GetPlayerRoom("Alice")
+		if !registered && roomErr != nil {
+			return
+		}
+
+		time.Sleep(time.Millisecond)
+	}
+
+	t.Fatal("player state was not cleaned up after abrupt disconnect")
+}
+
+func assertPlayerRemoved(t *testing.T, env *connectionTestEnv, name string) {
+	t.Helper()
+
+	if _, ok := env.registry.GetByName(name); ok {
+		t.Errorf("player %q remains in the registry after disconnect", name)
+	}
+
+	if roomID, err := env.gameWorld.GetPlayerRoom(name); err == nil {
+		t.Errorf("player %q remains in room %q after disconnect", name, roomID)
 	}
 }
 
