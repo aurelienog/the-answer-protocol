@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +31,133 @@ func TestHandleAdmittedConnectionRequiresLease(t *testing.T) {
 	)
 	if _, err := bufio.NewReader(client).ReadString('\n'); !errors.Is(err, io.EOF) {
 		t.Fatalf("read from connection without admission lease returned %v, want EOF", err)
+	}
+}
+
+func TestMalformedFramingReturnsErrorAndKeepsConnectionOpen(t *testing.T) {
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+	client, serverConn := net.Pipe()
+	defer client.Close()
+	defer serverConn.Close()
+
+	guard := abuse.NewAbuseGuard(abuse.Config{})
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit malformed-framing test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
+		serverConn,
+		dispatcher,
+		server.NewRegistry(),
+		gameWorld,
+		nil,
+		lease,
+		0,
+	)
+	if err := client.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatalf("set client deadline: %v", err)
+	}
+	reader := bufio.NewReader(client)
+	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
+		t.Fatalf("greeting = (%q, %v)", greeting, err)
+	}
+	if _, err := client.Write([]byte("CONNECT FramingTester\n")); err != nil {
+		t.Fatalf("send CONNECT: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {
+		t.Fatalf("CONNECT response = (%q, %v)", response, err)
+	}
+
+	if _, err := client.Write([]byte{'L', 'O', 'O', 'K', ' ', 0xff, '\n'}); err != nil {
+		t.Fatalf("send invalid UTF-8 line: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "ERR 400 INVALID_REQUEST\n" {
+		t.Fatalf("invalid UTF-8 response = (%q, %v)", response, err)
+	}
+
+	if _, err := client.Write([]byte(strings.Repeat("x", 1025) + "\n")); err != nil {
+		t.Fatalf("send oversized line: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "ERR 400 INVALID_REQUEST\n" {
+		t.Fatalf("oversized-line response = (%q, %v)", response, err)
+	}
+
+	if _, err := client.Write([]byte("LOOK\n")); err != nil {
+		t.Fatalf("send valid line after framing errors: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || !strings.HasPrefix(response, "OK ") {
+		t.Fatalf("response after framing errors = (%q, %v), want session to remain open", response, err)
+	}
+}
+
+func TestUnterminatedFrameReturnsProtocolErrorBeforeClosing(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+
+	client, err := net.Dial("tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer client.Close()
+	tcpClient := client.(*net.TCPConn)
+	if err := tcpClient.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatalf("set client deadline: %v", err)
+	}
+
+	serverConn, err := listener.Accept()
+	if err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+	gameWorld, err := world.Load("../../../data/world.json")
+	if err != nil {
+		t.Fatalf("load world: %v", err)
+	}
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+	guard := abuse.NewAbuseGuard(abuse.Config{})
+	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
+	if rejection != "" {
+		t.Fatalf("admit unterminated-frame test connection: %v", rejection)
+	}
+	go server.HandleAdmittedConnection(
+		serverConn,
+		dispatcher,
+		server.NewRegistry(),
+		gameWorld,
+		nil,
+		lease,
+		0,
+	)
+
+	reader := bufio.NewReader(tcpClient)
+	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
+		t.Fatalf("greeting = (%q, %v)", greeting, err)
+	}
+	if _, err := tcpClient.Write([]byte("CONNECT HalfClosed\n")); err != nil {
+		t.Fatalf("send CONNECT: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {
+		t.Fatalf("CONNECT response = (%q, %v)", response, err)
+	}
+	if _, err := tcpClient.Write([]byte("LOOK")); err != nil {
+		t.Fatalf("send unterminated line: %v", err)
+	}
+	if err := tcpClient.CloseWrite(); err != nil {
+		t.Fatalf("half-close client write side: %v", err)
+	}
+	if response, err := reader.ReadString('\n'); err != nil || response != "ERR 400 INVALID_REQUEST\n" {
+		t.Fatalf("unterminated-line response = (%q, %v)", response, err)
+	}
+	if _, err := reader.ReadString('\n'); !errors.Is(err, io.EOF) {
+		t.Fatalf("read after unterminated-line response = %v, want EOF", err)
 	}
 }
 

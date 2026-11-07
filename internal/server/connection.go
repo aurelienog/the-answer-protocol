@@ -127,6 +127,17 @@ func (handler *connectionHandler) readLoop() {
 		if !ok {
 			return
 		}
+		if event.ProtocolError != nil {
+			log.Printf("Malformed protocol message from %s: %v", handler.sessionID, event.ProtocolError)
+			if err := SendMessage(
+				handler.session,
+				protocol.ERR(protocol.CodeInvalidRequest, "INVALID_REQUEST"),
+			); err != nil {
+				log.Printf("Failed to queue malformed-request response for %s: %v", handler.sessionID, err)
+				return
+			}
+			continue
+		}
 		if event.Err != nil {
 			if !errors.Is(event.Err, net.ErrClosed) {
 				log.Printf("Read error from %s: %v", handler.sessionID, event.Err)

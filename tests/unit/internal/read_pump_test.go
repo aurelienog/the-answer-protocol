@@ -195,11 +195,11 @@ func TestReadPumpMeasuresMaximumLengthInBytes(t *testing.T) {
 	overLimitLine := strings.Repeat("a", serverMaxLineBytesForTest-1) + "é"
 	events = runReadPump(t, overLimitLine+"\n")
 
-	if len(events) != 1 || events[0].Err == nil {
+	if len(events) != 1 || events[0].ProtocolError == nil {
 		t.Fatalf("expected %d-byte UTF-8 line to be rejected, got %+v", serverMaxLineBytesForTest+1, events)
 	}
-	if !strings.Contains(events[0].Err.Error(), "exceeds maximum length") {
-		t.Errorf("expected maximum-length error, got %v", events[0].Err)
+	if !strings.Contains(events[0].ProtocolError.Error(), "exceeds maximum length") {
+		t.Errorf("expected maximum-length error, got %v", events[0].ProtocolError)
 	}
 }
 
@@ -212,11 +212,11 @@ func TestReadPump_RejectsLineExceedingMaximumLength(t *testing.T) {
 		t.Fatalf("expected 1 error event, got %d events", len(events))
 	}
 
-	if events[0].Err == nil {
+	if events[0].ProtocolError == nil {
 		t.Fatal("expected an error for a line exceeding the maximum length")
 	}
-	if !strings.Contains(events[0].Err.Error(), "exceeds maximum length") {
-		t.Errorf("expected maximum-length error, got %v", events[0].Err)
+	if !strings.Contains(events[0].ProtocolError.Error(), "exceeds maximum length") {
+		t.Errorf("expected maximum-length error, got %v", events[0].ProtocolError)
 	}
 }
 
@@ -233,11 +233,11 @@ func TestReadPump_RejectsInvalidUTF8(t *testing.T) {
 		t.Fatalf("expected 1 error event, got %d events", len(events))
 	}
 
-	if events[0].Err == nil {
+	if events[0].ProtocolError == nil {
 		t.Fatal("expected an error for invalid UTF-8")
 	}
-	if events[0].Err.Error() != "message is not valid UTF-8" {
-		t.Errorf("expected invalid UTF-8 error, got %v", events[0].Err)
+	if events[0].ProtocolError.Error() != "message is not valid UTF-8" {
+		t.Errorf("expected invalid UTF-8 error, got %v", events[0].ProtocolError)
 	}
 }
 
@@ -248,7 +248,7 @@ func TestReadPump_RejectsControlCharacters(t *testing.T) {
 		t.Fatalf("expected 1 error event, got %d events", len(events))
 	}
 
-	if events[0].Err == nil {
+	if events[0].ProtocolError == nil {
 		t.Fatal("expected an error for a control character")
 	}
 }
@@ -282,24 +282,27 @@ func TestReadPump_RejectsUnterminatedLineAtEOF(t *testing.T) {
 		t.Fatalf("expected 1 error event, got %d events: %+v", len(events), events)
 	}
 
-	if events[0].Err == nil {
+	if events[0].ProtocolError == nil {
 		t.Fatal("expected an error for a message without LF")
 	}
-	if !strings.Contains(events[0].Err.Error(), "unterminated message") {
-		t.Errorf("expected unterminated-message error, got %v", events[0].Err)
+	if !strings.Contains(events[0].ProtocolError.Error(), "unterminated message") {
+		t.Errorf("expected unterminated-message error, got %v", events[0].ProtocolError)
 	}
 }
 
-func TestReadPumpStopsAfterInvalidLine(t *testing.T) {
-	events := runReadPump(t, "LOOK\n", "BAD\x00\n")
+func TestReadPumpContinuesAfterInvalidLine(t *testing.T) {
+	events := runReadPump(t, "LOOK\n", "BAD\x00\n", "MOVE north\n")
 
-	if len(events) != 2 {
-		t.Fatalf("expected valid line and one error event, got %+v", events)
+	if len(events) != 3 {
+		t.Fatalf("expected valid, malformed, and valid events, got %+v", events)
 	}
 	if events[0].Err != nil || events[0].Line != "LOOK" {
 		t.Errorf("first event = %+v, want LOOK without error", events[0])
 	}
-	if events[1].Err == nil || !strings.Contains(events[1].Err.Error(), "control characters") {
+	if events[1].ProtocolError == nil || !strings.Contains(events[1].ProtocolError.Error(), "control characters") {
 		t.Errorf("second event = %+v, want control-character error", events[1])
+	}
+	if events[2].Err != nil || events[2].Line != "MOVE north" {
+		t.Errorf("third event = %+v, want MOVE north after malformed line", events[2])
 	}
 }
