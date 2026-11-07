@@ -33,17 +33,19 @@ type connectionTestEnv struct {
 func newConnectionTestEnv(t *testing.T) *connectionTestEnv {
 	t.Helper()
 
-	client, serverConn := net.Pipe()
-
-	registry := server.NewRegistry()
-
 	gameWorld, err := world.Load("../../data/world.json")
 	if err != nil {
-		client.Close()
-		serverConn.Close()
 		t.Fatalf("load world: %v", err)
 	}
 
+	return newConnectionTestEnvWithWorld(t, gameWorld)
+}
+
+func newConnectionTestEnvWithWorld(t *testing.T, gameWorld *world.World) *connectionTestEnv {
+	t.Helper()
+
+	client, serverConn := net.Pipe()
+	registry := server.NewRegistry()
 	dispatcher := commands.NewDispatcher()
 	commands.RegisterCommands(dispatcher)
 

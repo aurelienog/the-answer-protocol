@@ -64,6 +64,137 @@ func TestHandleConnectionCleansUpAfterAbruptDisconnect(t *testing.T) {
 	t.Fatal("player state was not cleaned up after abrupt disconnect")
 }
 
+func TestHandleConnectionAbruptDisconnectRemovesPlayerFromGroup(t *testing.T) {
+	alice := newConnectionTestEnv(t)
+	connectTestPlayer(t, alice, "Alice")
+
+	bob := newSharedConnectionTestEnv(
+		t,
+		alice.registry,
+		alice.dispatcher,
+		alice.gameWorld,
+		alice.eventBus,
+		"group-disconnect-bob",
+	)
+	connectTestPlayer(t, bob, "Bob")
+	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Bob" {
+		t.Fatalf("Alice's Bob-enter event = %q", got)
+	}
+
+	alice.sendRequest(t, "GROUP CREATE Adventurers")
+	if got := alice.readResponse(t); got != "OK group=group:1 name=Adventurers" {
+		t.Fatalf("create-group response = %q", got)
+	}
+
+	alice.sendRequest(t, "GROUP INVITE Bob")
+	if got := alice.readResponse(t); got != "OK" {
+		t.Fatalf("invite response = %q", got)
+	}
+	if got := bob.readResponse(t); got != "EVT GROUP INVITE player=Alice group=Adventurers" {
+		t.Fatalf("group-invite event = %q", got)
+	}
+
+	bob.sendRequest(t, "GROUP JOIN Adventurers")
+	if got := bob.readResponse(t); got != "OK group=group:1" {
+		t.Fatalf("join-group response = %q", got)
+	}
+	if got := alice.readResponse(t); got != "EVT GROUP JOIN player=Bob" {
+		t.Fatalf("group-join event = %q", got)
+	}
+
+	if err := bob.client.Close(); err != nil {
+		t.Fatalf("close Bob's connection: %v", err)
+	}
+	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Bob" {
+		t.Fatalf("Alice's Bob-leave event = %q", got)
+	}
+
+	group, err := alice.gameWorld.GetPlayerGroup("Alice")
+	if err != nil || len(group.Members) != 1 || group.Members[0] != "Alice" {
+		t.Fatalf("Alice's group after Bob disconnects = (%+v, %v), want Alice alone", group, err)
+	}
+	if _, err := alice.gameWorld.GetPlayerGroup("Bob"); err == nil {
+		t.Fatal("Bob remains in a group after abruptly disconnecting")
+	}
+
+	deadline := time.Now().Add(connectionTestTimeout)
+	for time.Now().Before(deadline) {
+		if _, ok := alice.registry.GetByName("Bob"); !ok {
+			assertPlayerRemoved(t, alice, "Bob")
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("Bob's session remains registered after abrupt disconnect")
+}
+
+func TestHandleConnectionDisconnectingGroupCreatorPreservesRemainingMember(t *testing.T) {
+	alice := newConnectionTestEnv(t)
+	connectTestPlayer(t, alice, "Alice")
+
+	bob := newSharedConnectionTestEnv(
+		t,
+		alice.registry,
+		alice.dispatcher,
+		alice.gameWorld,
+		alice.eventBus,
+		"leader-disconnect-bob",
+	)
+	connectTestPlayer(t, bob, "Bob")
+	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Bob" {
+		t.Fatalf("Alice's Bob-enter event = %q", got)
+	}
+
+	alice.sendRequest(t, "GROUP CREATE Adventurers")
+	if got := alice.readResponse(t); got != "OK group=group:1 name=Adventurers" {
+		t.Fatalf("create-group response = %q", got)
+	}
+	alice.sendRequest(t, "GROUP INVITE Bob")
+	if got := alice.readResponse(t); got != "OK" {
+		t.Fatalf("invite response = %q", got)
+	}
+	if got := bob.readResponse(t); got != "EVT GROUP INVITE player=Alice group=Adventurers" {
+		t.Fatalf("group-invite event = %q", got)
+	}
+	bob.sendRequest(t, "GROUP JOIN Adventurers")
+	if got := bob.readResponse(t); got != "OK group=group:1" {
+		t.Fatalf("join-group response = %q", got)
+	}
+	if got := alice.readResponse(t); got != "EVT GROUP JOIN player=Bob" {
+		t.Fatalf("group-join event = %q", got)
+	}
+
+	if err := alice.client.Close(); err != nil {
+		t.Fatalf("close group creator's connection: %v", err)
+	}
+	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
+		t.Fatalf("Bob's Alice-leave event = %q", got)
+	}
+
+	group, err := bob.gameWorld.GetPlayerGroup("Bob")
+	if err != nil || len(group.Members) != 1 || group.Members[0] != "Bob" {
+		t.Fatalf("Bob's group after Alice disconnects = (%+v, %v), want Bob alone", group, err)
+	}
+	if _, err := bob.gameWorld.GetPlayerGroup("Alice"); err == nil {
+		t.Fatal("Alice remains in a group after disconnecting")
+	}
+
+	bob.sendRequest(t, "GROUP CREATE New Adventurers")
+	if got := bob.readResponse(t); got != "ERR 402 ALREADY_IN_GROUP" {
+		t.Fatalf("new group response while Bob remains in the existing group = %q", got)
+	}
+
+	deadline := time.Now().Add(connectionTestTimeout)
+	for time.Now().Before(deadline) {
+		if _, ok := alice.registry.GetByName("Alice"); !ok {
+			assertPlayerRemoved(t, alice, "Alice")
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatal("Alice's session remains registered after disconnecting")
+}
+
 func TestHandleConnectionBroadcastsPlayerLeave(t *testing.T) {
 	observer := newConnectionTestEnv(t)
 
