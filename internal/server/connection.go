@@ -168,13 +168,6 @@ func HandleConnection(
 			// The player is fully registered and authenticated.
 			authenticated = true
 
-			if err := SendMessage(session, protocol.OK("connected")); err != nil {
-				log.Printf("Failed to queue CONNECT response for %s: %v", username, err)
-				return
-			}
-
-			connected = true
-
 			if !authTimer.Stop() {
 				select {
 				case <-authTimer.C:
@@ -205,6 +198,13 @@ func HandleConnection(
 			}
 
 			playerEnterBroadcast = true
+
+			if err := SendMessage(session, protocol.OK("connected")); err != nil {
+				log.Printf("Failed to queue CONNECT response for %s: %v", username, err)
+				return
+			}
+
+			connected = true
 			continue
 		}
 
@@ -220,6 +220,20 @@ func HandleConnection(
 		if errors.Is(err, commands.ErrQuit) {
 			quitRequested = true
 
+			cleanupPlayer(
+				sessionID,
+				session,
+				registry,
+				gameWorld,
+				registered,
+				authenticated,
+				playerEnterBroadcast,
+				eventPublisher,
+			)
+			registered = false
+			authenticated = false
+			playerEnterBroadcast = false
+
 			// Queue the final response before closing the output queue.
 			if queueErr := SendMessage(session, message); queueErr != nil {
 				log.Printf(
@@ -227,12 +241,6 @@ func HandleConnection(
 					session.PlayerName,
 					queueErr,
 				)
-			}
-
-			// Remove the session before Outbox is closed.
-			if registered {
-				registry.Remove(sessionID)
-				registered = false
 			}
 
 			session.CloseOutbox()
