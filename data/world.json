@@ -228,7 +228,7 @@
     "item.missing_ships_report": {
       "id": "item.missing_ships_report",
       "name": "Missing Ships Report",
-      "description": "The Dock Warden's secret ledger detailing every ship that vanished from Arvendale. Bring it to Captain Eliza.",
+      "description": "The Dock Warden's secret ledger detailing every ship that vanished from Arvendale.",
       "type": "quest"
     },
     "item.gold_coins": {
@@ -287,11 +287,10 @@
             "Defeat the Shadow Smuggler or search the warehouse for the Incriminating Letter, and I will reward you with a Royal Guard Breastplate!"
           ],
           "active": [
-            "Have you recovered the Incriminating Letter from the Abandoned Warehouse yet?",
-            "Without hard evidence, I cannot arrest the conspirators."
+            "Have you recovered the Incriminating Letter from the Abandoned Warehouse yet?"
           ],
           "completed": [
-            "This letter confirms my worst fears! Take this Royal Guard Breastplate — you have earned it."
+            "This letter confirms my worst fears! Take this Royal Guard Breastplate (+6 Defense) — you have earned it."
           ],
           "locked": [
             "We have other matters to settle first."
@@ -306,11 +305,23 @@
             "Defeat the corrupt Dock Warden or secure the Missing Ships Report to end this conspiracy once and for all."
           ],
           "completed": [
-            "You defeated the Warden and recovered the ledger! Arvendale is forever in your debt. Wear the Helm of Arvendale with pride, Champion!"
+            "You defeated the Warden and recovered the ledger! Wear the Helm of Arvendale (+2 Attack, +5 Defense) with pride, Champion!"
           ],
           "locked": [
             "First help me expose the smugglers in the warehouse."
           ]
+        },
+        "quest.bounty_smugglers": {
+          "available": [
+            "The Shadow Smuggler still returns to the warehouse! Anytime you bring me another Incriminating Letter, I will reward your dedication with Harbor Vintage Wine and Fresh Bread!"
+          ],
+          "active": [
+            "Bring me any additional Incriminating Letters you confiscate from the Shadow Smuggler."
+          ],
+          "completed": [
+            "Thank you for your tireless service to Arvendale! Enjoy this Harbor Vintage Wine and Fresh Bread."
+          ],
+          "locked": []
         }
       }
     },
@@ -340,7 +351,7 @@
       "quest_dialogues": {
         "quest.explore_arvendale": {
           "available": [
-            "Welcome, adventurer! Your first task is to scout our realm. Travel north to the North Town Gate, pick up the Northern Gate Seal, and bring it back to me for a pair of Pathfinder Boots! (Also visit Apprentice Elisa in the Apothecary East and Captain Eliza South for more quests)."
+            "Welcome, adventurer! Your first task is to scout our realm. Travel north to the North Town Gate, pick up the Northern Gate Seal, and bring it back to me for a pair of Pathfinder Boots!"
           ],
           "active": [
             "Travel north to the North Town Gate, take the Northern Gate Seal, and return here to claim your Pathfinder Boots!"
@@ -388,6 +399,56 @@
             "Marvelous! These herbs will save lives. Take these Alchemist's Iron Gauntlets (+3 Attack, +3 Defense) and a Healing Elixir!"
           ],
           "locked": []
+        },
+        "quest.repeatable_herbs": {
+          "available": [
+            "I always need more Healing Herbs to brew potions! Whenever you defeat the Dire Wolf and bring me more herbs, I'll brew you a fresh Healing Elixir (+40 HP)!"
+          ],
+          "active": [
+            "Bring me Healing Herbs from the Whispering Forest anytime you need another Healing Elixir."
+          ],
+          "completed": [
+            "Thank you for your hard work! Here is a freshly brewed Healing Elixir for your battles!"
+          ],
+          "locked": []
+        }
+      }
+    },
+    "tavern_keeper": {
+      "id": "tavern_keeper",
+      "name": "Mara",
+      "role": "tavern_keeper",
+      "hostile": false,
+      "respawn_seconds": 60,
+      "combat_stats": {
+        "hp": 60,
+        "max_hp": 60,
+        "attack": 5,
+        "defense": 5,
+        "speed": 10
+      },
+      "quest_id": "quest.bounty_warden",
+      "dialogue": {
+        "default": [
+          "Welcome to The Salty Siren! Help yourself to Fresh Bread (+15 HP) and Harbor Vintage Wine (+25 HP) to recover your strength."
+        ],
+        "available": [],
+        "active": [],
+        "completed": [],
+        "locked": []
+      },
+      "quest_dialogues": {
+        "quest.bounty_warden": {
+          "available": [
+            "Many of my regular sailor customers vanished because of the Dock Warden! Anytime you defeat him and bring me a Missing Ships Report, I'll treat you to Harbor Vintage Wine and Fresh Bread on the house!"
+          ],
+          "active": [
+            "Bring me a Missing Ships Report from the Dock Warden, and a feast of Wine and Bread is yours!"
+          ],
+          "completed": [
+            "Bless you for avenging our sailors! Here is your Harbor Vintage Wine (+25 HP) and Fresh Bread (+15 HP)!"
+          ],
+          "locked": []
         }
       }
     },
@@ -400,7 +461,7 @@
       "combat_stats": {
         "hp": 60,
         "max_hp": 60,
-        "attack": 0,
+        "attack": 5,
         "defense": 5,
         "speed": 10
       },
@@ -433,31 +494,6 @@
       "dialogue": {
         "default": [
           "Steel and oak keep an adventurer breathing! Take the Iron Sword and Oak Shield beside my anvil — you'll need every bit of armor before facing the Dock Warden."
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
-      },
-      "quest_dialogues": {}
-    },
-    "tavern_keeper": {
-      "id": "tavern_keeper",
-      "name": "Mara",
-      "role": "tavern_keeper",
-      "hostile": false,
-      "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 60,
-        "max_hp": 60,
-        "attack": 3,
-        "defense": 5,
-        "speed": 10
-      },
-      "quest_id": "",
-      "dialogue": {
-        "default": [
-          "Welcome to The Salty Siren! Help yourself to Fresh Bread (+15 HP) and Harbor Vintage Wine (+25 HP) to recover your strength during battle."
         ],
         "available": [],
         "active": [],
@@ -534,8 +570,7 @@
       },
       "quest_id": "",
       "rewards": [
-        "item.compromise_letter",
-        "item.gold_coins"
+        "item.compromise_letter"
       ],
       "dialogue": {
         "default": [
@@ -563,8 +598,7 @@
       },
       "quest_id": "",
       "rewards": [
-        "item.missing_ships_report",
-        "item.gold_coins"
+        "item.missing_ships_report"
       ],
       "dialogue": {
         "default": [
@@ -585,11 +619,13 @@
       "description": "Explore the city to the North Town Gate, retrieve the Northern Gate Seal, and return to the Quest Advisor on Market Street.",
       "giver_npc_id": "quest_advisor",
       "required_item_id": "item.explorer_token",
+      "required_item_quantity": 1,
       "consume_required_item": true,
       "reward_item_ids": [
         "item.leather_boots"
       ],
-      "next_quest_id": ""
+      "next_quest_id": "",
+      "repeatable": false
     },
     "quest.expose_smugglers": {
       "id": "quest.expose_smugglers",
@@ -597,11 +633,13 @@
       "description": "Defeat the Shadow Smuggler or recover the Incriminating Letter from the Abandoned Warehouse and bring it to Captain Eliza.",
       "giver_npc_id": "captain_eliza",
       "required_item_id": "item.compromise_letter",
+      "required_item_quantity": 1,
       "consume_required_item": true,
       "reward_item_ids": [
         "item.steel_breastplate"
       ],
-      "next_quest_id": "quest.investigate_missing_ships"
+      "next_quest_id": "quest.investigate_missing_ships",
+      "repeatable": false
     },
     "quest.investigate_missing_ships": {
       "id": "quest.investigate_missing_ships",
@@ -609,11 +647,28 @@
       "description": "Defeat the heavily armored Dock Warden on The Great Pier or secure the Missing Ships Report and deliver it to Captain Eliza.",
       "giver_npc_id": "captain_eliza",
       "required_item_id": "item.missing_ships_report",
+      "required_item_quantity": 1,
       "consume_required_item": true,
       "reward_item_ids": [
         "item.royal_helmet"
       ],
-      "next_quest_id": ""
+      "next_quest_id": "quest.bounty_smugglers",
+      "repeatable": false
+    },
+    "quest.bounty_smugglers": {
+      "id": "quest.bounty_smugglers",
+      "name": "Keeping the Warehouse Clear (Repeatable)",
+      "description": "Bring any additional Incriminating Letters from the Shadow Smuggler to Captain Eliza in exchange for Wine and Fresh Bread.",
+      "giver_npc_id": "captain_eliza",
+      "required_item_id": "item.compromise_letter",
+      "required_item_quantity": 1,
+      "consume_required_item": true,
+      "reward_item_ids": [
+        "item.wine",
+        "item.bread"
+      ],
+      "next_quest_id": "",
+      "repeatable": true
     },
     "quest.gather_herbs": {
       "id": "quest.gather_herbs",
@@ -621,12 +676,43 @@
       "description": "Defeat the Dire Wolf or gather Healing Herbs from the Whispering Forest Edge and bring them to Apprentice Elisa in the Apothecary.",
       "giver_npc_id": "herbalist",
       "required_item_id": "item.herbs",
+      "required_item_quantity": 1,
       "consume_required_item": true,
       "reward_item_ids": [
         "item.iron_gauntlets",
         "item.healing_potion"
       ],
-      "next_quest_id": ""
+      "next_quest_id": "quest.repeatable_herbs",
+      "repeatable": false
+    },
+    "quest.repeatable_herbs": {
+      "id": "quest.repeatable_herbs",
+      "name": "Alchemist's Herb Supply (Repeatable)",
+      "description": "Deliver Healing Herbs from the Dire Wolf to Apprentice Elisa anytime to receive a fresh Healing Elixir (+40 HP).",
+      "giver_npc_id": "herbalist",
+      "required_item_id": "item.herbs",
+      "required_item_quantity": 1,
+      "consume_required_item": true,
+      "reward_item_ids": [
+        "item.healing_potion"
+      ],
+      "next_quest_id": "",
+      "repeatable": true
+    },
+    "quest.bounty_warden": {
+      "id": "quest.bounty_warden",
+      "name": "Justice for the Sailors (Repeatable)",
+      "description": "Bring a Missing Ships Report from the Dock Warden to Mara at The Salty Siren Tavern for Harbor Vintage Wine and Fresh Bread.",
+      "giver_npc_id": "tavern_keeper",
+      "required_item_id": "item.missing_ships_report",
+      "required_item_quantity": 1,
+      "consume_required_item": true,
+      "reward_item_ids": [
+        "item.wine",
+        "item.bread"
+      ],
+      "next_quest_id": "",
+      "repeatable": true
     }
   }
 }
