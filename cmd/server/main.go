@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
+	"time"
 
+	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/config"
 	"the-answer-protocol/internal/events"
@@ -11,10 +14,17 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
-const maxActiveConnections = 3
-
 func main() {
 	cfg := config.LoadConfig()
+	guard := abuse.NewAbuseGuard(abuse.Config{
+		MaxConnections:                cfg.MaxConnections,
+		MaxConnectionsPerIP:           cfg.MaxConnectionsPerIP,
+		MaxConnectionAttemptsPerIP:    cfg.MaxConnectionAttemptsPerIP,
+		MaxUnauthenticatedConnections: cfg.MaxUnauthenticatedConnections,
+	})
+	cleanupContext, stopCleanup := context.WithCancel(context.Background())
+	defer stopCleanup()
+	go guard.RunCleanup(cleanupContext, time.Minute)
 
 	gameWorld, err := world.Load(cfg.WorldPath)
 	if err != nil {
@@ -27,6 +37,12 @@ func main() {
 
 	notificationDispatcher := server.NewNotificationDispatcher(registry)
 	eventBus.Subscribe(notificationDispatcher.Handle)
+	combatTurnTimeouts := server.NewCombatTurnTimeoutManager(
+		cfg.CombatTurnTimeout,
+		commands.NewCombatTurnTimeoutHandler(gameWorld, eventBus),
+	)
+	eventBus.Subscribe(combatTurnTimeouts.Handle)
+	go combatTurnTimeouts.Run(cleanupContext)
 
 	dispatcher := commands.NewDispatcher()
 	commands.RegisterCommands(dispatcher)
@@ -39,8 +55,6 @@ func main() {
 
 	log.Printf("TAP server listening on port %s", cfg.ServerPort)
 
-	connectionSlots := make(chan struct{}, maxActiveConnections)
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -48,25 +62,23 @@ func main() {
 			continue
 		}
 
-		// Reserve a slot before starting a connection handler.
-		select {
-		case connectionSlots <- struct{}{}:
-			// A slot is available.
-		default:
-			log.Printf(
-				"Maximum active connections reached; rejecting %s",
-				conn.RemoteAddr(),
-			)
+		lease, rejection := guard.AcquireConnection(conn.RemoteAddr())
+		if rejection != "" {
+			log.Printf("Connection rejected from %s: %s", conn.RemoteAddr(), rejection)
 			_ = conn.Close()
 			continue
 		}
 
-		go func(conn net.Conn) {
-			defer func() {
-				<-connectionSlots
-			}()
-
-			server.HandleConnection(conn, dispatcher, registry, gameWorld, eventBus)
-		}(conn)
+		go func(conn net.Conn, lease *abuse.ConnectionLease) {
+			server.HandleAdmittedConnection(
+				conn,
+				dispatcher,
+				registry,
+				gameWorld,
+				eventBus,
+				lease,
+				cfg.IdleTimeout,
+			)
+		}(conn, lease)
 	}
 }
