@@ -24,7 +24,7 @@ func (w *World) validateWorldRelations() error {
 		return err
 	}
 
-		if err := w.validateInitialRoomRelation(); err != nil {
+	if err := w.validateInitialRoomRelation(); err != nil {
 		return err
 	}
 
@@ -38,30 +38,14 @@ func (w *World) validateWorldRelations() error {
 // validateQuestNPCRelations checks the bidirectional relationship
 // between quests and their giver NPCs.
 func (w *World) validateQuestNPCRelations() error {
-	for questID, quest := range w.quests {
-		npc, exists := w.npcs[quest.GiverNPCID]
-		if !exists {
-			// The individual quest validator already checks this reference.
-			continue
-		}
-
-		if npc.QuestID != questID {
-			return fmt.Errorf(
-				"quest %q references giver NPC %q, but NPC references quest %q",
-				questID,
-				quest.GiverNPCID,
-				npc.QuestID,
-			)
-		}
-	}
+	npcQuestChains := make(map[string]map[string]struct{}, len(w.npcs))
 
 	for npcID, npc := range w.npcs {
 		if npc.QuestID == "" {
 			continue
 		}
 
-		quest, exists := w.quests[npc.QuestID]
-		if !exists {
+		if _, exists := w.quests[npc.QuestID]; !exists {
 			return fmt.Errorf(
 				"NPC %q references nonexistent quest %q",
 				npcID,
@@ -69,12 +53,49 @@ func (w *World) validateQuestNPCRelations() error {
 			)
 		}
 
-		if quest.GiverNPCID != npcID {
+		chain := make(map[string]struct{})
+		questID := npc.QuestID
+		for questID != "" {
+			if _, visited := chain[questID]; visited {
+				break
+			}
+
+			quest, exists := w.quests[questID]
+			if !exists {
+				break
+			}
+
+			if quest.GiverNPCID != npcID {
+				return fmt.Errorf(
+					"NPC %q quest chain includes quest %q assigned to NPC %q",
+					npcID,
+					questID,
+					quest.GiverNPCID,
+				)
+			}
+
+			chain[questID] = struct{}{}
+			questID = quest.NextQuestID
+		}
+
+		npcQuestChains[npcID] = chain
+	}
+
+	for questID, quest := range w.quests {
+		chain, exists := npcQuestChains[quest.GiverNPCID]
+		if !exists {
 			return fmt.Errorf(
-				"NPC %q references quest %q, but that quest belongs to NPC %q",
-				npcID,
-				npc.QuestID,
+				"quest %q references giver NPC %q without a quest chain",
+				questID,
 				quest.GiverNPCID,
+			)
+		}
+
+		if _, exists := chain[questID]; !exists {
+			return fmt.Errorf(
+				"NPC %q does not expose quest %q in its quest chain",
+				quest.GiverNPCID,
+				questID,
 			)
 		}
 	}

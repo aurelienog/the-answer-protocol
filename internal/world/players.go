@@ -200,7 +200,7 @@ func (w *World) RemovePlayer(
 	// Identify combats that no longer have active players.
 	combatsToEnd := make([]string, 0)
 
-	if combat != nil && !w.combatHasActivePlayersLocked(combat) {
+	if combat != nil && !combatHasActivePlayersLocked(combat) {
 		combatsToEnd = append(combatsToEnd, combat.ID)
 	}
 
