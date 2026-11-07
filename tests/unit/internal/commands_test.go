@@ -54,7 +54,11 @@ func createCommandTestWorld(t *testing.T) *world.World {
 				"id": "guard",
 				"name": "Harbor Guard",
 				"combat_stats": {
-					"max_hp": 1
+					"hp": 1,
+					"max_hp": 1,
+					"attack": 1,
+					"defense": 0,
+					"speed": 1
 				}
 			}
 		}

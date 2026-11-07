@@ -219,7 +219,7 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 			name: "invalid room exit",
 			definition: `{"rooms":{"room":{"id":"room","name":"Room",` +
 				`"exits":{"north":"missing"}}}}`,
-			expectedInError: `exit "north" to nonexistent room "missing"`,
+			expectedInError: `exit "north" references unknown destination room "missing"`,
 		},
 		{
 			name: "room references unknown item",
@@ -255,6 +255,17 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 				`"giver_npc_id":"missing"}}}`,
 			expectedInError: `references nonexistent giver NPC "missing"`,
 		},
+		{
+			name: "quest is not in giver NPC's quest chain",
+			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+				`"name":"Room","npcs":["npc"]}},"npcs":{"npc":{"id":"npc",` +
+				`"name":"NPC","combat_stats":{"hp":1,"max_hp":1,"attack":1,` +
+				`"defense":0,"speed":1},"quest_id":"quest.root"}},` +
+				`"quests":{"quest.root":{"id":"quest.root","name":"Root",` +
+				`"giver_npc_id":"npc"},"quest.other":{"id":"quest.other",` +
+				`"name":"Other","giver_npc_id":"npc"}}}`,
+			expectedInError: `does not expose quest "quest.other" in its quest chain`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -281,6 +292,26 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 	}
 }
 
+func TestLoadWorldAllowsQuestChainsForSameNPC(t *testing.T) {
+	definition := `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+		`"name":"Room","npcs":["npc"]}},"npcs":{"npc":{"id":"npc",` +
+		`"name":"NPC","combat_stats":{"hp":1,"max_hp":1,"attack":1,` +
+		`"defense":0,"speed":1},"quest_id":"quest.first"}},` +
+		`"quests":{"quest.first":{"id":"quest.first","name":"First",` +
+		`"giver_npc_id":"npc","next_quest_id":"quest.second"},` +
+		`"quest.second":{"id":"quest.second","name":"Second",` +
+		`"giver_npc_id":"npc"}}}`
+
+	gameWorld, err := world.Load(writeWorldDefinition(t, definition))
+	if err != nil {
+		t.Fatalf("world.Load() rejected a valid NPC quest chain: %v", err)
+	}
+
+	if gameWorld == nil {
+		t.Fatal("world.Load() returned a nil world without an error")
+	}
+}
+
 func TestLoadWorldReportsFileAndJSONErrors(t *testing.T) {
 	t.Run("missing file", func(t *testing.T) {
 		_, err := world.Load(filepath.Join(t.TempDir(), "missing.json"))
@@ -304,6 +335,79 @@ func TestLoadWorldReportsFileAndJSONErrors(t *testing.T) {
 			t.Errorf("expected decode error, got %q", err)
 		}
 	})
+}
+
+func TestLoadWorldJSONParsing(t *testing.T) {
+	validDefinition := `{"rooms":{"harbor_square":{"id":"harbor_square","name":"Room"}}}`
+
+	tests := []struct {
+		name            string
+		definition      string
+		expectedInError string
+	}{
+		{
+			name:            "unknown top-level field",
+			definition:      `{"rooms":{"room":{"id":"room","name":"Room"}},"unexpected":true}`,
+			expectedInError: `unknown field "unexpected"`,
+		},
+		{
+			name:            "unknown nested field",
+			definition:      `{"rooms":{"room":{"id":"room","name":"Room","unexpected":true}}}`,
+			expectedInError: `unknown field "unexpected"`,
+		},
+		{
+			name:            "multiple JSON values",
+			definition:      validDefinition + ` {}`,
+			expectedInError: "multiple JSON values are not allowed",
+		},
+		{
+			name:            "trailing non-JSON content",
+			definition:      validDefinition + ` trailing`,
+			expectedInError: "unexpected trailing content",
+		},
+		{
+			name:       "trailing whitespace",
+			definition: validDefinition + " \n\t",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeWorldDefinition(t, tt.definition)
+
+			gameWorld, err := world.Load(path)
+			if tt.expectedInError != "" {
+				if err == nil {
+					t.Fatal("world.Load() succeeded for an invalid JSON definition")
+				}
+
+				if !strings.Contains(err.Error(), tt.expectedInError) {
+					t.Errorf(
+						"expected error to contain %q, got %q",
+						tt.expectedInError,
+						err,
+					)
+				}
+
+				if gameWorld != nil {
+					t.Error("world.Load() returned a world together with an error")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("world.Load() returned an error: %v", err)
+			}
+
+			if gameWorld == nil {
+				t.Fatal("world.Load() returned a nil world without an error")
+			}
+
+			if got := gameWorld.RoomCount(); got != 1 {
+				t.Errorf("expected 1 room, got %d", got)
+			}
+		})
+	}
 }
 
 func TestLoadWorldReturnsErrorsForUnknownRoom(t *testing.T) {
