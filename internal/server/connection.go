@@ -29,13 +29,14 @@ func HandleAdmittedConnection(
 	gameWorld *world.World,
 	eventPublisher events.Publisher,
 	lease *abuse.ConnectionLease,
+	idleTimeout time.Duration,
 ) {
 	if lease == nil {
 		_ = conn.Close()
 		return
 	}
 
-	handler := newConnectionHandler(conn, dispatcher, registry, gameWorld, eventPublisher, lease)
+	handler := newConnectionHandler(conn, dispatcher, registry, gameWorld, eventPublisher, lease, idleTimeout)
 	handler.run()
 }
 
@@ -46,6 +47,7 @@ type connectionHandler struct {
 	gameWorld      *world.World
 	eventPublisher events.Publisher
 	lease          *abuse.ConnectionLease
+	idleTimeout    time.Duration
 	session        *Session
 	sessionID      string
 	writerDone     chan struct{}
@@ -60,6 +62,7 @@ type connectionHandler struct {
 	connected      bool
 	authTimer      *time.Timer
 	authTimeout    <-chan time.Time
+	idleTimer      *time.Timer
 }
 
 func newConnectionHandler(
@@ -69,6 +72,7 @@ func newConnectionHandler(
 	gameWorld *world.World,
 	eventPublisher events.Publisher,
 	lease *abuse.ConnectionLease,
+	idleTimeout time.Duration,
 ) *connectionHandler {
 	sessionID := conn.RemoteAddr().String()
 	return &connectionHandler{
@@ -78,6 +82,7 @@ func newConnectionHandler(
 		gameWorld:      gameWorld,
 		eventPublisher: eventPublisher,
 		lease:          lease,
+		idleTimeout:    idleTimeout,
 		session: &Session{
 			ID:         sessionID,
 			Connection: conn,
@@ -128,11 +133,11 @@ func (handler *connectionHandler) readLoop() {
 			}
 			return
 		}
-
 		line := event.Line
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
+		handler.resetIdleTimer()
 		if !handler.connected {
 			if !handler.handleConnect(line) {
 				return
@@ -151,12 +156,52 @@ func (handler *connectionHandler) nextReadEvent() (ReadEvent, bool) {
 		log.Printf("Authentication timeout from %s", handler.sessionID)
 		_ = handler.conn.Close()
 		return ReadEvent{}, false
+	case <-handler.idleTimeoutChannel():
+		log.Printf(
+			"Authenticated connection idle timeout for %q from %s",
+			handler.session.PlayerName,
+			handler.sessionID,
+		)
+		_ = handler.conn.Close()
+		return ReadEvent{}, false
 	case event, ok := <-handler.incoming:
 		return event, ok
 	}
 }
 
+func (handler *connectionHandler) idleTimeoutChannel() <-chan time.Time {
+	if handler.idleTimer == nil {
+		return nil
+	}
+	return handler.idleTimer.C
+}
+
+func (handler *connectionHandler) resetIdleTimer() {
+	if !handler.connected || handler.idleTimeout <= 0 {
+		return
+	}
+	if handler.idleTimer == nil {
+		handler.idleTimer = time.NewTimer(handler.idleTimeout)
+		return
+	}
+	if !handler.idleTimer.Stop() {
+		select {
+		case <-handler.idleTimer.C:
+		default:
+		}
+	}
+	handler.idleTimer.Reset(handler.idleTimeout)
+}
+
 func (handler *connectionHandler) shutdown() {
+	if handler.idleTimer != nil {
+		if !handler.idleTimer.Stop() {
+			select {
+			case <-handler.idleTimer.C:
+			default:
+			}
+		}
+	}
 	close(handler.stopRead)
 
 	cleanupPlayer(

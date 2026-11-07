@@ -51,6 +51,8 @@ func cleanupPlayer(
 						session.PlayerName,
 						err,
 					)
+				} else if eventPublisher != nil {
+					eventPublisher.Publish(world.CombatEnded{CombatID: combatID})
 				}
 			}
 		}

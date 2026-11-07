@@ -1,54 +1,54 @@
 package commands
 
 import (
-    "sort"
-    "strconv"
-    "strings"
+	"sort"
+	"strconv"
+	"strings"
 
-    "the-answer-protocol/internal/protocol"
+	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
 
 func (c *CombatCommand) handleDefend(
-    ctx *Context,
+	ctx *Context,
 ) (protocol.Message, error) {
-    if len(ctx.RawArgs) != 1 {
-        return protocol.ERR(
-            protocol.CodeInvalidArguments,
-            "INVALID_ARGUMENTS",
-        ), nil
-    }
+	if len(ctx.RawArgs) != 1 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
 
-    combat, err := ctx.World.GetActiveCombatForPlayer(ctx.PlayerName)
-    if err != nil {
-        return mapCombatError(err), nil
-    }
+	combat, err := ctx.World.GetActiveCombatForPlayer(ctx.PlayerName)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
 
-    result, turnEvent, err := ctx.World.DefendCombatParticipant(
-        combat.ID,
-        ctx.PlayerName,
-    )
-    if err != nil {
-        return mapCombatError(err), nil
-    }
+	result, turnEvent, err := ctx.World.DefendCombatParticipant(
+		combat.ID,
+		ctx.PlayerName,
+	)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
 
-    if turnEvent != nil && ctx.Events != nil {
-        ctx.Events.Publish(*turnEvent)
-    }
+	if turnEvent != nil && ctx.Events != nil {
+		ctx.Events.Publish(*turnEvent)
+	}
 
-    // Process NPC turns automatically.
-    if result.Active {
-        if err := c.processNPCTurns(ctx, result.ID); err != nil {
-            return mapCombatError(err), nil
-        }
-    }
+	// Process NPC turns automatically.
+	if result.Active {
+		if err := c.processNPCTurns(ctx, result.ID); err != nil {
+			return mapCombatError(err), nil
+		}
+	}
 
-    result, err = ctx.World.GetCombat(result.ID)
-    if err != nil {
-        return mapCombatError(err), nil
-    }
+	result, err = ctx.World.GetCombat(result.ID)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
 
-    return protocol.OK(
+	return protocol.OK(
 		"defended=true" +
 			" defense_bonus=" + strconv.Itoa(world.DefaultDefenseBonusPercent) +
 			" combat=" + result.ID,
@@ -160,49 +160,49 @@ func (c *CombatCommand) handleUse(
 }
 
 func (c *CombatCommand) handleFlee(
-    ctx *Context,
+	ctx *Context,
 ) (protocol.Message, error) {
-    if len(ctx.RawArgs) != 1 {
-        return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
-    }
+	if len(ctx.RawArgs) != 1 {
+		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
+	}
 
-    combat, err := ctx.World.GetActiveCombatForPlayer(ctx.PlayerName)
-    if err != nil {
-        return mapCombatError(err), nil
-    }
+	combat, err := ctx.World.GetActiveCombatForPlayer(ctx.PlayerName)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
 
-    result, fleeEvent, err := ctx.World.FleeCombat(
-        combat.ID,
-        ctx.PlayerName,
-    )
-    if err != nil {
-        return mapCombatError(err), nil
-    }
+	result, fleeEvent, err := ctx.World.FleeCombat(
+		combat.ID,
+		ctx.PlayerName,
+	)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
 
-    if fleeEvent != nil && ctx.Events != nil {
-        ctx.Events.Publish(*fleeEvent)
-    }
+	if fleeEvent != nil && ctx.Events != nil {
+		ctx.Events.Publish(*fleeEvent)
+	}
 
-    // Check whether the combat should end.
-    if !combatHasLivingPlayers(result) ||
-        !combatHasLivingNPCs(result) {
-        _, err = ctx.World.EndCombat(result.ID)
-        if err != nil {
-            return mapCombatError(err), nil
-        }
-    } else if result.Active {
-        // Process NPC turns automatically.
-        if err := c.processNPCTurns(ctx, result.ID); err != nil {
-            return mapCombatError(err), nil
-        }
-    }
+	// Check whether the combat should end.
+	if !combatHasLivingPlayers(result) ||
+		!combatHasLivingNPCs(result) {
+		_, err = endCombat(ctx, result.ID)
+		if err != nil {
+			return mapCombatError(err), nil
+		}
+	} else if result.Active {
+		// Process NPC turns automatically.
+		if err := c.processNPCTurns(ctx, result.ID); err != nil {
+			return mapCombatError(err), nil
+		}
+	}
 
-    result, err = ctx.World.GetCombat(result.ID)
-    if err != nil {
-        return mapCombatError(err), nil
-    }
+	result, err = ctx.World.GetCombat(result.ID)
+	if err != nil {
+		return mapCombatError(err), nil
+	}
 
-    response := "fled=true combat=" + result.ID
+	response := "fled=true combat=" + result.ID
 
 	if fleeEvent != nil {
 		response = "fled=true" +

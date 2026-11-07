@@ -169,6 +169,39 @@ func (w *World) NextCombatTurn(
 	return cloneCombat(combat), event, nil
 }
 
+// SkipPlayerCombatTurn consumes a player's remaining actions and advances the
+// combat turn if the specified participant still owns the active turn.
+func (w *World) SkipPlayerCombatTurn(
+	combatID string,
+	participantID string,
+) (*CombatTurnChanged, error) {
+	if w == nil {
+		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+	}
+
+	combatID = strings.TrimSpace(combatID)
+	participantID = strings.TrimSpace(participantID)
+	if combatID == "" || participantID == "" {
+		return nil, fmt.Errorf("%w: combat and participant IDs are required", ErrInvalidArgument)
+	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	combat, exists := w.combats[combatID]
+	if !exists || combat == nil || !combat.Active || !combat.TurnsInitialized ||
+		combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
+		return nil, fmt.Errorf("%w: active combat turn not found", ErrInvalidWorldState)
+	}
+
+	participant := combat.Participants[combat.TurnIndex]
+	if !participant.IsPlayer || participant.ID != participantID {
+		return nil, ErrInvalidCombatTurn
+	}
+
+	return w.skipRemainingCombatActionsLocked(combat)
+}
+
 // consumeCombatActionLocked consumes one action from the current participant.
 // The caller must hold w.mu.
 func (w *World) consumeCombatActionLocked(
@@ -360,8 +393,8 @@ func (w *World) buildCombatTurnChangedLocked(
 
 	return &CombatTurnChanged{
 		CombatID:         combat.ID,
-		ParticipantID:   participant.ID,
-		ParticipantName: participant.Name,
+		ParticipantID:    participant.ID,
+		ParticipantName:  participant.Name,
 		IsPlayer:         participant.IsPlayer,
 		Round:            combat.Round,
 		AvailableActions: availableActions,

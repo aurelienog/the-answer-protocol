@@ -55,7 +55,9 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 
 	combat, turnEvent, err := ctx.World.InitializeCombatTurns(combat.ID)
 	if err != nil {
-		_, _ = ctx.World.EndCombat(combat.ID)
+		if _, endErr := endCombat(ctx, combat.ID); endErr != nil {
+			return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), endErr
+		}
 		return mapCombatError(err), nil
 	}
 

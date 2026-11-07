@@ -1,8 +1,11 @@
 package commands
 
 import (
+	"errors"
+	"log"
 	"strings"
 
+	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
@@ -11,6 +14,49 @@ type CombatCommand struct{}
 
 func NewCombatCommand() *CombatCommand {
 	return &CombatCommand{}
+}
+
+// NewCombatTurnTimeoutHandler creates the gameplay action for an expired turn.
+func NewCombatTurnTimeoutHandler(
+	gameWorld *world.World,
+	publisher events.Publisher,
+) func(world.CombatTurnChanged) {
+	return func(turn world.CombatTurnChanged) {
+		combat, err := gameWorld.GetCombat(turn.CombatID)
+		if err != nil {
+			log.Printf("Failed to inspect combat %q after turn timeout: %v", turn.CombatID, err)
+			return
+		}
+		if !combat.Active || !combat.TurnsInitialized ||
+			combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
+			return
+		}
+		current := combat.Participants[combat.TurnIndex]
+		if !current.IsPlayer || current.ID != turn.ParticipantID {
+			return
+		}
+
+		nextTurn, err := gameWorld.SkipPlayerCombatTurn(turn.CombatID, turn.ParticipantID)
+		if err != nil {
+			if !errors.Is(err, world.ErrInvalidCombatTurn) {
+				log.Printf(
+					"Failed to expire combat turn for participant %q in combat %q: %v",
+					turn.ParticipantID,
+					turn.CombatID,
+					err,
+				)
+			}
+			return
+		}
+		if nextTurn != nil && publisher != nil {
+			publisher.Publish(*nextTurn)
+		}
+
+		ctx := &Context{World: gameWorld, Events: publisher}
+		if err := NewCombatCommand().processNPCTurns(ctx, turn.CombatID); err != nil {
+			log.Printf("Failed to continue combat %q after turn timeout: %v", turn.CombatID, err)
+		}
+	}
 }
 
 func (c *CombatCommand) Name() string {
@@ -67,7 +113,7 @@ func (c *CombatCommand) processNPCTurns(
 		// Check whether the combat has ended.
 		if !combatHasLivingPlayers(combat) ||
 			!combatHasLivingNPCs(combat) {
-			_, err = ctx.World.EndCombat(combatID)
+			_, err = endCombat(ctx, combatID)
 			return err
 		}
 
@@ -132,7 +178,7 @@ func (c *CombatCommand) processNPCTurns(
 			!combatHasLivingNPCs(combat)
 
 		if combatEnded {
-			combat, err = ctx.World.EndCombat(combatID)
+			combat, err = endCombat(ctx, combatID)
 			if err != nil {
 				return err
 			}
@@ -154,6 +200,17 @@ func (c *CombatCommand) processNPCTurns(
 			return nil
 		}
 	}
+}
+
+func endCombat(ctx *Context, combatID string) (*world.Combat, error) {
+	combat, err := ctx.World.EndCombat(combatID)
+	if err != nil {
+		return nil, err
+	}
+	if ctx.Events != nil {
+		ctx.Events.Publish(world.CombatEnded{CombatID: combatID})
+	}
+	return combat, nil
 }
 
 func combatHasLivingPlayers(combat *world.Combat) bool {

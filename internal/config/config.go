@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 // Config holds all centralized system parameters
@@ -18,6 +19,8 @@ type Config struct {
 	MaxConnectionsPerIP           int
 	MaxConnectionAttemptsPerIP    int
 	MaxUnauthenticatedConnections int
+	IdleTimeout                   time.Duration
+	CombatTurnTimeout             time.Duration
 }
 
 func (c *Config) ServerAddr() string {
@@ -37,6 +40,8 @@ func LoadConfig() *Config {
 	defaultMaxConnectionsPerIP := envInt("TAP_MAX_CONNECTIONS_PER_IP", 5)
 	defaultMaxConnectionAttemptsPerIP := envInt("TAP_MAX_CONNECTION_ATTEMPTS_PER_IP", 10)
 	defaultMaxUnauthenticatedConnections := envInt("TAP_MAX_UNAUTHENTICATED_CONNECTIONS", 20)
+	defaultIdleTimeout := envDuration("TAP_IDLE_TIMEOUT", 30*time.Minute)
+	defaultCombatTurnTimeout := envDuration("TAP_COMBAT_TURN_TIMEOUT", 30*time.Second)
 
 	if envHost := os.Getenv("TAP_SERVER_HOST"); envHost != "" {
 		defaultHost = envHost
@@ -54,6 +59,8 @@ func LoadConfig() *Config {
 	maxConnectionsPerIP := flag.Int("max-connections-per-ip", defaultMaxConnectionsPerIP, "Maximum simultaneous TCP connections from one IP")
 	maxConnectionAttemptsPerIP := flag.Int("max-connection-attempts-per-ip", defaultMaxConnectionAttemptsPerIP, "Maximum TCP connection attempts per IP per minute")
 	maxUnauthenticatedConnections := flag.Int("max-unauthenticated-connections", defaultMaxUnauthenticatedConnections, "Maximum simultaneous unauthenticated TCP connections")
+	idleTimeout := flag.Duration("idle-timeout", defaultIdleTimeout, "Maximum authenticated connection inactivity duration; 0 disables it")
+	combatTurnTimeout := flag.Duration("combat-turn-timeout", defaultCombatTurnTimeout, "Maximum duration for a combat participant's turn")
 
 	// flag.Parse() will be triggered at main invocation boundary
 	flag.Parse()
@@ -66,7 +73,22 @@ func LoadConfig() *Config {
 		MaxConnectionsPerIP:           *maxConnectionsPerIP,
 		MaxConnectionAttemptsPerIP:    *maxConnectionAttemptsPerIP,
 		MaxUnauthenticatedConnections: *maxUnauthenticatedConnections,
+		IdleTimeout:                   *idleTimeout,
+		CombatTurnTimeout:             *combatTurnTimeout,
 	}
+}
+
+func envDuration(name string, fallback time.Duration) time.Duration {
+	value := os.Getenv(name)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil || parsed < 0 {
+		log.Printf("Invalid %s value %q; using default %s", name, value, fallback)
+		return fallback
+	}
+	return parsed
 }
 
 func envInt(name string, fallback int) int {

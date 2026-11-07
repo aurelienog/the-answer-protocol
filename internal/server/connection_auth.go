@@ -137,6 +137,7 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 		return false
 	}
 	handler.connected = true
+	handler.resetIdleTimer()
 	return true
 }
 

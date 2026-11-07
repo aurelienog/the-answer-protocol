@@ -1,10 +1,10 @@
 package commands
 
 import (
-    "strconv"
-    "strings"
+	"strconv"
+	"strings"
 
-    "the-answer-protocol/internal/protocol"
+	"the-answer-protocol/internal/protocol"
 )
 
 func (c *CombatCommand) handleAttack(
@@ -59,7 +59,7 @@ func (c *CombatCommand) handleAttack(
 		!combatHasLivingNPCs(result)
 
 	if combatEnded {
-		result, err = ctx.World.EndCombat(result.ID)
+		result, err = endCombat(ctx, result.ID)
 		if err != nil {
 			return mapCombatError(err), nil
 		}
