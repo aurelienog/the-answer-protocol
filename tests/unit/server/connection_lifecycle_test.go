@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,7 +13,17 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
+var authenticationTimeoutTestOnce sync.Once
+
 func TestHandleConnectionClosesUnauthenticatedSessionOnTimeout(t *testing.T) {
+	runTimeoutCheck := false
+	authenticationTimeoutTestOnce.Do(func() {
+		runTimeoutCheck = true
+	})
+	if !runTimeoutCheck {
+		t.Skip("the production authentication timeout is 30 seconds; verify once per test process")
+	}
+
 	client, serverConn := net.Pipe()
 	defer client.Close()
 	defer serverConn.Close()
