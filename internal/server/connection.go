@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/protocol"
@@ -16,115 +17,114 @@ import (
 const (
 	initialRoomID         = world.InitialRoomID
 	authenticationTimeout = 30 * time.Second
+	readEventBufferSize   = 16
 )
 
-func HandleConnection(
+// HandleAdmittedConnection handles a connection whose capacity has already
+// been reserved by the accept loop.
+func HandleAdmittedConnection(
 	conn net.Conn,
 	dispatcher *commands.Dispatcher,
 	registry *Registry,
 	gameWorld *world.World,
 	eventPublisher events.Publisher,
+	lease *abuse.ConnectionLease,
 ) {
-	sessionID := conn.RemoteAddr().String()
-
-	session := &Session{
-		ID:         sessionID,
-		Connection: conn,
-		PlayerName: "",
-		Outbox:     make(chan string, OutboxSize),
-	}
-
-	// The handler owns the lifecycle of these channels.
-	writerDone := make(chan struct{})
-	stopRead := make(chan struct{})
-
-	registered := false
-	authenticated := false
-	playerEnterBroadcast := false
-	quitRequested := false
-
-	go WritePump(session, writerDone)
-
-	readerDone := make(chan struct{})
-	readerStarted := false
-
-	defer func() {
-		// Stop the reader from sending more events to the handler.
-		close(stopRead)
-
-		// Clean up the player's state before broadcasting PLAYER_LEAVE.
-		cleanupPlayer(
-			sessionID,
-			session,
-			registry,
-			gameWorld,
-			registered,
-			authenticated,
-			playerEnterBroadcast,
-			eventPublisher,
-		)
-		registered = false
-
-		// On QUIT, the final response has already been given a chance to send.
-		if quitRequested {
-			<-writerDone
-		} else {
-			// Close the output queue and allow the writer to drain pending messages.
-			session.CloseOutbox()
-			<-writerDone
-		}
-
-		// Closing the connection interrupts a reader blocked in Scan.
+	if lease == nil {
 		_ = conn.Close()
-
-		// Wait for the reader only if it was started.
-		if readerStarted {
-			<-readerDone
-		}
-
-		log.Printf("Connection closed: %s", sessionID)
-	}()
-
-	authTimer := time.NewTimer(authenticationTimeout)
-	defer authTimer.Stop()
-
-	// Send the TAP greeting through the single writer.
-	if err := SendMessage(session, protocol.OK("hello proto=1")); err != nil {
-		log.Printf("Failed to queue greeting for %s: %v", sessionID, err)
 		return
 	}
 
-	// Start the dedicated TCP reader.
-	incoming := make(chan ReadEvent, 16)
-	readerStarted = true
+	handler := newConnectionHandler(conn, dispatcher, registry, gameWorld, eventPublisher, lease)
+	handler.run()
+}
 
+type connectionHandler struct {
+	conn           net.Conn
+	dispatcher     *commands.Dispatcher
+	registry       *Registry
+	gameWorld      *world.World
+	eventPublisher events.Publisher
+	lease          *abuse.ConnectionLease
+	session        *Session
+	sessionID      string
+	writerDone     chan struct{}
+	stopRead       chan struct{}
+	readerDone     chan struct{}
+	incoming       chan ReadEvent
+	readerStarted  bool
+	registered     bool
+	authenticated  bool
+	enterBroadcast bool
+	quitRequested  bool
+	connected      bool
+	authTimer      *time.Timer
+	authTimeout    <-chan time.Time
+}
+
+func newConnectionHandler(
+	conn net.Conn,
+	dispatcher *commands.Dispatcher,
+	registry *Registry,
+	gameWorld *world.World,
+	eventPublisher events.Publisher,
+	lease *abuse.ConnectionLease,
+) *connectionHandler {
+	sessionID := conn.RemoteAddr().String()
+	return &connectionHandler{
+		conn:           conn,
+		dispatcher:     dispatcher,
+		registry:       registry,
+		gameWorld:      gameWorld,
+		eventPublisher: eventPublisher,
+		lease:          lease,
+		session: &Session{
+			ID:         sessionID,
+			Connection: conn,
+			Outbox:     make(chan string, OutboxSize),
+		},
+		sessionID:  sessionID,
+		writerDone: make(chan struct{}),
+		stopRead:   make(chan struct{}),
+		readerDone: make(chan struct{}),
+		incoming:   make(chan ReadEvent, readEventBufferSize),
+	}
+}
+
+func (handler *connectionHandler) run() {
+	go WritePump(handler.session, handler.writerDone)
+	handler.authTimer = time.NewTimer(authenticationTimeout)
+	handler.authTimeout = handler.authTimer.C
+
+	defer handler.lease.Release()
+	defer handler.authTimer.Stop()
+	defer handler.shutdown()
+
+	if err := SendMessage(handler.session, protocol.OK("hello proto=1")); err != nil {
+		log.Printf("Failed to queue greeting for %s: %v", handler.sessionID, err)
+		return
+	}
+	handler.startReader()
+	handler.readLoop()
+}
+
+func (handler *connectionHandler) startReader() {
+	handler.readerStarted = true
 	go func() {
-		defer close(readerDone)
-		ReadPump(conn, incoming, stopRead)
+		defer close(handler.readerDone)
+		ReadPump(handler.conn, handler.incoming, handler.stopRead)
 	}()
+}
 
-	connected := false
-	authTimeout := authTimer.C
-
+func (handler *connectionHandler) readLoop() {
 	for {
-		var event ReadEvent
-
-		select {
-		case <-authTimeout:
-			log.Printf("Authentication timeout from %s", sessionID)
-			_ = conn.Close()
+		event, ok := handler.nextReadEvent()
+		if !ok {
 			return
-
-		case received, ok := <-incoming:
-			if !ok {
-				return
-			}
-			event = received
 		}
-
 		if event.Err != nil {
 			if !errors.Is(event.Err, net.ErrClosed) {
-				log.Printf("Read error from %s: %v", sessionID, event.Err)
+				log.Printf("Read error from %s: %v", handler.sessionID, event.Err)
 			}
 			return
 		}
@@ -133,144 +133,50 @@ func HandleConnection(
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-
-		// Only CONNECT is accepted before authentication.
-		if !connected {
-			username, rejection := parseConnectRequest(line)
-			if rejection != nil {
-				if SendMessage(session, *rejection) != nil {
-					return
-				}
-				continue
-			}
-
-			session.PlayerName = username
-
-			// Register the session first to reserve the unique username.
-			if err := authenticatePlayer(session, registry, gameWorld); err != nil {
-				if errors.Is(err, ErrNameInUse) {
-					if SendMessage(session, protocol.ERR(protocol.CodeNameInUse, "NAME_IN_USE")) != nil {
-						return
-					}
-					continue
-				}
-
-				log.Printf("Failed to authenticate player %q: %v", session.PlayerName, err)
-
-				if SendMessage(session, protocol.ERR(protocol.CodeConnectionFailed, "CONNECTION_FAILED")) != nil {
-					return
-				}
-				return
-			}
-
-			registered = true
-
-			// The player is fully registered and authenticated.
-			authenticated = true
-
-			if !authTimer.Stop() {
-				select {
-				case <-authTimer.C:
-				default:
-				}
-			}
-			authTimeout = nil
-
-			log.Printf("Player %q connected from %s", username, sessionID)
-			roomID, err := gameWorld.GetPlayerRoom(username)
-			if err != nil {
-				log.Printf("Failed to get room for %q: %v", username, err)
-				return
-			}
-
-			players, err := gameWorld.GetPlayersInRoom(roomID)
-			if err != nil {
-				log.Printf("Failed to get players in room %q: %v", roomID, err)
-				return
-			}
-
-			if eventPublisher != nil {
-				eventPublisher.Publish(world.PlayerEntered{
-					PlayerName:  username,
-					RoomID:      roomID,
-					RoomPlayers: players,
-				})
-			}
-
-			playerEnterBroadcast = true
-
-			if err := SendMessage(session, protocol.OK("connected")); err != nil {
-				log.Printf("Failed to queue CONNECT response for %s: %v", username, err)
-				return
-			}
-
-			connected = true
-			continue
-		}
-
-		// Dispatch commands only after successful authentication.
-		ctx := &commands.Context{
-			PlayerName: session.PlayerName,
-			World:      gameWorld,
-			Events:     eventPublisher,
-		}
-
-		message, err := dispatcher.Dispatch(ctx, line)
-
-		if errors.Is(err, commands.ErrQuit) {
-			quitRequested = true
-
-			cleanupPlayer(
-				sessionID,
-				session,
-				registry,
-				gameWorld,
-				registered,
-				authenticated,
-				playerEnterBroadcast,
-				eventPublisher,
-			)
-			registered = false
-			authenticated = false
-			playerEnterBroadcast = false
-
-			// Queue the final response before closing the output queue.
-			if queueErr := SendMessage(session, message); queueErr != nil {
-				log.Printf(
-					"Failed to queue QUIT response for %s: %v",
-					session.PlayerName,
-					queueErr,
-				)
-			}
-
-			session.CloseOutbox()
-
-			// Let writePump send the queued response before returning.
-			<-writerDone
-
-			log.Printf("Player %s requested session closure", session.PlayerName)
-			return
-		}
-
-		if err != nil {
-			log.Printf("Command error from %s: %v", session.PlayerName, err)
-
-			if SendMessage(session, protocol.ERR(
-				protocol.CodeCommandFailed,
-				"COMMAND_FAILED",
-			)) != nil {
+		if !handler.connected {
+			if !handler.handleConnect(line) {
 				return
 			}
 			continue
 		}
-
-		if err := SendMessage(session, message); err != nil {
-			log.Printf(
-				"Failed to queue response for %s: %v",
-				session.PlayerName,
-				err,
-			)
+		if !handler.handleCommand(line) {
 			return
 		}
 	}
+}
+
+func (handler *connectionHandler) nextReadEvent() (ReadEvent, bool) {
+	select {
+	case <-handler.authTimeout:
+		log.Printf("Authentication timeout from %s", handler.sessionID)
+		_ = handler.conn.Close()
+		return ReadEvent{}, false
+	case event, ok := <-handler.incoming:
+		return event, ok
+	}
+}
+
+func (handler *connectionHandler) shutdown() {
+	close(handler.stopRead)
+
+	cleanupPlayer(
+		handler.sessionID,
+		handler.session,
+		handler.registry,
+		handler.gameWorld,
+		handler.registered,
+		handler.authenticated,
+		handler.enterBroadcast,
+		handler.eventPublisher,
+	)
+
+	if !handler.quitRequested {
+		handler.session.CloseOutbox()
+	}
+	<-handler.writerDone
+	_ = handler.conn.Close()
+	if handler.readerStarted {
+		<-handler.readerDone
+	}
+	log.Printf("Connection closed: %s", handler.sessionID)
 }

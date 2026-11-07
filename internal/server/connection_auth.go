@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"log"
 
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
@@ -79,4 +80,72 @@ func authenticatePlayer(
 	}
 
 	return nil
+}
+
+// handleConnect processes a pre-authentication line. It returns false when the
+// connection should be closed; recoverable request and name errors keep it open.
+func (handler *connectionHandler) handleConnect(line string) bool {
+	username, rejection := parseConnectRequest(line)
+	if rejection != nil {
+		return SendMessage(handler.session, *rejection) == nil
+	}
+
+	handler.session.PlayerName = username
+	if err := authenticatePlayer(handler.session, handler.registry, handler.gameWorld); err != nil {
+		if errors.Is(err, ErrNameInUse) {
+			return SendMessage(
+				handler.session,
+				protocol.ERR(protocol.CodeNameInUse, "NAME_IN_USE"),
+			) == nil
+		}
+
+		log.Printf("Failed to authenticate player %q: %v", username, err)
+		_ = SendMessage(
+			handler.session,
+			protocol.ERR(protocol.CodeConnectionFailed, "CONNECTION_FAILED"),
+		)
+		return false
+	}
+
+	handler.registered = true
+	handler.authenticated = true
+	handler.lease.Authenticate()
+	handler.stopAuthenticationTimer()
+
+	log.Printf("Player %q connected from %s", username, handler.sessionID)
+	roomID, err := handler.gameWorld.GetPlayerRoom(username)
+	if err != nil {
+		log.Printf("Failed to get room for %q: %v", username, err)
+		return false
+	}
+	players, err := handler.gameWorld.GetPlayersInRoom(roomID)
+	if err != nil {
+		log.Printf("Failed to get players in room %q: %v", roomID, err)
+		return false
+	}
+	if handler.eventPublisher != nil {
+		handler.eventPublisher.Publish(world.PlayerEntered{
+			PlayerName:  username,
+			RoomID:      roomID,
+			RoomPlayers: players,
+		})
+	}
+	handler.enterBroadcast = true
+
+	if err := SendMessage(handler.session, protocol.OK("connected")); err != nil {
+		log.Printf("Failed to queue CONNECT response for %s: %v", username, err)
+		return false
+	}
+	handler.connected = true
+	return true
+}
+
+func (handler *connectionHandler) stopAuthenticationTimer() {
+	if !handler.authTimer.Stop() {
+		select {
+		case <-handler.authTimer.C:
+		default:
+		}
+	}
+	handler.authTimeout = nil
 }
