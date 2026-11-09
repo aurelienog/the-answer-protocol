@@ -4,8 +4,8 @@
 
 .right-action-bar {
     position: absolute !important;
-    top: 86px;
-    bottom: 242px;
+    top: 90px;
+    bottom: 230px;
     right: 14px;
     width: 98px;
     min-height: 0;
@@ -48,8 +48,8 @@
 }
 
 .right-action-bar .cmd-icon-img {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
 }
 
 .act-label {

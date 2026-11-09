@@ -21,8 +21,8 @@
 
     /* 🔧 2. TOP RIGHT HUD */
     --hud-right-w: 330px;
-    --hud-right-h: 100px;
-    --hud-right-pad-x: 32px;
+    --hud-right-h: 110px;
+    --hud-right-pad-x: 42px;
 }
 
 .top-hud {
