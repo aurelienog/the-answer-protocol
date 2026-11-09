@@ -3,7 +3,7 @@ package world
 import "fmt"
 
 // calculatePlayerCombatStatsLocked calculates a player's effective combat
-// stats by adding the bonuses of all equipment items in their inventory.
+// stats by adding the bonuses of all equipment and unique items in their inventory.
 // The caller must hold w.mu.
 func (w *World) calculatePlayerCombatStatsLocked(
 	playerName string,
@@ -40,7 +40,7 @@ func (w *World) calculatePlayerCombatStatsLocked(
 			)
 		}
 
-		if item.Type != ItemTypeEquipment {
+		if item.Type != ItemTypeEquipment && item.Type != ItemTypeUnique {
 			continue
 		}
 
