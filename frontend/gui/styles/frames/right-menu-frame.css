@@ -1,0 +1,52 @@
+/* ==========================================================================
+   FRAME 5: RIGHT ACTION SIDEBAR ARCHED FRAME (Pure CSS — Zero <span>!)
+   ========================================================================== */
+
+.right-action-bar::before {
+    content: "";
+    position: absolute;
+    top: 18px;
+    bottom: 18px;
+    left: 4px;
+    right: 4px;
+    background: linear-gradient(180deg, rgba(7, 15, 28, 0.92), rgba(4, 9, 18, 0.95));
+    border-radius: 4px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.right-action-bar::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    left: -2px;
+    right: -2px;
+    pointer-events: none;
+    z-index: 20;
+
+    background-image:
+        url('/assets/ui/menu-top.png'),
+        url('/assets/ui/menu-bottom.png'),
+        url('/assets/ui/slot-edge-v.png'),
+        url('/assets/ui/slot-edge-v.png');
+
+    background-position:
+        top center,
+        bottom center,
+        left 6px center,
+        right 6px center;
+
+    background-size:
+        102px 58px,
+        102px 58px,
+        3px calc(100% - 76px),
+        3px calc(100% - 76px);
+
+    background-repeat: no-repeat;
+}
+
+.right-action-bar > .action-btn {
+    position: relative;
+    z-index: 5;
+}

@@ -1,0 +1,380 @@
+/* ==========================================================================
+   MODAL SPECIFIC: FULLSCREEN COMBAT ARENA & BATTLE ANIMATIONS (#modal-combat)
+   Covers Top HUD and Right Sidebar, leaving only the Bottom Chat/Players Dock!
+   ========================================================================== */
+
+.combat-arena {
+    position: fixed !important;
+    top: 8px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 222px !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    z-index: 40 !important;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 30px 22px 30px;
+    overflow: visible;
+}
+
+.combat-scene {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 6px;
+    background: radial-gradient(circle at center, #1b3556 0%, #070e1a 100%);
+    background-size: cover;
+    background-position: center;
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+    padding: 16px 24px;
+}
+
+/* ==================== 1. TOP COMBAT HUD (Separate Hero & Enemy Controls!) ==================== */
+:root {
+    /* 🔧 CENTRAL ROUNDS FRAME */
+    --turn-banner-w: 320px;
+    --turn-banner-h: 110px;
+
+    /* 🔧 1. A Left-Wing Fighter — A Hero */
+    --hero-combat-w: 350px;
+    --hero-combat-h: 92px;
+    --hero-combat-avatar-size: 58px;
+    --hero-combat-avatar-radius: 50%;
+    --hero-combat-avatar-left: 50px;
+    --hero-combat-avatar-y: -5px;
+    --hero-combat-name-left: 135px;
+    --hero-combat-name-y: 24px;
+    --hero-combat-hp-left: 121px;
+    --hero-combat-hp-y: 48px;
+    --hero-combat-hp-w: 193px;
+    --hero-combat-hp-h: 16px;
+    --hero-hp-text-x: 20px;
+    --hero-hp-text-y: 0px;
+
+    /* 🔧 2. A RIGHTEOUS FIGHTER IS AN ENEMY */
+    --enemy-combat-w: 350px;
+    --enemy-combat-h: 92px;
+    --enemy-combat-avatar-size: 65px;
+    --enemy-combat-avatar-radius: 50%;
+    --enemy-combat-avatar-right: 45px;
+    --enemy-combat-avatar-y: -3px;
+    --enemy-combat-name-right: 140px;
+    --enemy-combat-name-y: 24px;
+    --enemy-combat-hp-right: 120px;
+    --enemy-combat-hp-y: 48px;
+    --enemy-combat-hp-w: 193px;
+    --enemy-combat-hp-h: 16px;
+    --enemy-hp-text-x: 130px;
+    --enemy-hp-text-y: 0px;
+}
+
+.combat-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    z-index: 5;
+}
+
+.combat-fighter-hud {
+    position: relative;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.combat-fighter-hud.fighter-left {
+    width: var(--hero-combat-w);
+    height: var(--hero-combat-h);
+}
+
+.combat-fighter-hud.fighter-right {
+    width: var(--enemy-combat-w);
+    height: var(--enemy-combat-h);
+}
+
+.combat-fighter-hud::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.combat-fighter-hud.fighter-left::after {
+    background: url('/assets/ui/hud-hero-left.webp') no-repeat center / 100% 100%;
+}
+
+.combat-fighter-hud.fighter-right::after {
+    background: url('/assets/ui/hud-enemy-right.webp') no-repeat center / 100% 100%;
+}
+
+/* Avatars (separate ones for the Hero and the Enemy!) */
+.combat-Hud-avatar {
+    position: absolute;
+    border: none !important;
+    object-fit: cover;
+    object-position: center top;
+    background: #0d1829;
+    z-index: 2;
+}
+
+.fighter-left .combat-Hud-avatar {
+    left: var(--hero-combat-avatar-left);
+    top: calc(50% + var(--hero-combat-avatar-y));
+    transform: translateY(-50%);
+    width: var(--hero-combat-avatar-size);
+    height: var(--hero-combat-avatar-size);
+    border-radius: var(--hero-combat-avatar-radius);
+}
+
+.fighter-right .combat-Hud-avatar {
+    right: var(--enemy-combat-avatar-right);
+    top: calc(50% + var(--enemy-combat-avatar-y));
+    transform: translateY(-50%);
+    width: var(--enemy-combat-avatar-size);
+    height: var(--enemy-combat-avatar-size);
+    border-radius: var(--enemy-combat-avatar-radius);
+}
+
+/* Names of the fighters */
+.combat-fighter-name {
+    position: absolute;
+    font-size: 16px;
+    color: var(--gold-bright);
+    z-index: 12;
+}
+
+.fighter-left .combat-fighter-name {
+    left: var(--hero-combat-name-left);
+    top: var(--hero-combat-name-y);
+}
+
+.fighter-right .combat-fighter-name {
+    right: var(--enemy-combat-name-right);
+    top: var(--enemy-combat-name-y);
+    text-align: right;
+}
+
+/* HP bars and text positioning within them */
+.combat-fighter-hud .stat-bar {
+    position: absolute !important;
+    margin: 0 !important;
+    z-index: 3;
+}
+.combat-fighter-hud .stat-bar::after {
+    display: none !important;
+}
+
+.fighter-left .stat-bar {
+    left: var(--hero-combat-hp-left) !important;
+    top: var(--hero-combat-hp-y) !important;
+    width: var(--hero-combat-hp-w) !important;
+    height: var(--hero-combat-hp-h) !important;
+}
+
+.fighter-right .stat-bar {
+    right: var(--enemy-combat-hp-right) !important;
+    top: var(--enemy-combat-hp-y) !important;
+    width: var(--enemy-combat-hp-w) !important;
+    height: var(--enemy-combat-hp-h) !important;
+}
+
+.fighter-left .bar-text {
+    z-index: 15;
+    left: var(--hero-hp-text-x) !important;
+    top: var(--hero-hp-text-y) !important;
+    line-height: var(--hero-combat-hp-h) !important;
+    font-size: 11.5px !important;
+}
+
+.fighter-right .bar-text {
+    z-index: 15;
+    left: var(--enemy-hp-text-x) !important;
+    top: var(--enemy-hp-text-y) !important;
+    line-height: var(--enemy-combat-hp-h) !important;
+    font-size: 11.5px !important;
+}
+
+/* CENTRAL TURN BANNER */
+.combat-turn-banner {
+    width: var(--turn-banner-w);
+    height: var(--turn-banner-h);
+    padding: 12px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent url('/assets/ui/hud-banner-sm.webp') no-repeat center / 100% 100% !important;
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.92));
+}
+
+.turn-main-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17px;
+    color: var(--gold-bright);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.turn-sub-row {
+    font-size: 12.5px;
+    color: var(--sapphire-light);
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.turn-hourglass {
+    font-size: 16px;
+}
+
+/* ==================== 2. CENTER FIGHTERS STAGE & ANIMATIONS ==================== */
+.combat-stage-fighters {
+    flex: 1;
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 8% 12px 8%;
+    min-height: 0;
+}
+
+.fighter-spot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    max-height: 310px;
+    width: 280px;
+    animation: fighter-idle 2.8s ease-in-out infinite;
+}
+
+.fighter-sprite {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.9));
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.fighter-fallback {
+    display: none;
+    font-size: 120px;
+    filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.9));
+}
+
+/* Idle breathing animation */
+@keyframes fighter-idle {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50%      { transform: translateY(-6px) scale(1.015); }
+}
+
+/* Hero lunges right to strike enemy */
+.lunge-right {
+    animation: anim-lunge-right 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) !important;
+}
+@keyframes anim-lunge-right {
+    0%   { transform: translateX(0) scale(1); }
+    40%  { transform: translateX(95px) scale(1.08); }
+    100% { transform: translateX(0) scale(1); }
+}
+
+/* Enemy lunges left to strike hero */
+.lunge-left {
+    animation: anim-lunge-left 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) !important;
+}
+@keyframes anim-lunge-left {
+    0%   { transform: translateX(0) scale(1); }
+    40%  { transform: translateX(-95px) scale(1.08); }
+    100% { transform: translateX(0) scale(1); }
+}
+
+/* Hit shake & crimson flash when taking damage */
+.hit-shake {
+    animation: anim-hit-shake 0.42s ease !important;
+}
+@keyframes anim-hit-shake {
+    0%, 100% { transform: translateX(0); filter: none; }
+    20%      { transform: translateX(-14px); filter: brightness(1.8) sepia(1) hue-rotate(-50deg) saturate(4); }
+    40%      { transform: translateX(12px);  filter: brightness(1.8) sepia(1) hue-rotate(-50deg) saturate(4); }
+    60%      { transform: translateX(-8px); }
+    80%      { transform: translateX(6px); }
+}
+
+/* Floating damage numbers (-12) */
+.floating-dmg {
+    position: absolute;
+    top: 10%;
+    font-size: 36px;
+    font-weight: bold;
+    color: #ff4d4d;
+    text-shadow: 0 3px 10px #000, 0 0 8px #7a0000;
+    z-index: 20;
+    pointer-events: none;
+    animation: anim-float-dmg 0.95s ease-out forwards;
+}
+
+@keyframes anim-float-dmg {
+    0%   { opacity: 1; transform: translateY(15px) scale(0.8); }
+    30%  { opacity: 1; transform: translateY(-10px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-45px) scale(1); }
+}
+
+/* Center Victory / Defeat Overlay */
+.combat-outcome {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 420px;
+    height: 130px;
+    background: rgba(6, 13, 25, 0.94);
+    border: 2px solid var(--gold-bright);
+    border-radius: 8px;
+    box-shadow: 0 0 35px rgba(212, 163, 70, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 25;
+}
+.combat-outcome h2 {
+    font-size: 30px;
+    color: var(--gold-bright);
+    margin-bottom: 6px;
+}
+.combat-outcome p {
+    font-size: 15px;
+    color: var(--text-main);
+}
+
+/* ==================== 3. BOTTOM COMBAT ACTION BAR ==================== */
+.combat-action-bar {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    padding-top: 8px;
+    z-index: 10;
+}
+
+.combat-act-btn {
+    min-width: 150px;
+    padding: 11px 20px !important;
+    font-size: 17px !important;
+}

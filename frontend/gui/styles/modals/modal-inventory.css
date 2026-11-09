@@ -1,0 +1,40 @@
+/* ==========================================================================
+   MODAL SPECIFIC: INVENTORY 4x4 SLOTS GRID (Square 1:1 slots with scroll!)
+   ========================================================================== */
+
+.inventory-grid {
+    flex: 1.25;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: max-content; /* Рядки підлаштовуються під квадратну висоту слота! */
+    gap: 10px;
+    list-style: none;
+    align-content: start;
+}
+
+.inv-slot {
+    aspect-ratio: 1 / 1; /* Гарантує ідеальний квадрат за будь-якої висоти вікна! */
+    width: 100%;
+    background-image: url('/assets/buttons/bg-sq-base.png') !important;
+    background-size: cover !important;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 26px;
+    position: relative;
+}
+
+.inv-slot:hover,
+.inv-slot.selected {
+    background-image: url('/assets/buttons/bg-sq-gold.png') !important;
+    box-shadow: 0 0 12px rgba(212, 163, 70, 0.5);
+}
+
+.inv-slot-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}

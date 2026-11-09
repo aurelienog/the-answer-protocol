@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAP — The Answer Protocol</title>
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+
+    <!-- ==================== SCREEN 1: LOGIN VIEW ==================== -->
+    <main id="login-screen" class="screen">
+        <section class="login-container" aria-labelledby="game-title">
+            <header class="logo-header">
+                <img src="/assets/ui/logo-tap.png" alt="TAP — The Answer Protocol" class="login-logo-img">
+            </header>
+
+            <form id="login-form" class="gold-panel login-box">
+                <h2>Connect to the World</h2>
+                <p class="login-hint">Enter your name and begin your adventure.</p>
+                <hr class="sapphire-divider" style="margin-bottom:16px;">
+
+                <label class="form-field">
+                    <span class="field-label">Character Name</span>
+                    <span class="input-wrapper">
+                        <span class="input-icon" aria-hidden="true">👤</span>
+                        <input type="text" id="login-username" name="username"
+                               placeholder="Enter your character name..."
+                               value="Arthas" required minlength="1" maxlength="24"
+                               pattern="[A-Za-z0-9_]+">
+                    </span>
+                </label>
+
+                <fieldset class="form-field">
+                    <legend class="field-label">Gender (Avatar)</legend>
+                    <div class="gender-toggle">
+                        <label class="gender-option">
+                            <input type="radio" name="gender" value="male" checked>
+                            <span class="gender-btn">Male</span>
+                        </label>
+                        <label class="gender-option">
+                            <input type="radio" name="gender" value="female">
+                            <span class="gender-btn">Female</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="form-row">
+                    <label class="form-field flex-2">
+                        <span class="field-label">Server Address</span>
+                        <input type="text" id="login-host" name="host" value="127.0.0.1" required>
+                    </label>
+                    <label class="form-field flex-1">
+                        <span class="field-label">Port</span>
+                        <input type="text" id="login-port" name="port" value="8090" required pattern="[0-9]+">
+                    </label>
+                </div>
+
+                <output id="login-error" class="error-banner hidden" role="alert"></output>
+
+                <button type="submit" class="btn-primary-connect">
+                    ✦ CONNECT ✦
+                </button>
+            </form>
+        </section>
+    </main>
+
+    <!-- ==================== SCREEN 2: GAME INTERFACE ==================== -->
+    <div id="game-screen" class="screen hidden">
+
+        <!-- TOP HUD BAR -->
+        <header class="top-hud">
+            <h1 class="hud-center">
+                <img src="/assets/ui/hud-crest-tap.png" alt="TAP — The Answer Protocol" class="hud-crest-img">
+            </h1>
+
+            <section class="hud-left gold-frame" aria-label="Character Status">
+                <img id="hud-avatar" class="avatar-circle" src="/assets/avatars/icons/hero_male.jpeg" alt="Player Avatar">
+                <div class="bars-container">
+                    <header class="char-title">
+                        <h2 id="hud-player-name" style="font-size:15px;font-weight:bold;">Arthas</h2>
+                    </header>
+                    <div class="stat-bar hp-bar" role="progressbar" aria-label="Health Points" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+                        <div class="bar-fill" id="hud-hp-fill" style="width: 100%;"></div>
+                        <span class="bar-text">HP &nbsp; <b id="hud-hp-text">100 / 100</b></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="hud-right gold-frame" role="region" aria-label="Room Information and Actions">
+                <div class="hud-location-info">
+                    <p><span aria-hidden="true">👥</span> Room: <data id="hud-room-count" value="1"><b>1</b></data></p>
+                    <p><span aria-hidden="true">🌐</span> Server: <data id="hud-server-count" value="1"><b>1</b></data></p>
+                </div>
+                <div class="hud-top-icons" role="toolbar" aria-label="Quick System Actions">
+                    <button type="button" class="icon-btn" data-cmd="WHO" title="Refresh WHO">
+                        <img src="/assets/icons/command/who.png" alt="" aria-hidden="true" class="cmd-icon-img">
+                        <span class="act-label">WHO</span>
+                    </button>
+                    <button type="button" class="icon-btn" data-open-window="status" title="Character Status">
+                        <img src="/assets/icons/command/status.png" alt="" aria-hidden="true" class="cmd-icon-img">
+                        <span class="act-label">STATUS</span>
+                    </button>
+                    <button type="button" class="icon-btn" data-open-window="quit" title="Leave Game">
+                        <img src="/assets/icons/command/quit.png" alt="" aria-hidden="true" class="cmd-icon-img">
+                        <span class="act-label">QUIT</span>
+                    </button>
+                </div>
+            </section>
+        </header>
+
+        <!-- MIDDLE WORKSPACE -->
+        <main class="game-workspace">
+            
+            <!-- WORLD VIEWPORT -->
+            <section class="world-stage" id="world-stage" aria-label="World Viewport">
+                <img id="stage-bg-img" class="stage-bg-img" src="/assets/rooms/harbor_square.webp" alt="Central Harbor Square">
+
+                <!-- Scene Panorama Overlay -->
+                <div class="stage-backdrop">
+                    <header class="stage-banner gold-frame">
+                        <span id="stage-icon" class="stage-big-icon">⚓</span>
+                        <h2 id="stage-room-title">Central Harbor Square</h2>
+                        <p id="stage-room-region" class="room-region">Harbor District · Kingdom of Arvendale</p>
+                    </header>
+
+                    <!-- LEFT NPC QUICK BAR (Below Hero HUD: Green = TALK, Red = ATTACK) -->
+                    <aside class="left-npcs-dock" id="left-npcs-dock" aria-label="Characters in Location"></aside>
+                </div>
+
+                <!-- ==================== 1. LOOK WINDOW ==================== -->
+                <dialog id="modal-look" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <img src="/assets/icons/command/look.png" alt="" class="modal-header-icon-img">
+                            <div>
+                                <h2 class="modal-title">LOOK — Location</h2>
+                                <p class="modal-subtitle" id="look-sub-id">ID: harbor_square</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <nav class="window-tabs" role="tablist">
+                        <button type="button" class="tab-btn active" data-look-tab="look-tab-desc">Description</button>
+                        <button type="button" class="tab-btn" data-look-tab="look-tab-exits">Exits</button>
+                        <button type="button" class="tab-btn" data-look-tab="look-tab-items">Items</button>
+                        <button type="button" class="tab-btn" data-look-tab="look-tab-npcs">NPCs</button>
+                        <button type="button" class="tab-btn" data-look-tab="look-tab-players">Players</button>
+                    </nav>
+
+                    <div id="look-tab-desc" class="modal-split-body look-tab-panel">
+                        <aside class="split-left-preview inner-gold-box flush-portrait">
+                            <img id="look-art-box" class="full-panel-img" src="/assets/rooms/cards/harbor_square.jpeg" alt="Location illustration">
+                        </aside>
+                        <section class="split-right-list inner-gold-box">
+                            <h3 class="preview-title" id="look-room-title">Central Harbor Square</h3>
+                            <p class="modal-subtitle" id="look-room-region">Harbor District · Kingdom of Arvendale</p>
+                            <hr class="sapphire-divider" style="margin:12px 0;">
+                            <p id="look-room-desc" style="line-height:1.65;font-size:15px;"></p>
+                        </section>
+                    </div>
+
+                    <div id="look-tab-exits" class="modal-split-body look-tab-panel hidden">
+                        <aside class="split-left-preview inner-gold-box">
+                            <div class="preview-artwork tall">
+                                <img class="art-img cover" src="/assets/ui/card/look-exits.jpeg" alt="Compass and available exits">
+                            </div>
+                            <h3 class="preview-title">Compass & Exits</h3>
+                            <p class="preview-desc">Click any route on the right to travel immediately.</p>
+                        </aside>
+                        <section class="split-right-list inner-gold-box">
+                            <h3 class="preview-title">Available Exits</h3>
+                            <ul id="look-exits-list" class="selectable-list"></ul>
+                        </section>
+                    </div>
+
+                    <div id="look-tab-items" class="modal-split-body look-tab-panel hidden">
+                        <aside class="split-left-preview inner-gold-box">
+                            <div class="preview-artwork tall">
+                                <img class="art-img cover" src="/assets/ui/card/look-items.jpeg" alt="Items in location">
+                            </div>
+                            <h3 class="preview-title">Items in Location</h3>
+                            <p class="preview-desc">Objects discovered in this area.</p>
+                        </aside>
+                        <section class="split-right-list inner-gold-box">
+                            <h3 class="preview-title">Items on the Ground</h3>
+                            <ul id="look-items-list" class="selectable-list"></ul>
+                        </section>
+                    </div>
+
+                    <div id="look-tab-npcs" class="modal-split-body look-tab-panel hidden">
+                        <aside class="split-left-preview inner-gold-box">
+                            <div class="preview-artwork tall">
+                                <img class="art-img cover" src="/assets/ui/card/look-npcs.jpeg" alt="Characters in location">
+                            </div>
+                            <h3 class="preview-title">Local Characters</h3>
+                            <p class="preview-desc">Inhabitants and creatures currently in this room.</p>
+                        </aside>
+                        <section class="split-right-list inner-gold-box">
+                            <h3 class="preview-title">NPCs in Location</h3>
+                            <ul id="look-npcs-list" class="selectable-list"></ul>
+                        </section>
+                    </div>
+
+                    <div id="look-tab-players" class="modal-split-body look-tab-panel hidden">
+                        <aside class="split-left-preview inner-gold-box">
+                            <div class="preview-artwork tall">
+                                <img class="art-img cover" src="/assets/ui/card/look-players.jpeg" alt="Adventurers in location">
+                            </div>
+                            <h3 class="preview-title">Fellow Adventurers</h3>
+                            <p class="preview-desc">Connected players currently standing in this location.</p>
+                        </aside>
+                        <section class="split-right-list inner-gold-box">
+                            <h3 class="preview-title">Players in Location</h3>
+                            <ul id="look-players-list" class="selectable-list"></ul>
+                        </section>
+                    </div>
+                </dialog>
+
+                <!-- ==================== 2. UNIFIED SELECTOR MODAL (MOVE, TAKE, TALK, ATTACK) ==================== -->
+                <dialog id="modal-selector" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <span class="modal-header-icon" id="sel-header-icon">
+                                <img src="/assets/icons/command/move.png" alt="" class="modal-header-icon-img">
+                            </span>
+                            <div>
+                                <h2 class="modal-title" id="sel-header-title">MOVE — Travel</h2>
+                                <p class="modal-subtitle" id="sel-header-sub">Choose a destination from the available exits.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <div class="modal-split-body">
+                        <aside class="split-left-preview inner-gold-box">
+                            <div id="sel-preview-art" class="preview-artwork">
+                                <img class="art-img cover" src="/assets/rooms/cards/harbor_square.jpeg" alt="Selected option preview">
+                            </div>
+                            <h3 class="preview-title" id="sel-preview-title">Select an Option</h3>
+                            <p class="preview-desc" id="sel-preview-desc">Choose an entry on the right to inspect its details.</p>
+                            <ul class="stat-kv-list" id="sel-preview-stats"></ul>
+                        </aside>
+
+                        <section class="split-right-list inner-gold-box">
+                            <h3 class="preview-title" id="sel-list-heading">Available Options</h3>
+                            <ul class="selectable-list" id="sel-options-list"></ul>
+                        </section>
+                    </div>
+
+                    <footer class="modal-footer">
+                        <button type="button" class="btn-modal-primary" id="btn-sel-confirm" disabled>Confirm</button>
+                    </footer>
+                </dialog>
+
+                <!-- ==================== 3. NPC DIALOGUE & QUEST WINDOW ==================== -->
+                <dialog id="modal-dialogue" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <img src="/assets/icons/command/talk.png" alt="" class="modal-header-icon-img">
+                            <div>
+                                <h2 class="modal-title" id="dlg-header-title">TALK — Character</h2>
+                                <p class="modal-subtitle" id="dlg-header-sub">Converse and learn about the world.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <div class="modal-split-body">
+                        <aside class="split-left-preview inner-gold-box flush-portrait">
+                            <img id="dlg-npc-art" class="full-panel-img" src="/assets/avatars/captain_eliza.jpeg" alt="NPC Portrait">
+                        </aside>
+
+                        <section class="split-right-list inner-gold-box" style="justify-content:space-between;">
+                            <div>
+                                <h3 class="preview-title" id="dlg-speaker-label">Captain Eliza · Harbor Captain</h3>
+                                <hr class="sapphire-divider" style="margin:8px 0 12px;">
+                                <!-- NPC dialogue block above the buttons! -->
+                                <blockquote id="dlg-speech-text" class="npc-speech-box">
+                                    "Greetings, adventurer! Do you wish to speak with me, or are you looking for work?"
+                                </blockquote>
+                            </div>
+
+                            <ul class="selectable-list" id="dlg-choices" style="flex:0 0 auto;margin-top:12px;">
+                                <li class="select-card" id="dlg-btn-talk-again">
+                                    <div class="card-left">
+                                        <img src="/assets/icons/command/talk.png" alt="" class="inline-cmd-icon">
+                                        <strong class="card-title" id="dlg-talk-btn-label">Speak with character (TALK)</strong>
+                                    </div>
+                                </li>
+                                <li class="select-card" id="dlg-btn-quest">
+                                    <div class="card-left">
+                                        <img src="/assets/icons/command/quest.png" alt="" class="inline-cmd-icon">
+                                        <strong class="card-title" id="dlg-quest-btn-label">Ask for a Quest (QUEST)</strong>
+                                    </div>
+                                </li>
+                                <li class="select-card" data-close-modals>
+                                    <div class="card-left">
+                                        <img src="/assets/icons/command/quit.png" alt="" class="inline-cmd-icon">
+                                        <strong class="card-title">Goodbye.</strong>
+                                    </div>
+                                </li>
+                            </ul>
+                        </section>
+                    </div>
+                </dialog>
+
+                <!-- ==================== 4. INVENTORY WINDOW ==================== -->
+                <dialog id="modal-inventory" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <img src="/assets/icons/command/inventory.png" alt="" class="modal-header-icon-img">
+                            <div>
+                                <h2 class="modal-title">INVENTORY</h2>
+                                <p class="modal-subtitle">Your current items.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <div class="modal-split-body">
+                        <ul class="inventory-grid inner-gold-box" id="inventory-slots"></ul>
+
+                        <aside class="split-left-preview inner-gold-box">
+                            <div id="inv-item-icon" class="preview-artwork">
+                                <img class="art-img cover" src="/assets/ui/card/look-items.jpeg" alt="Selected inventory item">
+                            </div>
+                            <h3 class="preview-title" id="inv-item-name">Select an Item</h3>
+                            <ul class="stat-kv-list" id="inv-item-stats">
+                                <li><span>Type:</span> <strong id="inv-stat-type">-</strong></li>
+                                <li><span>Effect:</span> <strong id="inv-stat-weight">-</strong></li>
+                                <li><span>ID:</span> <strong id="inv-stat-value">-</strong></li>
+                            </ul>
+                            <hr class="sapphire-divider" style="margin:8px 0;">
+                            <p class="preview-desc" id="inv-item-desc" style="flex:1;margin-bottom:0;">Click on any item in your bag to inspect, use, or drop it in the current room.</p>
+                        </aside>
+                    </div>
+
+                    <footer class="modal-footer">
+                        <button type="button" id="btn-use-selected" class="btn-modal-primary" disabled>Use</button>
+                        <button type="button" id="btn-drop-selected" class="btn-modal-secondary" disabled>Drop</button>
+                    </footer>
+                </dialog>
+
+                <!-- ==================== 5. STATUS WINDOW (Full Portrait Left + Real Stats Column Right) ==================== -->
+                <dialog id="modal-status" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <img src="/assets/icons/command/status.png" alt="" class="modal-header-icon-img">
+                            <div>
+                                <h2 class="modal-title">STATUS</h2>
+                                <p class="modal-subtitle">Character information, combat gear, and world standing.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <div class="modal-split-body">
+                        <!-- Ліворуч: Портрет персонажа на все віконце без зайвої внутрішньої рамки! -->
+                        <aside class="split-left-preview inner-gold-box flush-portrait">
+                            <img id="status-hero-art" class="full-panel-img" src="/assets/avatars/hero_male.jpeg" alt="Character portrait">
+                        </aside>
+
+                        <!-- Праворуч: Ім'я + опис над HP, нижче Combat та Miscellaneous у стовпчик на всю ширину! -->
+                        <section class="split-right-list inner-gold-box" style="gap:10px;">
+                            <header class="status-hero-header">
+                                <h3 class="preview-title" id="status-char-name">Arthas</h3>
+                                <span class="modal-subtitle">🛡️ Adventurer of Arvendale</span>
+                            </header>
+
+                            <div class="stat-bar hp-bar">
+                                <div class="bar-fill" id="st-hp-fill" style="width:100%"></div>
+                                <span class="bar-text">❤️ Health (HP) &nbsp; <b id="st-hp-val">100 / 100</b></span>
+                            </div>
+
+                            <div class="status-column-stack">
+                                <div class="inner-gold-box status-subbox">
+                                    <h4>⚔️ Combat Statistics (Base + Equipment)</h4>
+                                    <ul class="stat-kv-list">
+                                        <li><span>🗡️ Attack Power</span><strong id="st-atk-val">10</strong></li>
+                                        <li><span>🛡️ Defense Rating</span><strong id="st-def-val">5</strong></li>
+                                        <li><span>⚡ Action Speed</span><strong id="st-spd-val">10</strong></li>
+                                        <li><span>❤️ Condition</span><strong id="st-cond-val">healthy</strong></li>
+                                    </ul>
+                                </div>
+
+                                <div class="inner-gold-box status-subbox">
+                                    <h4>📜 Miscellaneous & World Info</h4>
+                                    <ul class="stat-kv-list">
+                                        <li><span>📍 Current Location</span><strong id="st-loc-val">Central Harbor Square</strong></li>
+                                        <li><span>🛡️ Equipped Gear</span><strong id="st-gear-val">0 pieces</strong></li>
+                                        <li><span>🎒 Inventory Items</span><strong id="st-items-val">0</strong></li>
+                                        <li><span>📖 Quests Completed</span><strong id="st-quests-val">0</strong></li>
+                                        <li><span>👥 Active Party</span><strong id="st-party-val">None</strong></li>
+                                        <li><span>🌐 Server Population</span><strong id="st-pop-val">1 online</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </dialog>
+
+                <!-- ==================== 6. QUESTS WINDOW ==================== -->
+                <dialog id="modal-quests" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <img src="/assets/icons/command/quests.png" alt="" class="modal-header-icon-img">
+                            <div>
+                                <h2 class="modal-title">QUESTS</h2>
+                                <p class="modal-subtitle">Track your adventures and objectives.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <div class="modal-split-body">
+                        <section class="split-left-preview inner-gold-box">
+                            <nav class="window-tabs" role="tablist" style="padding:0 0 6px 0;">
+                                <button type="button" class="tab-btn active" id="q-tab-active" data-quest-tab="active">
+                                    Active (<span id="q-count-active">0</span>)
+                                </button>
+                                <button type="button" class="tab-btn" id="q-tab-completed" data-quest-tab="completed">
+                                    Completed (<span id="q-count-completed">0</span>)
+                                </button>
+                            </nav>
+                            <ul class="selectable-list" id="quests-list"></ul>
+                        </section>
+
+                        <aside class="split-right-list inner-gold-box">
+                            <h3 class="preview-title" id="quest-detail-title">Select a Quest</h3>
+                            <p class="modal-subtitle" id="quest-detail-giver">Kingdom of Arvendale</p>
+                            <hr class="sapphire-divider" style="margin:10px 0;">
+                            <h4 style="color:var(--gold-light);font-size:14px;margin-bottom:6px;">📖 Description</h4>
+                            <p class="preview-desc" id="quest-detail-desc">
+                                Speak with NPCs in the world using the QUEST command to discover tasks and earn rewards.
+                            </p>
+                            <h4 style="color:var(--gold-light);font-size:14px;margin:10px 0 6px;">🎯 Objectives</h4>
+                            <p class="preview-desc" id="quest-detail-obj">☑️ Explore the Kingdom of Arvendale</p>
+                            <h4 style="color:var(--gold-light);font-size:14px;margin:10px 0 6px;">🪙 Rewards</h4>
+                            <p class="preview-desc" id="quest-detail-rew">✨ Armor Gear & Healing Consumables</p>
+                        </aside>
+                    </div>
+                </dialog>
+
+                <!-- ==================== 7. GROUP WINDOW ==================== -->
+                <dialog id="modal-group" class="rpg-modal gold-panel hidden" open>
+                    <header class="modal-header">
+                        <div class="modal-title-group">
+                            <img src="/assets/icons/command/group.png" alt="" class="modal-header-icon-img">
+                            <div>
+                                <h2 class="modal-title">GROUP</h2>
+                                <p class="modal-subtitle">Create your own group or join another player's party.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="close-btn" data-close-modals aria-label="Close">✕</button>
+                    </header>
+                    <hr class="sapphire-divider">
+
+                    <div class="modal-split-body">
+                        <aside class="split-left-preview inner-gold-box">
+                            <div class="preview-artwork tall">
+                                <img class="art-img cover" src="/assets/ui/card/group-img.jpeg" alt="Party and Co-op">
+                            </div>
+                            <h3 class="preview-title">Party & Co-op</h3>
+                            <p class="preview-desc">Form a party with other adventurers to coordinate via Group Chat and explore dungeons together.</p>
+                        </aside>
+
+                        <section class="split-right-list inner-gold-box" style="gap:10px;">
+                            <div style="margin-bottom:6px;">
+                                <h4 style="color:var(--gold-light);margin-bottom:6px;">👑 Create or Join Group</h4>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <input type="text" id="group-name-input" placeholder="Group name (e.g. Heroes)..." value="Arvendale_Watch">
+                                    <button type="button" class="btn-gold-sm" data-group-act="CREATE">Create</button>
+                                    <button type="button" class="btn-gold-sm" data-group-act="JOIN">Join</button>
+                                    <button type="button" class="btn-gold-sm" data-cmd="GROUP LEAVE">Leave</button>
+                                </div>
+                            </div>
+
+                            <hr class="sapphire-divider">
+
+                            <div>
+                                <h4 style="color:var(--gold-light);margin-bottom:6px;">🤝 Invite Player to Group</h4>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <input type="text" id="group-modal-input" placeholder="Enter player username...">
+                                    <button type="button" class="btn-gold-sm" data-group-act="INVITE">Invite</button>
+                                    <button type="button" class="btn-gold-sm" data-cmd="GROUP INVITATIONS">Check Invites</button>
+                                </div>
+                            </div>
+
+                            <ul class="selectable-list" id="group-invitations-list"></ul>
+                        </section>
+                    </div>
+                </dialog>
+
+                <!-- ==================== 8. QUIT CONFIRMATION WINDOW ==================== -->
+                <dialog id="modal-quit" class="rpg-modal modal-sm modal-quit gold-panel hidden" open>
+                    <img class="quit-crest-badge" src="/assets/ui/quit-crest.png" alt="">
+
+                    <button type="button" class="close-btn quit-close-btn" data-close-modals aria-label="Close">✕</button>
+
+                    <div class="quit-body">
+                        <h2 class="quit-title">Leave the Game?</h2>
+                        <hr class="sapphire-divider">
+                        <p class="quit-question">
+                            Are you sure you want to leave the world of TAP?
+                        </p>
+                        <p class="quit-subtext">
+                            Your current session will be disconnected.
+                        </p>
+                    </div>
+
+                    <footer class="modal-footer quit-footer">
+                        <button type="button" class="btn-modal-danger" data-cmd="QUIT">Quit</button>
+                        <button type="button" class="btn-modal-secondary" data-close-modals>Cancel</button>
+                    </footer>
+                </dialog>
+
+                <!-- ==================== 9. FULLSCREEN COMBAT ARENA ==================== -->
+                <dialog id="modal-combat" class="combat-arena gold-panel hidden" open>
+                    <div class="combat-scene" id="combat-scene-bg">
+                        <img id="combat-bg-img" class="stage-bg-img" src="/assets/rooms/harbor_square.webp" alt="Combat Arena">
+
+                        <header class="combat-top-bar">
+                            <div class="combat-fighter-hud fighter-left gold-frame">
+                                <img class="combat-Hud-avatar" id="combat-hero-avatar" src="/assets/avatars/icons/hero_male.jpeg" alt="Hero Avatar">
+                                <div class="combat-hud-bars">
+                                    <div class="combat-fighter-name">
+                                        <strong id="combat-hero-name">Arthas</strong>
+                                    </div>
+                                    <div class="stat-bar hp-bar">
+                                        <div class="bar-fill" id="combat-hero-hp-fill" style="width: 100%;"></div>
+                                        <span class="bar-text"><b id="combat-hero-hp-text">100 / 100</b></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Center: Turn Indicator + Round & Timer -->
+                            <div class="combat-turn-banner" id="combat-turn-banner">
+                                <div class="turn-main-row">
+                                    <span class="turn-hourglass">⏳</span>
+                                    <strong id="combat-turn-text">YOUR TURN</strong>
+                                </div>
+                                <div class="turn-sub-row">
+                                    <span id="combat-round-label">Round 1</span>
+                                    <span class="turn-sep"> - </span>
+                                    <span id="combat-timer-label">30s</span>
+                                </div>
+                            </div>
+
+                            <div class="combat-fighter-hud fighter-right gold-frame">
+                                <div class="combat-hud-bars">
+                                    <div class="combat-fighter-name">
+                                        <strong id="combat-enemy-name">Dire Wolf</strong>
+                                    </div>
+                                    <div class="stat-bar hp-bar">
+                                        <div class="bar-fill" id="combat-enemy-hp-fill" style="width: 100%;"></div>
+                                        <span class="bar-text"><b id="combat-enemy-hp-text">45 / 45</b></span>
+                                    </div>
+                                </div>
+                                <img class="combat-Hud-avatar" id="combat-enemy-avatar" src="/assets/avatars/icons/dire_wolf.jpeg" alt="Enemy Avatar">
+                            </div>
+                        </header>
+
+                        <div class="combat-stage-fighters">
+                            <div class="fighter-spot spot-hero" id="fighter-hero-box">
+                                <div class="floating-dmg hidden" id="dmg-on-hero">-10</div>
+                                <img id="combat-hero-sprite" class="fighter-sprite" src="/assets/combat/hero_female.png" alt="Hero"
+                                     onerror="this.style.display='none'; document.getElementById('combat-hero-fallback').style.display='block';">
+                                <span id="combat-hero-fallback" class="fighter-fallback">🧙‍♂️</span>
+                            </div>
+
+                            <div id="combat-outcome-banner" class="combat-outcome hidden">
+                                <h2 id="combat-outcome-title">🏆 VICTORY!</h2>
+                                <p id="combat-outcome-sub">Enemy defeated!</p>
+                            </div>
+
+                            <div class="fighter-spot spot-enemy" id="fighter-enemy-box">
+                                <div class="floating-dmg hidden" id="dmg-on-enemy">-12</div>
+                                <img id="combat-enemy-sprite" class="fighter-sprite" src="/assets/combat/dire_wolf.png" alt="Enemy"
+                                     onerror="this.style.display='none'; document.getElementById('combat-enemy-fallback').style.display='block';">
+                                <span id="combat-enemy-fallback" class="fighter-fallback">🐺</span>
+                            </div>
+                        </div>
+
+                        <footer class="combat-action-bar">
+                            <button type="button" class="btn-modal-primary combat-act-btn" id="btn-combat-strike">
+                                🗡️ Attack
+                            </button>
+                            <button type="button" class="btn-modal-secondary combat-act-btn" id="btn-combat-defend">
+                                🛡️ Defend
+                            </button>
+                            <button type="button" class="btn-modal-secondary combat-act-btn" id="btn-combat-heal">
+                                🧪 Heal
+                            </button>
+                            <button type="button" class="btn-modal-secondary combat-act-btn" id="btn-combat-help">
+                                📯 Help
+                            </button>
+                            <button type="button" class="btn-modal-danger combat-act-btn" id="btn-combat-flee">
+                                🏃 Flee
+                            </button>
+                        </footer>
+
+                    </div>
+                </dialog>
+
+                <!-- ==================== 10. FLEE CONFIRMATION MODAL (No <figure>!) ==================== -->
+                <dialog id="modal-flee" class="rpg-modal modal-sm modal-quit gold-panel hidden" open style="z-index: 55;">
+                    <img class="quit-crest-badge" src="/assets/ui/fled-crest.png" alt="">
+
+                    <button type="button" class="close-btn quit-close-btn" id="btn-close-flee" aria-label="Close">✕</button>
+
+                    <div class="quit-body">
+                        <h2 class="quit-title">Flee from Battle?</h2>
+                        <hr class="sapphire-divider">
+                        <p class="quit-question">
+                            Are you sure you want to retreat from this fight?
+                        </p>
+                        <p class="quit-subtext">
+                            You will abandon the combat without claiming rewards.
+                        </p>
+                    </div>
+
+                    <footer class="modal-footer quit-footer">
+                        <button type="button" class="btn-modal-danger" id="btn-confirm-flee">🏃 Flee</button>
+                        <button type="button" class="btn-modal-secondary" id="btn-cancel-flee">Cancel</button>
+                    </footer>
+                </dialog>
+            </section>
+
+            <!-- RIGHT ACTION BAR -->
+            <aside class="right-action-bar gold-frame" aria-label="Protocol Commands">
+                <div class="right-menu-scroll">
+                    <button type="button" class="action-btn" data-open-window="look" title="LOOK">
+                        <img src="/assets/icons/command/look.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">LOOK</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="move" title="MOVE">
+                        <img src="/assets/icons/command/move.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">MOVE</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="talk" title="TALK">
+                        <img src="/assets/icons/command/talk.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">TALK</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="take" title="TAKE">
+                        <img src="/assets/icons/command/take.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">TAKE</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="attack" title="ATTACK">
+                        <img src="/assets/icons/command/attack.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">ATTACK</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="inventory" title="INVENTORY & DROP">
+                        <img src="/assets/icons/command/inventory.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">INVENTORY</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="quests" title="QUESTS">
+                        <img src="/assets/icons/command/quests.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">QUESTS</span>
+                    </button>
+                    <button type="button" class="action-btn" data-open-window="group" title="GROUP">
+                        <img src="/assets/icons/command/group.png" alt="" class="cmd-icon-img">
+                        <span class="act-label">GROUP</span>
+                    </button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- BOTTOM DOCK: CHAT (Left) | COMPASS ROSE (Exact Center) | PLAYERS & PARTY (Right) -->
+        <footer class="bottom-dock">
+            
+            <!-- 1. LEFT: CHAT PANEL -->
+            <section class="chat-panel gold-panel" aria-label="Communications">
+                <nav class="chat-tabs" role="tablist">
+                    <button type="button" class="chat-tab active" data-chat-scope="ROOM">Room</button>
+                    <button type="button" class="chat-tab" data-chat-scope="GLOBAL">World</button>
+                    <button type="button" class="chat-tab" data-chat-scope="GROUP">Party</button>
+                    <button type="button" class="chat-tab system-tab" data-chat-scope="LOG">
+                        <img src="/assets/icons/command/system-log.png" alt="" class="tab-mini-icon"> System
+                    </button>
+                </nav>
+
+                <section id="chat-messages" class="chat-history" role="log" aria-live="polite"></section>
+
+                <form id="chat-form" class="chat-input-row">
+                    <output id="chat-scope-badge" class="scope-tag">[ROOM]</output>
+                    <input type="text" id="chat-input" placeholder="Type a message or command..." autocomplete="off">
+                    <button type="submit" class="btn-send" aria-label="Send">➤</button>
+                </form>
+            </section>
+
+            <!-- 2. CENTER: COMPASS ROSE WITH QUICK-PIN BUTTONS -->
+            <nav class="compass-dock" aria-label="Compass Navigation">
+                <div class="compass-rose-wrap">
+                    <button type="button" class="stage-pin comp-pin pin-north hidden" id="comp-btn-north"></button>
+                    <button type="button" class="stage-pin comp-pin pin-west hidden" id="comp-btn-west"></button>
+                    <div class="compass-rose-emblem">
+                        <img src="/assets/ui/compass-cross.webp" alt="Compass" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                    </div>
+                    <button type="button" class="stage-pin comp-pin pin-east hidden" id="comp-btn-east"></button>
+                    <button type="button" class="stage-pin comp-pin pin-south hidden" id="comp-btn-south"></button>
+                </div>
+                <div id="compass-aid-slot"></div>
+            </nav>
+
+            <!-- 3. RIGHT: PLAYERS & PARTY DOCK (Expands columns on Fullscreen!) -->
+            <section class="players-panel gold-panel" aria-label="Players in Location and Party">
+                <nav class="chat-tabs" role="tablist">
+                    <button type="button" class="chat-tab active" data-dock-tab="players" id="tab-btn-players">
+                        Location (<span id="dock-room-count">1</span>)
+                    </button>
+                    <button type="button" class="chat-tab" data-dock-tab="group" id="tab-btn-group">
+                        Party (<span id="dock-group-count">0</span>)
+                    </button>
+                </nav>
+
+                <!-- TAB 1: PLAYERS IN CURRENT ROOM -->
+                <div id="dock-players-view" class="dock-content">
+                    <table class="rpg-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th class="col-wide-only">Role</th>
+                                <th class="col-wide-only">Status</th>
+                                <th>Party</th>
+                            </tr>
+                        </thead>
+                        <tbody id="players-table-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 2: PARTY MEMBERS -->
+                <div id="dock-group-view" class="dock-content hidden">
+                    <table class="rpg-table">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th class="col-wide-only">Rank</th>
+                                <th>Group</th>
+                            </tr>
+                        </thead>
+                        <tbody id="group-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </footer>
+    </div>
+
+    <!-- 1. Core -->
+    <script src="/src/core/assets.js"></script>
+    <script src="/src/core/state.js"></script>
+    <script src="/src/core/network.js"></script>
+
+    <!-- 2. PNG Frame Builder -->
+    <script src="/src/frames/frameBuilder.js"></script>
+
+    <!-- 3. Persistent HUD & Dock Views -->
+    <script src="/src/hud/topHudView.js"></script>
+    <script src="/src/hud/chatView.js"></script>
+    <script src="/src/hud/playersDockView.js"></script>
+    <script src="/src/hud/stageView.js"></script>
+
+    <!-- 4. Individual Modal Controllers -->
+    <script src="/src/modals/lookModal.js"></script>
+    <script src="/src/modals/selectorModal.js"></script>
+    <script src="/src/modals/dialogueModal.js"></script>
+    <script src="/src/modals/inventoryModal.js"></script>
+    <script src="/src/modals/statusModal.js"></script>
+    <script src="/src/modals/questsModal.js"></script>
+    <script src="/src/modals/groupModal.js"></script>
+    <script src="/src/modals/combatModal.js"></script>
+
+    <!-- 5. Master UI Orchestrator -->
+    <script src="/src/ui.js"></script>
+</body>
+</html>

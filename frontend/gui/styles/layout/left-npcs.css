@@ -1,0 +1,135 @@
+/* ==========================================================================
+   LAYOUT: LEFT NPC QUICK DOCK (Frame on top ::after, Red Texture BEHIND ::before!)
+   ========================================================================== */
+
+:root {
+    --npc-card-w: 245px;
+    --npc-card-h: 72px;
+
+    --npc-avatar-size: 51px;
+    --npc-avatar-x: 31px;
+    --npc-avatar-y: 0px;
+
+    --npc-text-x: 97px;
+    --npc-text-y: 0px;
+
+    /* Inset the inner red/green texture so it doesn't extend beyond the frame boundaries. */
+    --npc-bg-top: 12px;
+    --npc-bg-bottom: 12px;
+    --npc-bg-left: 56px;
+    --npc-bg-right: 16px;
+}
+
+.left-npcs-dock {
+    position: absolute;
+    top: 100px;
+    left: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 18;
+    pointer-events: auto;
+}
+
+.npc-quick-card {
+    position: relative;
+    width: var(--npc-card-w);
+    height: var(--npc-card-h);
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--gold-light);
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.22s ease;
+    text-align: left;
+    overflow: visible;
+}
+
+/* LAYER 1: Red texture for enemies / green sheen for peaceful ones! */
+.npc-quick-card::before {
+    content: "";
+    position: absolute;
+    top: var(--npc-bg-top);
+    bottom: var(--npc-bg-bottom);
+    left: var(--npc-bg-left);
+    right: var(--npc-bg-right);
+    border-radius: 6px;
+    z-index: 1;
+    pointer-events: none;
+    transition: filter 0.22s ease, opacity 0.22s ease;
+}
+
+.npc-quick-card.npc-friendly::before {
+    background: linear-gradient(90deg, rgba(36, 180, 79, 0.75), rgba(8, 28, 22, 0.85));
+    box-shadow: 0 0 12px rgba(39, 189, 101, 0.45);
+}
+
+.npc-quick-card.npc-hostile::before {
+    opacity: 0.88;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.65);
+}
+
+/* LAYER 2: Circular avatar and NPC name */
+.npc-quick-card .card-thumb {
+    position: absolute;
+    left: var(--npc-avatar-x);
+    top: calc(50% + var(--npc-avatar-y));
+    transform: translateY(-50%);
+    width: var(--npc-avatar-size);
+    height: var(--npc-avatar-size);
+    border-radius: 50% !important;
+    border: none !important;
+    overflow: hidden;
+    z-index: 3;
+}
+.npc-quick-card .card-thumb::after {
+    display: none !important;
+}
+
+.npc-quick-info {
+    position: absolute;
+    left: var(--npc-text-x);
+    right: 18px;
+    top: calc(50% + var(--npc-text-y));
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 5;
+}
+
+.npc-quick-info strong {
+    font-size: 13.5px;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 4px #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.npc-quick-info span {
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    text-shadow: 0 1px 3px #000;
+}
+
+.npc-hostile .npc-quick-info span {
+    color: #ffd2d2;
+    font-weight: bold;
+}
+
+/* LAYER 3: The gold frame */
+.npc-quick-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url('/assets/ui/hud-npc-slot.webp') no-repeat center / 100% 100%;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.npc-quick-card:hover {
+    transform: translateX(4px) scale(1.02);
+}

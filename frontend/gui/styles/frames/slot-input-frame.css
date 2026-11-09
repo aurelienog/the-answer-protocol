@@ -1,0 +1,77 @@
+/* ==========================================================================
+   FRAME 3: SLOTS, CARDS, INPUTS & PREVIEWS (Pure CSS — Zero <span> tags!)
+   ========================================================================== */
+
+.select-card,
+.stage-banner,
+.stage-pin,
+.inv-slot,
+.preview-artwork,
+.card-thumb,
+.close-btn,
+.btn-send,
+.icon-btn {
+    position: relative;
+    border: none !important;
+    border-radius: 3px;
+}
+
+.select-card::after,
+.stage-banner::after,
+.stage-pin::after,
+.inv-slot::after,
+.preview-artwork::after,
+.card-thumb::after,
+.close-btn::after,
+.btn-send::after,
+.icon-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 6;
+
+    background-image:
+        url('/assets/ui/slot-corner-tl.png'),
+        url('/assets/ui/slot-corner-tr.png'),
+        url('/assets/ui/slot-corner-bl.png'),
+        url('/assets/ui/slot-corner-br.png'),
+        url('/assets/ui/slot-edge-h.png'),
+        url('/assets/ui/slot-edge-h.png'),
+        url('/assets/ui/slot-edge-v.png'),
+        url('/assets/ui/slot-edge-v.png');
+
+    background-position:
+        top left, top right, bottom left, bottom right,
+        top center, bottom center, left center, right center;
+
+    background-size:
+        8px 8px, 8px 8px, 8px 8px, 8px 8px,
+        calc(100% - 16px) 1px, calc(100% - 16px) 1px,
+        1px calc(100% - 16px), 1px calc(100% - 16px);
+
+    background-repeat: no-repeat;
+}
+
+input[type="text"] {
+    border: none !important;
+    background-color: rgba(4, 9, 18, 0.94) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85);
+    background-image:
+        url('/assets/ui/slot-corner-tl.png'),
+        url('/assets/ui/slot-corner-tr.png'),
+        url('/assets/ui/slot-corner-bl.png'),
+        url('/assets/ui/slot-corner-br.png'),
+        url('/assets/ui/slot-edge-h.png'),
+        url('/assets/ui/slot-edge-h.png'),
+        url('/assets/ui/slot-edge-v.png'),
+        url('/assets/ui/slot-edge-v.png') !important;
+    background-position:
+        top left, top right, bottom left, bottom right,
+        top center, bottom center, left center, right center !important;
+    background-size:
+        8px 8px, 8px 8px, 8px 8px, 8px 8px,
+        calc(100% - 16px) 1px, calc(100% - 16px) 1px,
+        1px calc(100% - 16px), 1px calc(100% - 16px) !important;
+    background-repeat: no-repeat !important;
+}

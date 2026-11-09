@@ -1,0 +1,127 @@
+/* ==========================================================================
+   LAYOUT: CENTER COMPASS ROSE WIDGET (3x3 Symmetric Grid)
+   ========================================================================== */
+
+.compass-dock {
+    width: 244px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    pointer-events: auto;
+}
+
+.compass-rose-wrap {
+    display: grid;
+    grid-template-columns: 64px 96px 64px;
+    grid-template-rows: 56px 96px 56px;
+    align-items: center;
+    justify-items: center;
+    gap: 4px;
+}
+
+.compass-rose-emblem {
+    grid-column: 2;
+    grid-row: 2;
+    width: 96px;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.compass-rose-emblem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.95));
+}
+
+.compass-plus-fallback {
+    font-size: 26px;
+    color: var(--gold-main);
+    text-shadow: 0 0 10px rgba(212, 163, 70, 0.8);
+}
+
+/* Square Compass Buttons (Centered inside their Grid cells!) */
+.comp-pin {
+    position: relative;
+    width: 62px !important;
+    height: 54px !important;
+    padding: 4px 2px !important;
+    margin: 0 !important;
+    background-image: url('/assets/buttons/bg-sq-base.png') !important;
+    background-size: 100% 100% !important;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.85);
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+
+/* Smooth gold texture overlay on hover */
+.comp-pin::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('/assets/buttons/bg-sq-gold.png');
+    background-size: 100% 100%;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.comp-pin:hover::before {
+    opacity: 1;
+}
+
+.comp-pin:hover {
+    transform: scale(1.07) !important;
+    box-shadow: 0 0 14px rgba(212, 163, 70, 0.65);
+}
+
+.comp-pin.hidden {
+    display: none !important;
+}
+
+.comp-sq-icon,
+.comp-sq-label {
+    position: relative;
+    z-index: 2;
+}
+
+.comp-sq-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
+}
+
+.comp-sq-label {
+    font-size: 9.5px;
+    color: var(--gold-bright);
+    letter-spacing: 0.3px;
+    line-height: 1;
+    text-shadow: 0 2px 4px #000000;
+}
+
+.comp-pin:hover .comp-sq-label {
+    color: #ffffff !important;
+}
+
+/* Exact Grid Positions */
+.comp-pin.pin-north { grid-column: 2; grid-row: 1; }
+.comp-pin.pin-west  { grid-column: 1; grid-row: 2; }
+.comp-pin.pin-east  { grid-column: 3; grid-row: 2; }
+.comp-pin.pin-south { grid-column: 2; grid-row: 3; }

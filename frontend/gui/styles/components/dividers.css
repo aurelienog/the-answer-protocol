@@ -1,0 +1,33 @@
+/* ==========================================================================
+   COMPONENT: SAPPHIRE DIVIDERS & BADGES
+   ========================================================================== */
+
+.sapphire-divider {
+    width: 100%;
+    height: 21px;
+    margin: 4px auto;
+    border: none;
+    background-color: transparent;
+    background-image:
+        url('/assets/ui/line-sapphire.png'),
+        url('/assets/ui/line-gold.png');
+    background-repeat: no-repeat, no-repeat;
+    background-position: center center, center 5px;
+    background-size:
+        contain,
+        96% 1px;
+    flex-shrink: 0;
+}
+
+.sapphire-divider::after {
+    display: none;
+}
+
+.badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--gold-dark);
+    border-radius: 4px;
+    color: var(--gold-light);
+}

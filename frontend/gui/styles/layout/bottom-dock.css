@@ -1,0 +1,89 @@
+/* ==========================================================================
+   LAYOUT: FLOATING BOTTOM DOCK (CHAT LEFT & PLAYERS/PARTY RIGHT)
+   ========================================================================== */
+
+.bottom-dock {
+    position: absolute;
+    bottom: 5px;
+    left: 6px;
+    right: 6px;
+    height: 232px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 8px;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.chat-panel,
+.players-panel {
+    pointer-events: auto;
+}
+
+.chat-panel {
+    flex: 1.15;
+    display: flex;
+    flex-direction: column;
+    padding: 15px 28px 16px 28px;
+}
+
+.players-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 15px 28px 16px 28px;
+}
+
+.col-wide-only {
+    display: none;
+}
+
+@media (min-width: 1480px) {
+    .col-wide-only {
+        display: table-cell;
+    }
+}
+
+.chat-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--gold-dark);
+    background: rgba(5, 9, 18, 0.55);
+    padding: 0 6px;
+}
+
+.chat-history {
+    flex: 1;
+    padding: 8px 10px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    user-select: text;
+}
+
+.chat-line { margin-bottom: 4px; }
+.chat-time { color: #6c7a96; margin-right: 6px; }
+.chat-author { color: var(--gold-light); font-weight: bold; margin-right: 6px; }
+.chat-sys { color: #63b3ed; }
+.chat-err { color: #fc8181; }
+
+.chat-input-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 4px 0 4px;
+    border-top: 1px solid rgba(212, 163, 70, 0.25);
+    gap: 8px;
+}
+
+.scope-tag { font-size: 11px; color: var(--gold-main); }
+
+.btn-send {
+    padding: 7px 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.dock-content { flex: 1; padding: 8px 6px; overflow-y: auto; }
+.rpg-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rpg-table th { text-align: left; color: var(--gold-main); border-bottom: 1px solid rgba(200, 155, 60, 0.3); padding-bottom: 5px; }
+.rpg-table td { padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }

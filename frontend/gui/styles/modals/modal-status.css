@@ -1,0 +1,38 @@
+/* ==========================================================================
+   MODAL SPECIFIC: STATUS 2x2 ATTRIBUTES GRID
+   ========================================================================== */
+
+.status-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.status-hero-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0 6px;
+}
+
+.status-column-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+}
+
+.status-subbox {
+    padding: 10px 14px !important;
+}
+
+.status-subbox h4 {
+    color: var(--gold-light);
+    font-size: 14px;
+    font-weight: normal;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgba(212, 163, 70, 0.25);
+    padding-bottom: 4px;
+}

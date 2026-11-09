@@ -1,0 +1,187 @@
+/* ==========================================================================
+   LAYOUT: FLOATING TOP HUD BAR (Full Manual Controls & Frame Layering!)
+   ========================================================================== */
+
+:root {
+    /* 🔧 1. THE HERO'S LEFT BLOCK */
+    --hud-hero-w: 350px;
+    --hud-hero-h: 92px;
+
+    --hero-avatar-size: 56px;
+    --hero-avatar-x: 50px;
+    --hero-avatar-y: -5px;
+
+    --hero-name-x: 135px;
+    --hero-name-y: 25px;
+
+    --hero-hp-x: 121px;
+    --hero-hp-y: 48px;
+    --hero-hp-w: 193px;
+    --hero-hp-h: 16px;
+
+    /* 🔧 2. TOP RIGHT HUD */
+    --hud-right-w: 330px;
+    --hud-right-h: 100px;
+    --hud-right-pad-x: 32px;
+}
+
+.top-hud {
+    position: absolute;
+    top: 1px;
+    left: 14px;
+    right: 10px;
+    height: 92px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 25;
+    pointer-events: none;
+}
+
+.hud-left,
+.hud-center,
+.hud-right {
+    pointer-events: auto;
+}
+
+/* ==================== 1. LEFT HERO HUD ==================== */
+.hud-left.gold-frame {
+    position: relative;
+    width: var(--hud-hero-w);
+    height: var(--hud-hero-h);
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* The gold frame is drawn ON TOP of the avatar and the HP bar (z-index: 10)! */
+.hud-left.gold-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url('/assets/ui/hud-hero-left.webp') no-repeat center / 100% 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Circular avatar (BEHIND the frame, z-index: 2) */
+.hud-left .avatar-circle {
+    position: absolute;
+    left: var(--hero-avatar-x);
+    top: calc(50% + var(--hero-avatar-y));
+    transform: translateY(-50%);
+    width: var(--hero-avatar-size);
+    height: var(--hero-avatar-size);
+    border-radius: 50%;
+    border: none !important;
+    object-fit: cover;
+    object-position: center top;
+    background: #0d1829;
+    z-index: 2;
+}
+
+.hud-left .bars-container {
+    position: static;
+}
+
+/* Name of the character */
+.hud-left .char-title {
+    position: absolute;
+    left: var(--hero-name-x);
+    top: var(--hero-name-y);
+    font-size: 16px;
+    color: var(--gold-bright);
+    z-index: 12;
+    pointer-events: none;
+}
+
+/* The HP bar (BEHIND the frame, z-index: 3, and the text ON TOP of the frame!) */
+.hud-left .stat-bar {
+    position: absolute !important;
+    left: var(--hero-hp-x) !important;
+    top: var(--hero-hp-y) !important;
+    width: var(--hero-hp-w) !important;
+    height: var(--hero-hp-h) !important;
+    margin: 0 !important;
+    border-radius: 4px;
+    z-index: 3;
+}
+.hud-left .stat-bar::after {
+    display: none !important;
+}
+.hud-left .bar-text {
+    z-index: 15;
+    line-height: var(--hero-hp-h) !important;
+    font-size: 11.5px !important;
+}
+
+/* ==================== 2. CENTER TAP CREST ==================== */
+.hud-center {
+    position: absolute;
+    left: 50%;
+    top: -6px;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+.hud-crest-img {
+    height: 100px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* ==================== 3. RIGHT SERVER INFO & BUTTONS ==================== */
+.hud-right.gold-frame {
+    position: relative;
+    width: var(--hud-right-w);
+    height: var(--hud-right-h);
+    padding: 0 var(--hud-right-pad-x);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent url('/assets/ui/hud-banner-wide.webp') no-repeat center / 100% 100% !important;
+}
+
+.hud-location-info {
+    font-size: 13.5px;
+    line-height: 1.45;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: nowrap;
+}
+
+.hud-top-icons {
+    display: flex;
+    gap: 6px;
+}
+
+/* WHO, STATUS, QUIT */
+.icon-btn {
+    width: 48px;
+    height: 46px;
+    font-family: inherit !important;
+    color: var(--gold-bright) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95) !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.icon-btn .cmd-icon-img {
+    width: 20px;
+    height: 20px;
+}
+
+.icon-btn .act-label {
+    font-family: inherit !important;
+    font-size: 9px !important;
+    letter-spacing: 0.5px !important;
+    color: var(--gold-bright) !important;
+}

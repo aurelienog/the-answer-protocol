@@ -1,0 +1,334 @@
+/* ==========================================================================
+   COMPONENT: TEXTURED RPG BUTTONS & TABS (Smooth 0.22s Hover Transitions!)
+   ========================================================================== */
+
+:root {
+    --btn-corner-size: 10px;
+    --btn-border-h: 1px;
+    --btn-border-v: 1.4px;
+
+    --btn-font-lg: 18px;
+    --btn-font-tab: 15px;
+    --btn-font-connect: 20px;
+    --btn-font-sm: 13px;
+}
+
+.btn-modal-primary,
+.btn-modal-secondary,
+.btn-modal-danger,
+.btn-primary-connect,
+.btn-gold-sm,
+.tab-btn,
+.chat-tab,
+.action-btn,
+.gender-btn {
+    position: relative;
+    border: none !important;
+    border-radius: 3px;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+    font-family: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    z-index: 1;
+
+    --btn-bg: url('/assets/buttons/bg-base.png');
+    --btn-hover-bg: url('/assets/buttons/bg-gold.png');
+    --btn-edge-h: url('/assets/buttons/edge-h-base.png');
+    --btn-edge-v: url('/assets/buttons/edge-v-base.png');
+    --btn-c-tl: url('/assets/buttons/corner-base-tl.png');
+    --btn-c-tr: url('/assets/buttons/corner-base-tr.png');
+    --btn-c-bl: url('/assets/buttons/corner-base-bl.png');
+    --btn-c-br: url('/assets/buttons/corner-base-br.png');
+
+    background: transparent !important;
+    background-image: var(--btn-bg) !important;
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: 100% 100% !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.85) !important;
+    transition: transform 0.18s ease, filter 0.22s ease, box-shadow 0.22s ease, color 0.18s ease !important;
+}
+
+/* Smooth texture cross-fade layer (::before) */
+.btn-modal-primary::before,
+.btn-modal-secondary::before,
+.btn-modal-danger::before,
+.btn-primary-connect::before,
+.btn-gold-sm::before,
+.tab-btn::before,
+.chat-tab::before,
+.action-btn::before,
+.gender-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--btn-hover-bg);
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 100% 100%;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 4 Corners + 4 Edges frame layer (::after) */
+.btn-modal-primary::after,
+.btn-modal-secondary::after,
+.btn-modal-danger::after,
+.btn-primary-connect::after,
+.btn-gold-sm::after,
+.tab-btn::after,
+.chat-tab::after,
+.action-btn::after,
+.gender-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+
+    background-image:
+        var(--btn-c-tl),
+        var(--btn-c-tr),
+        var(--btn-c-bl),
+        var(--btn-c-br),
+        var(--btn-edge-h),
+        var(--btn-edge-h),
+        var(--btn-edge-v),
+        var(--btn-edge-v);
+
+    background-position:
+        top left, top right, bottom left, bottom right,
+        top 0.5px center, bottom 0.5px center, left 0.5px center, right 0.5px center;
+
+    background-size:
+        var(--btn-corner-size) var(--btn-corner-size),
+        var(--btn-corner-size) var(--btn-corner-size),
+        var(--btn-corner-size) var(--btn-corner-size),
+        var(--btn-corner-size) var(--btn-corner-size),
+        calc(100% - 18px) var(--btn-border-h),
+        calc(100% - 18px) var(--btn-border-h),
+        var(--btn-border-v) calc(100% - 18px),
+        var(--btn-border-v) calc(100% - 18px);
+
+    background-repeat: no-repeat;
+}
+
+.btn-modal-primary,
+.btn-modal-secondary,
+.btn-modal-danger {
+    flex: 1;
+    max-width: 240px;
+    font-size: var(--btn-font-lg) !important;
+    letter-spacing: 0.8px;
+    padding: 10px 26px;
+}
+
+.btn-modal-primary:disabled,
+.btn-modal-secondary:disabled,
+.btn-modal-danger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.tab-btn,
+.chat-tab {
+    font-size: var(--btn-font-tab) !important;
+    letter-spacing: 0.4px;
+    padding: 8px 16px;
+}
+
+.btn-primary-connect {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+    font-size: var(--btn-font-connect) !important;
+    letter-spacing: 3px;
+    --btn-hover-bg: url('/assets/buttons/bg-blue.png');
+}
+
+.btn-gold-sm {
+    padding: 5px 10px;
+    font-size: var(--btn-font-sm) !important;
+}
+
+/* Theme assignment for ::before overlay */
+.window-tabs .tab-btn.active,
+.chat-tabs .chat-tab.active {
+    --btn-hover-bg: url('/assets/buttons/bg-blue.png');
+    --btn-edge-h: url('/assets/buttons/edge-h-blue.png') !important;
+    --btn-edge-v: url('/assets/buttons/edge-v-blue.png') !important;
+    --btn-c-tl: url('/assets/buttons/corner-blue-tl.png') !important;
+    --btn-c-tr: url('/assets/buttons/corner-blue-tr.png') !important;
+    --btn-c-bl: url('/assets/buttons/corner-blue-bl.png') !important;
+    --btn-c-br: url('/assets/buttons/corner-blue-br.png') !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(30, 98, 208, 0.55) !important;
+}
+
+.btn-modal-danger,
+#btn-drop-selected,
+.btn-attack-mode,
+[data-cmd="GROUP LEAVE"] {
+    --btn-hover-bg: url('/assets/buttons/bg-red.png');
+}
+
+.right-action-bar .action-btn {
+    --btn-bg: url('/assets/buttons/bg-sq-base.png') !important;
+    --btn-hover-bg: url('/assets/buttons/bg-sq-gold.png');
+}
+
+.right-action-bar .action-btn[data-open-window="attack"],
+.right-action-bar .action-btn[data-open-window="quit"] {
+    --btn-hover-bg: url('/assets/buttons/bg-sq-red.png');
+}
+
+/* Smoothly fade-in ::before on hover or active! */
+.btn-modal-primary:hover:not(:disabled)::before,
+.btn-modal-primary.active::before,
+.btn-modal-secondary:hover:not(:disabled)::before,
+.btn-modal-danger:hover:not(:disabled)::before,
+.btn-primary-connect:hover:not(:disabled)::before,
+.btn-gold-sm:hover:not(:disabled)::before,
+.tab-btn:hover::before,
+.tab-btn.active::before,
+.chat-tab:hover::before,
+.chat-tab.active::before,
+.action-btn:hover::before,
+.action-btn.active::before,
+.gender-option input[type="radio"]:checked + .gender-btn::before,
+.gender-btn:hover::before {
+    opacity: 1;
+}
+
+/* Unified light text + glow on hover/active */
+.btn-modal-primary:hover:not(:disabled),
+.btn-modal-secondary:hover:not(:disabled),
+.btn-modal-danger:hover:not(:disabled),
+.btn-primary-connect:hover:not(:disabled),
+.btn-gold-sm:hover:not(:disabled),
+.tab-btn:hover,
+.chat-tab:hover,
+.action-btn:hover,
+.action-btn.active,
+.gender-option input[type="radio"]:checked + .gender-btn,
+.gender-btn:hover {
+    color: #ffffff !important;
+    text-shadow: 0 2px 4px #000000, 0 0 6px rgba(0, 0, 0, 0.95) !important;
+    filter: brightness(1.12);
+    box-shadow: 0 0 14px rgba(212, 163, 70, 0.55) !important;
+}
+
+.btn-primary-connect:hover:not(:disabled) {
+    box-shadow: 0 0 16px rgba(77, 166, 255, 0.65) !important;
+}
+
+.btn-modal-danger:hover:not(:disabled),
+#btn-drop-selected:hover:not(:disabled),
+.btn-attack-mode:hover:not(:disabled),
+.right-action-bar .action-btn[data-open-window="attack"]:hover,
+.right-action-bar .action-btn[data-open-window="quit"]:hover {
+    box-shadow: 0 0 14px rgba(220, 38, 38, 0.65) !important;
+}
+
+/* Square Small Buttons (Close 'X', Send '➤', Top HUD Icons) */
+.close-btn,
+.btn-send,
+.icon-btn {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    background-image: url('/assets/buttons/bg-sq-base.png') !important;
+    background-size: cover !important;
+    color: var(--gold-bright) !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+    transition: transform 0.18s ease, filter 0.22s ease, box-shadow 0.22s ease;
+}
+
+.close-btn:hover,
+.btn-send:hover,
+.icon-btn:hover {
+    background-image: url('/assets/buttons/bg-sq-gold.png') !important;
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 0 12px rgba(212, 163, 70, 0.55);
+}
+
+.close-btn:hover,
+.icon-btn[data-open-window="quit"]:hover {
+    background-image: url('/assets/buttons/bg-sq-red.png') !important;
+    box-shadow: 0 0 12px rgba(220, 38, 38, 0.6);
+}
+
+.gender-btn {
+    color: var(--text-muted);
+    font-size: 18px !important;
+    font-weight: bold;
+    letter-spacing: 0.8px;
+    padding: 11px 20px;
+    width: 100%;
+    text-align: center;
+}
+
+/* Custom PNG Icons for Close 'X' and Chat Send '➤' */
+.close-btn,
+.btn-send {
+    font-size: 0 !important;
+    color: transparent !important;
+}
+
+.close-btn::before,
+.btn-send::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    pointer-events: none;
+    z-index: 7;
+}
+
+.close-btn::before {
+    background-image: url('/assets/icons/ui/close.png');
+}
+
+.btn-send::before {
+    background-image: url('/assets/icons/ui/next.png');
+}
+
+/* Command & UI Icon Sizes */
+.cmd-icon-img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
+}
+
+.modal-header-icon-img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
+}
+
+.inline-cmd-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.tab-mini-icon {
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+    vertical-align: text-bottom;
+    margin-right: 4px;
+}

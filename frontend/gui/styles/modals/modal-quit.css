@@ -1,0 +1,77 @@
+/* ==========================================================================
+   MODAL SPECIFIC: QUIT CONFIRMATION WINDOW & TOP CREST MEDALLION
+   ========================================================================== */
+
+.rpg-modal.modal-quit {
+    width: 500px;
+    height: 300px;
+    overflow: visible !important;
+    padding: 42px 36px 24px 36px;
+}
+
+.quit-crest-badge {
+    position: absolute !important;
+    top: -36px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 190px;
+    height: 98px;
+    z-index: 30 !important;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quit-crest-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.9));
+}
+
+.quit-close-btn {
+    position: absolute !important;
+    top: 22px;
+    right: 26px;
+    z-index: 31 !important;
+}
+
+.quit-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+}
+
+.quit-title {
+    font-size: 28px;
+    color: var(--gold-light);
+    font-weight: normal;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.quit-question {
+    font-size: 16px;
+    color: var(--text-main);
+    margin-top: 6px;
+}
+
+.quit-subtext {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.quit-footer {
+    border-top: none;
+    padding-top: 10px;
+}
+
+#modal-flee {
+    position: fixed !important;
+    z-index: 60 !important;
+}

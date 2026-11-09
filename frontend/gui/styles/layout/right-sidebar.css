@@ -1,0 +1,58 @@
+/* ==========================================================================
+   LAYOUT: FLOATING RIGHT ACTION BAR (Scrollable inside top/bottom arches!)
+   ========================================================================== */
+
+.right-action-bar {
+    position: absolute !important;
+    top: 86px;
+    bottom: 242px;
+    right: 14px;
+    width: 98px;
+    min-height: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 8px;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+.right-menu-scroll {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 3px;
+    position: relative;
+    z-index: 5;
+}
+
+.right-menu-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.action-btn {
+    flex: 1 0 46px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 3px;
+}
+
+.right-action-bar .cmd-icon-img {
+    width: 26px;
+    height: 26px;
+}
+
+.act-label {
+    font-size: 10.5px;
+    letter-spacing: 0.6px;
+}

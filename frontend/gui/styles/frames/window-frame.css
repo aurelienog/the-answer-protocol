@@ -1,0 +1,109 @@
+/* ==========================================================================
+   FRAME 1: MAIN SAPPHIRE & GOLD WINDOW FRAME (Pure CSS — Zero <span> tags!)
+   ========================================================================== */
+
+:root {
+    --frame-scale: 0.55;
+    --panel-color: #07121c;
+}
+
+.gold-frame {
+    position: relative;
+    background: linear-gradient(180deg, rgba(8, 17, 32, 0.92), rgba(4, 9, 18, 0.96));
+    border: 2px solid var(--gold-main);
+    border-radius: 6px;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.85), 0 4px 12px rgba(0, 0, 0, 0.65);
+}
+
+.gold-panel {
+    position: relative;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    --top-w: calc(174px * var(--frame-scale));
+    --top-h: calc(190px * var(--frame-scale));
+    --bot-w: calc(174px * var(--frame-scale));
+    --bot-h: calc(154px * var(--frame-scale));
+
+    --edge-h: calc(21px * var(--frame-scale));
+    --edge-v: calc(21px * var(--frame-scale));
+
+    --shift-y: calc(15px * var(--frame-scale));
+    --shift-x: calc(24px * var(--frame-scale));
+
+    --bg-inset-y: calc(25px * var(--frame-scale));
+    --bg-inset-x: calc(35px * var(--frame-scale));
+}
+
+.chat-panel.gold-panel,
+.players-panel.gold-panel,
+.modal-sm.gold-panel {
+    --frame-scale: 0.44;
+}
+
+/* Layer 1: Dark blue background inside the window */
+.gold-panel::before {
+    content: "";
+    position: absolute;
+    top: var(--bg-inset-y);
+    bottom: var(--bg-inset-y);
+    left: var(--bg-inset-x);
+    right: var(--bg-inset-x);
+    background:
+        radial-gradient(ellipse at center, rgba(12, 30, 48, 0.94), rgba(4, 10, 18, 0.97)),
+        var(--panel-color);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.85);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Layer 2: All 4 corners + 4 sides + bottom ornament with stone in one ::after! */
+.gold-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    bottom: calc(-16px * var(--frame-scale));
+    z-index: 25;
+    pointer-events: none;
+
+    background-image:
+        url("/assets/ui/gem-ornament.png"),
+        url("/assets/frame/frame-corner-top.png"),
+        url("/assets/frame/frame-corner-top-right.png"),
+        url("/assets/frame/frame-corner-bottom.png"),
+        url("/assets/frame/frame-corner-bottom-right.png"),
+        url("/assets/frame/frame-border-top.png"),
+        url("/assets/frame/frame-border-bottom.png"),
+        url("/assets/frame/frame-border-left.png"),
+        url("/assets/frame/frame-border-right.png");
+
+    background-position:
+        bottom center,
+        top left,
+        top right,
+        left calc(5px * var(--frame-scale)) bottom calc(16px * var(--frame-scale)),
+        right calc(5px * var(--frame-scale)) bottom calc(16px * var(--frame-scale)),
+        center top var(--shift-y),
+        center bottom calc(16px * var(--frame-scale) + var(--shift-y)),
+        left var(--shift-x) center,
+        right var(--shift-x) center;
+
+    background-size:
+        calc(225px * var(--frame-scale)) calc(57px * var(--frame-scale)),
+        var(--top-w) var(--top-h),
+        var(--top-w) var(--top-h),
+        var(--bot-w) var(--bot-h),
+        var(--bot-w) var(--bot-h),
+        calc(100% - 220px * var(--frame-scale)) var(--edge-h),
+        calc(100% - 220px * var(--frame-scale)) var(--edge-h),
+        var(--edge-v) calc(100% - 200px * var(--frame-scale)),
+        var(--edge-v) calc(100% - 200px * var(--frame-scale));
+
+    background-repeat: no-repeat;
+}
+
+.gold-panel > * {
+    position: relative;
+    z-index: 5;
+}

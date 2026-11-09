@@ -1,0 +1,64 @@
+/* ==========================================================================
+   MODAL SPECIFIC: LOOK — LOCATION WINDOW (#modal-look)
+   Manages the tabs (Description, Exits, Items, NPCs, Players),
+   the location illustration on the left, and the description block on the right.
+   ========================================================================== */
+
+/* 1. A panel with 5 tabs at the top of the LOOK window */
+#modal-look .window-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 8px 6px 4px 6px;
+}
+
+#modal-look .window-tabs .tab-btn {
+    flex: 1;
+}
+
+/* 2. Left block with an image of a room in the Description tab */
+#look-art-box .inner-scroll-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+}
+
+#look-art-icon {
+    font-size: 80px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.85));
+}
+
+/* 3. Right block with the room's name and artistic description */
+#look-room-title {
+    font-size: 22px;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+}
+
+#look-room-region {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+#look-room-desc {
+    line-height: 1.65;
+    font-size: 15px;
+    color: var(--text-main);
+    margin-top: 6px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+/* 4. Left preview block in the Exits, Items, NPCs, and Players tabs */
+#look-tab-exits .split-left-preview .inner-scroll-area,
+#look-tab-items .split-left-preview .inner-scroll-area,
+#look-tab-npcs .split-left-preview .inner-scroll-area,
+#look-tab-players .split-left-preview .inner-scroll-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}

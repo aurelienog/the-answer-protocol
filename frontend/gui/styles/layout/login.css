@@ -1,0 +1,117 @@
+/* ==========================================================================
+   MODULE: LOGIN SCREEN LAYOUT
+   ========================================================================== */
+
+#login-screen {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 0 5.5% 5.5% 0;
+    background: radial-gradient(circle at 30% 50%, #1c3150 0%, #070b14 85%);
+    background-image: url('/assets/bg_login.webp');
+    background-size: cover;
+    background-position: center;
+}
+
+.login-container {
+    width: 470px;
+    z-index: 2;
+    text-align: center;
+}
+
+/* TAP logo. */
+.logo-header {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+.login-logo-img {
+    width: 340px;
+    height: auto;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.9));
+}
+
+.login-box.gold-panel {
+    --frame-scale: 0.56;
+    padding: 36px 44px;
+    text-align: left;
+}
+
+.login-box h2 {
+    text-align: center;
+    color: var(--gold-light);
+    font-weight: normal;
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.login-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+.form-field { display: block; margin-bottom: 14px; border: none; }
+.field-label { display: block; font-size: 13px; color: var(--gold-light); margin-bottom: 6px; }
+.form-row { display: flex; gap: 12px; }
+.flex-2 { flex: 2; }
+.flex-1 { flex: 1; }
+
+.input-wrapper { position: relative; display: block; }
+.input-wrapper .input-icon { position: absolute; left: 10px; top: 9px; }
+.input-wrapper input { padding-left: 34px; }
+
+.gender-toggle { display: flex; gap: 12px; }
+.gender-option { flex: 1; display: flex; }
+.gender-option input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.gender-btn {
+    width: 100%;
+    text-align: center;
+    padding: 9px;
+    background: rgba(10, 16, 28, 0.85);
+    border: 1px solid var(--gold-dark);
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.gender-option input[type="radio"]:checked + .gender-btn {
+    background: linear-gradient(180deg, #5e3f16, #2b1b07);
+    border-color: var(--gold-light);
+    color: var(--gold-light);
+    box-shadow: 0 0 12px rgba(212, 163, 70, 0.45);
+}
+
+.btn-primary-connect {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+    background: linear-gradient(180deg, #1d4d8c 0%, #0d2547 100%);
+    border: 1px solid var(--gold-main);
+    color: var(--gold-light);
+    font-family: inherit;
+    font-size: 17px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+.btn-primary-connect:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px rgba(77, 166, 255, 0.5);
+}
+
+.error-banner {
+    display: block;
+    background: rgba(140, 20, 20, 0.85);
+    border: 1px solid #ff5555;
+    color: #ffdada;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}

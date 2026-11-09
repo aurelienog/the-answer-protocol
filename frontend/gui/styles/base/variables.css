@@ -1,0 +1,20 @@
+/* ==========================================================================
+   BASE: GLOBAL COLOR PALETTE & GRADIENTS
+   ========================================================================== */
+
+:root {
+    --bg-dark: #050911;
+    --panel-bg: linear-gradient(180deg, rgba(10, 21, 38, 0.96) 0%, rgba(5, 11, 22, 0.98) 100%);
+    --panel-inner: rgba(6, 13, 25, 0.88);
+    --gold-bright: #fff3b8;
+    --gold-light: #f3d28c;
+    --gold-main: #d4a346;
+    --gold-dark: #7c5821;
+    --sapphire-light: #63b3ed;
+    --sapphire-main: #1e62d0;
+    --text-main: #ece3ce;
+    --text-muted: #9aa7bc;
+    --hp-red: linear-gradient(90deg, #7a0e0e, #e02424, #ff6b6b);
+    --mp-blue: linear-gradient(90deg, #0d3278, #1d68e8, #63b3ed);
+    --stamina-gold: linear-gradient(90deg, #875812, #e09f24, #ffe07d);
+}
