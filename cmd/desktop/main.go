@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	_ = config.LoadConfig()
+	cfg := config.LoadConfig()
 
 	app := desktop.NewApp()
 
@@ -25,6 +25,11 @@ func main() {
 	mux.HandleFunc("/api/connect", app.HandleConnect)
 	mux.HandleFunc("/api/command", app.HandleCommand)
 	mux.HandleFunc("/api/stream", app.HandleStream)
+	// We dynamically serve the latest `world.json` for frontend auto-synchronization!
+	mux.HandleFunc("/api/world", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		http.ServeFile(w, r, cfg.WorldPath)
+	})
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/gui")))
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
