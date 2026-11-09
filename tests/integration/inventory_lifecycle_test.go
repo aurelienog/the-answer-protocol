@@ -40,6 +40,27 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 	if len(inventory) != 1 || inventory[0].ID != "item.gold_coins" {
 		t.Fatalf("Alice's inventory before disconnect = %+v, want the unique gold coins", inventory)
 	}
+	alice.sendRequest(t, "MOVE south")
+	if got := alice.readResponse(t); got != "OK room=docks" {
+		t.Fatalf("Alice's move to the docks = %q", got)
+	}
+	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
+		t.Fatalf("Bob's Alice-leave event = %q", got)
+	}
+
+	alice.sendRequest(t, "ATTACK Dock Warden")
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
+		t.Fatalf("combat-start event = %q", got)
+	}
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
+		t.Fatalf("combat-turn event = %q", got)
+	}
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "OK ") {
+		t.Fatalf("combat-start response = %q", got)
+	}
+	if _, err := gameWorld.GetActiveCombatForPlayer("Alice"); err != nil {
+		t.Fatalf("Alice is not in active combat before disconnect: %v", err)
+	}
 
 	if err := alice.client.Close(); err != nil {
 		t.Fatalf("close Alice's connection: %v", err)
@@ -47,9 +68,6 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 	returnedEvent := bob.readResponse(t)
 	if !strings.HasPrefix(returnedEvent, "EVT UNIQUE_ITEMS_RETURNED instance:") {
 		t.Fatalf("unique-item return event = %q", returnedEvent)
-	}
-	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
-		t.Fatalf("Bob's Alice-leave event = %q", got)
 	}
 
 	deadline := time.Now().Add(connectionTestTimeout)
@@ -64,16 +82,16 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 	}
 	assertPlayerRemoved(t, bob, "Alice")
 
-	room, err := gameWorld.GetRoom("harbor_square")
+	room, err := gameWorld.GetRoom("docks")
 	if err != nil {
-		t.Fatalf("GetRoom(harbor_square) returned an error: %v", err)
+		t.Fatalf("GetRoom(docks) returned an error: %v", err)
 	}
 	if got := room.Items["item.gold_coins"]; got != 1 {
-		t.Fatalf("gold coins in harbor square after disconnect = %d, want 1", got)
+		t.Fatalf("gold coins in docks after disconnect = %d, want 1", got)
 	}
-	items, err := gameWorld.GetRoomItems("harbor_square")
+	items, err := gameWorld.GetRoomItems("docks")
 	if err != nil {
-		t.Fatalf("GetRoomItems(harbor_square) returned an error: %v", err)
+		t.Fatalf("GetRoomItems(docks) returned an error: %v", err)
 	}
 	returnedCount := 0
 	for _, item := range items {

@@ -411,6 +411,36 @@ func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 	}
 }
 
+func TestWorldUniqueItemAddsCombatStats(t *testing.T) {
+	gameWorld := loadWorldWithUniqueItemInHarbor(t)
+	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+	if err := gameWorld.TakeItem("Alice", "item.gold_coins"); err != nil {
+		t.Fatalf("TakeItem(gold coins) returned an error: %v", err)
+	}
+	for _, direction := range []string{"north", "north", "north"} {
+		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
+			t.Fatalf("MovePlayer(%s) returned an error: %v", direction, err)
+		}
+	}
+
+	combat, _, err := gameWorld.StartCombat("Alice", "Dire Wolf")
+	if err != nil {
+		t.Fatalf("StartCombat() returned an error: %v", err)
+	}
+
+	for _, participant := range combat.Participants {
+		if participant.IsPlayer && participant.ID == "Alice" {
+			if participant.Stats.Attack != world.DefaultPlayerAttack+7 {
+				t.Fatalf("Alice's attack in combat = %d, want %d", participant.Stats.Attack, world.DefaultPlayerAttack+7)
+			}
+			return
+		}
+	}
+	t.Fatal("Alice is missing from combat participants")
+}
+
 func loadWorldWithUniqueItemInHarbor(t *testing.T) *world.World {
 	t.Helper()
 
@@ -421,6 +451,17 @@ func loadWorldWithUniqueItemInHarbor(t *testing.T) *world.World {
 	var document map[string]json.RawMessage
 	if err := json.Unmarshal(data, &document); err != nil {
 		t.Fatalf("decode world fixture: %v", err)
+	}
+	var definitions map[string]world.Item
+	if err := json.Unmarshal(document["items"], &definitions); err != nil {
+		t.Fatalf("decode item definitions: %v", err)
+	}
+	uniqueItem := definitions["item.gold_coins"]
+	uniqueItem.Attack = 7
+	definitions["item.gold_coins"] = uniqueItem
+	document["items"], err = json.Marshal(definitions)
+	if err != nil {
+		t.Fatalf("encode item definitions: %v", err)
 	}
 	var rooms map[string]json.RawMessage
 	if err := json.Unmarshal(document["rooms"], &rooms); err != nil {
