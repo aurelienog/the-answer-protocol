@@ -6,6 +6,8 @@ const App = {
     eventSource: null,
 
     async restoreSessionIfActive() {
+        await this.loadWorldMeta();
+
         this.initStream();
         try {
             const res = await fetch('/api/session');
@@ -28,7 +30,21 @@ const App = {
         } catch (_) {}
     },
 
+    async loadWorldMeta() {
+        try {
+            const res = await fetch('/api/world');
+            if (res.ok) {
+                const worldData = await res.json();
+                GameState.syncWorldDefinition(worldData);
+            }
+        } catch (e) {
+            console.warn("Could not pre-load world metadata:", e);
+        }
+    },
+
     async connect() {
+        await this.loadWorldMeta();
+
         const username = document.getElementById('login-username').value.trim();
         const host = document.getElementById('login-host').value.trim();
         const port = document.getElementById('login-port').value.trim();
@@ -476,25 +492,27 @@ const App = {
             }
 
             if (sub === 'DAMAGE') {
-                const amtMatch = rest.match(/amount=(\d+)\s+remaining_hp=(\d+)/);
-                const dmg = amtMatch ? parseInt(amtMatch[1], 10) : 5;
-                const remHp = amtMatch ? parseInt(amtMatch[2], 10) : undefined;
+                const dmgMatch = rest.match(/^attacker=(.+?)\s+target=(.+?)\s+amount=(\d+)\s+remaining_hp=(\d+)$/);
+                if (!dmgMatch) return;
 
-                const hitMe = rest.includes(`target=${GameState.playerName} `);
-                const hitEnemy = rest.includes(`target=${CombatModal.enemyName} `);
+                const attackerName = dmgMatch[1];
+                const targetName = dmgMatch[2];
+                const dmg = parseInt(dmgMatch[3], 10);
+                const remHp = parseInt(dmgMatch[4], 10);
 
-                if (hitEnemy) {
-                    // One of the players (myself or an ally) hit the Boss -> update the Boss's HP!
+                const targetIsMe = (targetName.toLowerCase() === GameState.playerName.toLowerCase());
+                const targetNpcMeta = GameState.getNpcMeta(targetName);
+                const targetIsNpc = (targetName === CombatModal.enemyName) || (ASSETS.npcs[targetNpcMeta.id] !== undefined && targetNpcMeta.id !== 'default');
+
+                if (targetIsNpc) {
                     CombatModal.playHitEffect(true, dmg, remHp);
-                    UI.addChatLine('ROOM', '🗡️ Strike', `${CombatModal.enemyName} takes ${dmg} damage! (Enemy HP: ${remHp})`, 'chat-sys');
-                } else if (hitMe) {
-                    // The boss hit ME -> updating MY HP!
+                    UI.addChatLine('ROOM', '🗡️ Strike', `${attackerName} hits ${targetName} for ${dmg} damage! (Enemy HP: ${remHp})`, 'chat-sys');
+                } else if (targetIsMe) {
                     CombatModal.playHitEffect(false, dmg, remHp);
-                    UI.addChatLine('ROOM', '🛡️ Enemy Strike', `${CombatModal.enemyName} attacks you for ${dmg} damage! (HP: ${remHp})`, 'chat-err');
+                    UI.addChatLine('ROOM', '🛡️ Enemy Strike', `${attackerName} attacks you for ${dmg} damage! (HP: ${remHp})`, 'chat-err');
                 } else {
-                    // The Boss hits an ALLY -> play the Boss's attack animation, but DO NOT change my HP and DO NOT change the Boss's HP!
                     CombatModal.playHitEffect(false, dmg, undefined);
-                    UI.addChatLine('ROOM', '🛡️ Ally Hit', `${CombatModal.enemyName} strikes your ally for ${dmg} damage!`, 'chat-err');
+                    UI.addChatLine('ROOM', '🛡️ Ally Hit', `${attackerName} strikes ${targetName} for ${dmg} damage! (${targetName} HP: ${remHp})`, 'chat-err');
                 }
                 return;
             }

@@ -106,7 +106,13 @@ const SelectorModal = {
                     subtitle: m.hostile ? '💀 Hostile Enemy' : m.role,
                     hostile: m.hostile,
                     desc: `Engage ${m.name} in turn-based combat.`,
-                    stats: [['❤️ Health', m.hostile ? '70 HP' : '60 HP'], ['🗡️ Damage', '10 - 12'], ['🛡️ Defense', '5'], ['🪙 Loot', 'Quest Evidence']]
+                    stats: [
+                        ['❤️ Health', `${m.hp || 60} / ${m.maxHp || 60} HP`],
+                        ['🗡️ Attack', `${m.atk || 10}`],
+                        ['🛡️ Defense', `${m.def !== undefined ? m.def : 5}`],
+                        ['⚡ Speed', `${m.spd || 10}`],
+                        ['🪙 Loot', m.loot || 'None']
+                    ]
                 };
             });
         }

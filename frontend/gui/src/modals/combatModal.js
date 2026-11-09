@@ -134,8 +134,6 @@ const CombatModal = {
     },
 
     open(npcIdentifier, initialHeroHp, initialEnemyHp) {
-        sessionStorage.setItem('tap_active_combat_enemy', this.enemyId);
-
         this.startTurnTimer(1);
         UI.closeAllModals();
         UI.activeModalId = 'combat';
@@ -157,19 +155,20 @@ const CombatModal = {
             sessionStorage.setItem('tap_active_combat_enemy', this.enemyId);
         }
 
-        const defaultMax = npcMeta.id === 'dock_warden' ? 140 : (npcMeta.id === 'smuggler' ? 75 : 45);
-        this.enemyMaxHp = initialEnemyHp || defaultMax;
-        this.enemyHp = initialEnemyHp !== undefined ? initialEnemyHp : this.enemyMaxHp;
+        const defaultMax = npcMeta.maxHp || npcMeta.hp || 60;
+        const savedEnemyHp = parseInt(sessionStorage.getItem('tap_active_combat_enemy_hp'), 10);
+
+        this.enemyMaxHp = (initialEnemyHp !== undefined && initialEnemyHp > defaultMax)
+            ? initialEnemyHp
+            : defaultMax;
+
+        this.enemyHp = initialEnemyHp !== undefined
+            ? initialEnemyHp
+            : (!isNaN(savedEnemyHp) && savedEnemyHp > 0 ? savedEnemyHp : this.enemyMaxHp);
 
         if (initialHeroHp !== undefined) {
             GameState.hp = initialHeroHp;
         }
-
-        const savedEnemyHp = parseInt(sessionStorage.getItem('tap_active_combat_enemy_hp'), 10);
-        this.enemyMaxHp = defaultMax;
-        this.enemyHp = initialEnemyHp !== undefined
-            ? initialEnemyHp
-            : (!isNaN(savedEnemyHp) && savedEnemyHp > 0 ? savedEnemyHp : this.enemyMaxHp);
 
         const roomMeta = ASSETS.rooms[GameState.room.id] || ASSETS.rooms.default;
         const combatBg = document.getElementById('combat-bg-img');
@@ -314,8 +313,6 @@ const CombatModal = {
     },
 
     close() {
-        sessionStorage.removeItem('tap_active_combat_enemy');
-
         sessionStorage.removeItem('tap_active_combat_enemy');
         sessionStorage.removeItem('tap_active_combat_enemy_hp');
 
