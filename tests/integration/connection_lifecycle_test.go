@@ -4,6 +4,8 @@ import (
 	"io"
 	"testing"
 	"time"
+
+	"the-answer-protocol/internal/world"
 )
 
 func TestHandleConnectionQuit(t *testing.T) {
@@ -32,6 +34,15 @@ func TestHandleConnectionQuit(t *testing.T) {
 
 func TestHandleConnectionCleansUpAfterAbruptDisconnect(t *testing.T) {
 	env := newConnectionTestEnv(t)
+	playerLeftRegistryState := make(chan bool, 1)
+	env.eventBus.Subscribe(func(event any) {
+		left, ok := event.(world.PlayerLeft)
+		if !ok || left.PlayerName != "Alice" {
+			return
+		}
+		_, registered := env.registry.GetByName("Alice")
+		playerLeftRegistryState <- registered
+	})
 
 	_ = env.readResponse(t) // greeting
 	env.sendRequest(t, "CONNECT Alice")
@@ -48,6 +59,14 @@ func TestHandleConnectionCleansUpAfterAbruptDisconnect(t *testing.T) {
 
 	if err := env.client.Close(); err != nil {
 		t.Fatalf("close client connection: %v", err)
+	}
+	select {
+	case registered := <-playerLeftRegistryState:
+		if registered {
+			t.Fatal("Alice remains in the registry when PlayerLeft is published")
+		}
+	case <-time.After(connectionTestTimeout):
+		t.Fatal("PlayerLeft was not published after the abrupt disconnect")
 	}
 
 	deadline := time.Now().Add(connectionTestTimeout)

@@ -116,7 +116,6 @@ func (w *World) AddPlayer(playerName, roomID string) error {
 // RemovePlayer returns the player's unique items to their current room
 // and removes the player's state from the world.
 // It also returns the IDs of active combats that must be ended.
-// It is safe to call this method more than once.
 func (w *World) RemovePlayer(
 	playerName string,
 ) (PlayerLeft, UniqueItemsReturned, *CombatTurnChanged, []string, error) {
@@ -186,16 +185,11 @@ func (w *World) RemovePlayer(
 		}
 	}
 
-	// Remove the player from their group before disconnecting them.
-	if err := w.removePlayerFromGroupLocked(playerName); err != nil {
-		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil, err
-	}
-
-	// Find the player's active combat before disconnecting them.
+	// Remove the player from active combats before deleting their state.
 	combat := w.findActiveCombatForPlayerLocked(playerName)
-
-	// Mark the player as disconnected from active combats.
 	w.removePlayerFromCombatsLocked(playerName)
+	w.cleanupPlayerGroupStateLocked(playerName)
+	delete(w.playerQuests, playerName)
 
 	// Identify combats that no longer have active players.
 	combatsToEnd := make([]string, 0)
@@ -235,10 +229,7 @@ func (w *World) RemovePlayer(
 		w.playerInventories[playerName] = remainingInventory
 	}
 
-	// Preserve the remaining inventory while the player remains in an active combat.
-	if !w.playerInActiveCombatLocked(playerName) {
-		w.deletePlayerInventoryLocked(playerName)
-	}
+	w.deletePlayerInventoryLocked(playerName)
 
 	delete(w.players, playerName)
 
@@ -255,6 +246,31 @@ func (w *World) RemovePlayer(
 	}
 
 	return leftEvent, returnedEvent, turnEvent, combatsToEnd, nil
+}
+
+// cleanupPlayerGroupStateLocked removes a player's group membership and
+// pending invitations. The caller must hold w.mu.Lock().
+func (w *World) cleanupPlayerGroupStateLocked(playerName string) {
+	delete(w.playerGroups, playerName)
+
+	for groupID, group := range w.groups {
+		delete(group.Invitations, playerName)
+
+		members := make([]string, 0, len(group.Members))
+		for _, member := range group.Members {
+			if member != playerName {
+				members = append(members, member)
+			}
+		}
+
+		if len(members) == 0 {
+			delete(w.groups, groupID)
+			continue
+		}
+
+		group.Members = members
+		w.groups[groupID] = group
+	}
 }
 
 // GetPlayerRoom returns the ID of the room occupied by a player.

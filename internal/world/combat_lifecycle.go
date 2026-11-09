@@ -215,8 +215,8 @@ func (w *World) StartCombat(
 	return cloneCombat(combat), event, nil
 }
 
-// removePlayerFromCombatsLocked marks a player as disconnected
-// without removing them from active combats.
+// removePlayerFromCombatsLocked removes a player from active combats and
+// advances the turn when necessary.
 // The caller must hold w.mu.Lock().
 func (w *World) removePlayerFromCombatsLocked(playerName string) {
 	for _, combat := range w.combats {
@@ -224,39 +224,29 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) {
 			continue
 		}
 
-		for i := range combat.Participants {
-			participant := &combat.Participants[i]
-
+		for i, participant := range combat.Participants {
 			if !participant.IsPlayer || participant.ID != playerName {
 				continue
 			}
 
-			wasCurrentTurn := combat.TurnIndex == i
+			previousTurnIndex := combat.TurnIndex
+			combat.Participants = append(
+				combat.Participants[:i],
+				combat.Participants[i+1:]...,
+			)
 
-			participant.Connected = false
-			participant.SpeedPoints = 0
-
-			// End the combat if no living connected players remain.
 			if !combatHasActivePlayersLocked(combat) {
 				combat.TurnIndex = -1
-				break
-			}
-
-			if wasCurrentTurn {
-				foundNextTurn := false
-
-				for offset := 1; offset < len(combat.Participants); offset++ {
+			} else if previousTurnIndex > i {
+				combat.TurnIndex = previousTurnIndex - 1
+			} else if previousTurnIndex == i {
+				combat.TurnIndex = -1
+				for offset := 0; offset < len(combat.Participants); offset++ {
 					index := (i + offset) % len(combat.Participants)
-
 					if AvailableActions(combat.Participants[index]) > 0 {
 						combat.TurnIndex = index
-						foundNextTurn = true
 						break
 					}
-				}
-
-				if !foundNextTurn {
-					combat.TurnIndex = -1
 				}
 			}
 

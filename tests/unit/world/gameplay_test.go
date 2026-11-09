@@ -123,6 +123,100 @@ func TestWorldGroupInvitationJoinAndLeaveLifecycle(t *testing.T) {
 	}
 }
 
+func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
+	gameWorld := loadWorldWithUniqueItemInHarbor(t)
+	for _, name := range []string{"Alice", "Bob"} {
+		if err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
+		}
+	}
+	if err := gameWorld.TakeItem("Alice", "item.rope"); err != nil {
+		t.Fatalf("TakeItem(rope) returned an error: %v", err)
+	}
+	if err := gameWorld.TakeItem("Alice", "item.gold_coins"); err != nil {
+		t.Fatalf("TakeItem(gold coins) returned an error: %v", err)
+	}
+	if _, err := gameWorld.MovePlayer("Alice", "north"); err != nil {
+		t.Fatalf("MovePlayer(market street) returned an error: %v", err)
+	}
+	if _, err := gameWorld.TalkToNPC("Alice", "Quest Advisor"); err != nil {
+		t.Fatalf("TalkToNPC(Quest Advisor) returned an error: %v", err)
+	}
+	if err := gameWorld.AcceptQuest("Alice", "quest.explore_arvendale"); err != nil {
+		t.Fatalf("AcceptQuest() returned an error: %v", err)
+	}
+	if _, err := gameWorld.CreateGroup("Bob", "Adventurers"); err != nil {
+		t.Fatalf("CreateGroup() returned an error: %v", err)
+	}
+	if _, err := gameWorld.InvitePlayer("Bob", "Alice"); err != nil {
+		t.Fatalf("InvitePlayer() returned an error: %v", err)
+	}
+	if _, err := gameWorld.MovePlayer("Alice", "south"); err != nil {
+		t.Fatalf("MovePlayer(harbor square) returned an error: %v", err)
+	}
+	if _, err := gameWorld.MovePlayer("Alice", "south"); err != nil {
+		t.Fatalf("MovePlayer(docks) returned an error: %v", err)
+	}
+	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
+	if err != nil {
+		t.Fatalf("StartCombat() returned an error: %v", err)
+	}
+	if _, _, err := gameWorld.InitializeCombatTurns(combat.ID); err != nil {
+		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+	}
+
+	_, returned, _, combatsToEnd, err := gameWorld.RemovePlayer("Alice")
+	if err != nil {
+		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
+	}
+	if len(returned.ItemIDs) != 1 || returned.ItemIDs[0] == "item.gold_coins" {
+		t.Fatalf("unique items returned = %v, want one concrete gold-coins instance", returned.ItemIDs)
+	}
+	if len(combatsToEnd) != 1 || combatsToEnd[0] != combat.ID {
+		t.Fatalf("combats to end = %v, want only %q", combatsToEnd, combat.ID)
+	}
+	if _, err := gameWorld.GetPlayerRoom("Alice"); !errors.Is(err, world.ErrPlayerNotFound) {
+		t.Fatalf("GetPlayerRoom(Alice) after removal error = %v, want ErrPlayerNotFound", err)
+	}
+	combat, err = gameWorld.GetCombat(combat.ID)
+	if err != nil {
+		t.Fatalf("GetCombat() after disconnect returned an error: %v", err)
+	}
+	for _, participant := range combat.Participants {
+		if participant.IsPlayer && participant.ID == "Alice" {
+			t.Fatal("Alice remains in combat after disconnecting")
+		}
+	}
+	if _, err := gameWorld.EndCombat(combat.ID); err != nil {
+		t.Fatalf("EndCombat() after disconnect returned an error: %v", err)
+	}
+
+	if err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+		t.Fatalf("AddPlayer(Alice) after removal returned an error: %v", err)
+	}
+	quests, err := gameWorld.GetPlayerQuests("Alice")
+	if err != nil || len(quests) != 0 {
+		t.Fatalf("quests after reconnect = (%+v, %v), want none", quests, err)
+	}
+	inventory, err := gameWorld.GetInventory("Alice")
+	if err != nil || len(inventory) != 0 {
+		t.Fatalf("inventory after reconnect = (%+v, %v), want empty", inventory, err)
+	}
+	invitations, err := gameWorld.GetGroupInvitations("Alice")
+	if err != nil || len(invitations) != 0 {
+		t.Fatalf("invitations after reconnect = (%+v, %v), want none", invitations, err)
+	}
+	if _, err := gameWorld.GetPlayerGroup("Alice"); !errors.Is(err, world.ErrPlayerNotInGroup) {
+		t.Fatalf("GetPlayerGroup(Alice) after reconnect error = %v, want ErrPlayerNotInGroup", err)
+	}
+	if room, err := gameWorld.GetRoom("docks"); err != nil || room.Items["item.gold_coins"] != 1 {
+		t.Fatalf("gold coins in docks after disconnect = (%d, %v), want 1", room.Items["item.gold_coins"], err)
+	}
+	if room, err := gameWorld.GetRoom("harbor_square"); err != nil || room.Items["item.rope"] != 0 {
+		t.Fatalf("rope in harbor after disconnect = (%d, %v), want 0", room.Items["item.rope"], err)
+	}
+}
+
 func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	if err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {

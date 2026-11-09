@@ -29,6 +29,10 @@ func cleanupPlayer(
 				err,
 			)
 		} else {
+				if registered {
+					registry.Remove(sessionID)
+				}
+
 			if playerEnterBroadcast && eventPublisher != nil {
 				// The world state has already been updated before publishing.
 				if len(uniqueItemsReturned.ItemIDs) > 0 {

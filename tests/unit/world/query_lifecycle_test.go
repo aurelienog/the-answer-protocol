@@ -79,7 +79,7 @@ func TestWorldResolvesNPCIDsAndNamesInPlayerRoom(t *testing.T) {
 	}
 }
 
-func TestWorldReconnectsPlayerIntoActiveCombatRoom(t *testing.T) {
+func TestWorldDisconnectRemovesPlayerFromActiveCombat(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	for _, name := range []string{"Alice", "Bob"} {
 		if err := gameWorld.AddPlayer(name, "docks"); err != nil {
@@ -103,15 +103,9 @@ func TestWorldReconnectsPlayerIntoActiveCombatRoom(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
 	}
-	if _, _, _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "dock_warden"); err != nil {
-		t.Fatalf("AttackCombatParticipant() returned an error: %v", err)
+	if combat.TurnIndex < 0 || combat.Participants[combat.TurnIndex].ID != "Alice" {
+		t.Fatalf("initial turn = %+v, want Alice to own the active turn", combat)
 	}
-	combat, err = gameWorld.GetCombat(combat.ID)
-	if err != nil {
-		t.Fatalf("GetCombat() returned an error: %v", err)
-	}
-	aliceParticipant := combat.Participants[0]
-
 	_, _, turnEvent, combatsToEnd, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
@@ -119,35 +113,27 @@ func TestWorldReconnectsPlayerIntoActiveCombatRoom(t *testing.T) {
 	if len(combatsToEnd) != 0 {
 		t.Fatalf("combats to end = %v, want combat to remain for NPC turn", combatsToEnd)
 	}
-	if roomID, err := gameWorld.GetPlayerReconnectRoom("Alice"); err != nil || roomID != "docks" {
-		t.Fatalf("GetPlayerReconnectRoom(Alice) = (%q, %v), want docks", roomID, err)
+	if _, err := gameWorld.GetPlayerReconnectRoom("Alice"); !errors.Is(err, world.ErrPlayerNotInActiveCombat) {
+		t.Fatalf("GetPlayerReconnectRoom(Alice) error = %v, want ErrPlayerNotInActiveCombat", err)
 	}
-	if turnEvent != nil && turnEvent.IsPlayer && turnEvent.ParticipantID == "Alice" {
-		t.Fatalf("disconnected Alice retained active turn: %+v", turnEvent)
+	if turnEvent == nil || !turnEvent.IsPlayer || turnEvent.ParticipantID != "Bob" {
+		t.Fatalf("turn after Alice disconnects = %+v, want Bob", turnEvent)
 	}
 
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); !errors.Is(err, world.ErrInvalidWorldState) {
-		t.Fatalf("AddPlayer(Alice, wrong room) error = %v, want ErrInvalidWorldState", err)
+	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+		t.Fatalf("AddPlayer(Alice) after combat disconnect returned an error: %v", err)
 	}
-	if count, err := gameWorld.GetPlayerCount(); err != nil || count != 1 {
-		t.Fatalf("player count after rejected reconnect = (%d, %v), want Bob only", count, err)
-	}
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
-		t.Fatalf("AddPlayer(Alice, combat room) returned an error: %v", err)
-	}
-	stats, err := gameWorld.GetPlayerCombatStats("Alice")
-	if err != nil {
-		t.Fatalf("GetPlayerCombatStats() after reconnect returned an error: %v", err)
-	}
-	if stats != aliceParticipant.Stats {
-		t.Fatalf("Alice's stats after reconnect = %+v, want preserved combat stats %+v", stats, aliceParticipant.Stats)
+	if count, err := gameWorld.GetPlayerCount(); err != nil || count != 2 {
+		t.Fatalf("player count after reconnect = (%d, %v), want Alice and Bob", count, err)
 	}
 	reconnected, err := gameWorld.GetCombat(combat.ID)
 	if err != nil {
 		t.Fatalf("GetCombat() after reconnect returned an error: %v", err)
 	}
-	if !reconnected.Participants[0].Connected {
-		t.Fatal("Alice remains disconnected in combat after reconnecting")
+	for _, participant := range reconnected.Participants {
+		if participant.IsPlayer && participant.ID == "Alice" {
+			t.Fatal("Alice remains in combat after disconnecting")
+		}
 	}
 }
 
