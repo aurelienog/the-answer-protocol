@@ -5,7 +5,7 @@ import (
 	"unicode/utf8"
 )
 
-const MaxUsernameLength = 24
+const MaxUsernameLength = 12
 
 // ValidUsername accepts usernames containing Unicode letters and numbers,
 // combining marks, and underscores, up to 24 Unicode code points.
