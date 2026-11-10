@@ -192,7 +192,7 @@ func authenticate(
 		username := fields[1]
 		if !validUsername(username) {
 			ui.PrintError(
-				"Invalid username. Use 1-24 Unicode letters, numbers, or underscores.",
+				"Invalid username. Use 1-12 Unicode letters, numbers, combining marks, or underscores.",
 			)
 			continue
 		}
