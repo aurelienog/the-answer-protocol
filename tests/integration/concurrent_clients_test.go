@@ -25,7 +25,7 @@ type concurrentCommandClient struct {
 	readerDone chan struct{}
 }
 
-func Test100ConcurrentClientsIssueCommands(t *testing.T) {
+func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 	gameWorld, err := world.Load("../../data/world.json")
 	if err != nil {
 		t.Fatalf("load world: %v", err)
@@ -117,15 +117,18 @@ func Test100ConcurrentClientsIssueCommands(t *testing.T) {
 
 	start := make(chan struct{})
 	sendErrors := make(chan error, len(clients))
-	sendErrors = make(chan error, len(clients))
 	for _, client := range clients {
 		senders.Add(1)
 		go func(client *concurrentCommandClient) {
 			defer senders.Done()
 			<-start
-			_, err := fmt.Fprintln(client.connection, "STATUS")
+			_, err := fmt.Fprintf(
+				client.connection,
+				"GROUP CREATE Group%s\n",
+				strings.TrimPrefix(client.name, "ConcurrentPlayer"),
+			)
 			if err != nil {
-				sendErrors <- fmt.Errorf("send STATUS for %s: %w", client.name, err)
+				sendErrors <- fmt.Errorf("send GROUP CREATE for %s: %w", client.name, err)
 			}
 		}(client)
 	}
@@ -137,10 +140,19 @@ func Test100ConcurrentClientsIssueCommands(t *testing.T) {
 	}
 
 	for _, client := range clients {
-		response := readUntilConcurrentClientResponse(t, client, "OK {")
-		if !strings.HasPrefix(response, "OK {") ||
-			!strings.Contains(response, `"hp":`) {
-			t.Fatalf("%s STATUS response = %q, want status JSON", client.name, response)
+		groupName := "Group" + strings.TrimPrefix(client.name, "ConcurrentPlayer")
+		response := readUntilConcurrentClientResponse(t, client, "OK group=")
+		if !strings.HasPrefix(response, "OK group=") ||
+			!strings.HasSuffix(response, " name="+groupName) {
+			t.Fatalf("%s GROUP CREATE response = %q, want created group %q", client.name, response, groupName)
+		}
+
+		group, err := gameWorld.GetPlayerGroup(client.name)
+		if err != nil {
+			t.Fatalf("GetPlayerGroup(%s) after concurrent mutation returned an error: %v", client.name, err)
+		}
+		if group.Name != groupName || len(group.Members) != 1 || group.Members[0] != client.name {
+			t.Fatalf("group for %s = %+v, want %s with only that player", client.name, group, groupName)
 		}
 	}
 
