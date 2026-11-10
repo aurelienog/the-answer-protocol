@@ -333,6 +333,10 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
+	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
+	if err != nil {
+		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+	}
 	if _, _, err := gameWorld.JoinCombat("Bob", combat.ID); !errors.Is(err, world.ErrCombatHelpNotRequested) {
 		t.Fatalf("JoinCombat() before help request error = %v, want ErrCombatHelpNotRequested", err)
 	}
@@ -370,6 +374,42 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 	}
 	if _, _, err := gameWorld.JoinCombat("Bob", combat.ID); !errors.Is(err, world.ErrPlayerAlreadyInCombat) {
 		t.Fatalf("repeated JoinCombat(Bob) error = %v, want ErrPlayerAlreadyInCombat", err)
+	}
+}
+
+func TestWorldCombatHelpCanOnlyBeRequestedDuringPlayerTurn(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	for _, name := range []string{"Alice", "Bob"} {
+		if _, err := gameWorld.AddPlayer(name, "forest_edge"); err != nil {
+			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
+		}
+	}
+
+	combat, _, err := gameWorld.StartCombat("Alice", "Dire Wolf")
+	if err != nil {
+		t.Fatalf("StartCombat() returned an error: %v", err)
+	}
+	if _, _, err := gameWorld.RequestCombatHelp("Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
+		t.Fatalf("RequestCombatHelp() before turns initialize returned %v, want ErrInvalidCombatTurn", err)
+	}
+	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
+	if err != nil {
+		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+	}
+
+	current := combat.Participants[combat.TurnIndex]
+	if !current.IsPlayer || current.ID != "Alice" {
+		t.Fatalf("initial turn = %+v, want Alice", current)
+	}
+	if _, _, err := gameWorld.RequestCombatHelp("Alice"); err != nil {
+		t.Fatalf("RequestCombatHelp(Alice) during her turn returned an error: %v", err)
+	}
+	combat, _, err = gameWorld.JoinCombat("Bob", combat.ID)
+	if err != nil {
+		t.Fatalf("JoinCombat(Bob) returned an error: %v", err)
+	}
+	if _, _, err := gameWorld.RequestCombatHelp("Bob"); !errors.Is(err, world.ErrInvalidCombatTurn) {
+		t.Fatalf("RequestCombatHelp(Bob) out of turn returned %v, want ErrInvalidCombatTurn", err)
 	}
 }
 

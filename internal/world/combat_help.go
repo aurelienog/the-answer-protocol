@@ -38,6 +38,11 @@ func (w *World) RequestCombatHelp(
 		return nil, nil, ErrPlayerNotInActiveCombat
 	}
 
+	participant, err := w.getCurrentAttackerLocked(combat, playerName)
+	if err != nil || !participant.IsPlayer {
+		return nil, nil, ErrInvalidCombatTurn
+	}
+
 	combat.HelpRequested = true
 
 	event := &CombatHelpRequested{

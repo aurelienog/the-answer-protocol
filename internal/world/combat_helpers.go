@@ -104,27 +104,26 @@ func combatHasLivingNPCsLocked(combat *Combat) bool {
 }
 
 // findActiveCombatForPlayerLocked returns the active combat
-// in which a player is participating.
+// in which a player is participating, including if they have died.
 // The caller must hold at least a read lock on w.mu.
 func (w *World) findActiveCombatForPlayerLocked(
-    playerName string,
+	playerName string,
 ) *Combat {
-    for _, combat := range w.combats {
-        if combat == nil || !combat.Active {
-            continue
-        }
+	for _, combat := range w.combats {
+		if combat == nil || !combat.Active {
+			continue
+		}
 
-        for _, participant := range combat.Participants {
-            if participant.IsPlayer &&
-                participant.ID == playerName &&
-                participant.Alive &&
-                !participant.Escaped {
-                return combat
-            }
-        }
-    }
+		for _, participant := range combat.Participants {
+			if participant.IsPlayer &&
+				participant.ID == playerName &&
+				!participant.Escaped {
+				return combat
+			}
+		}
+	}
 
-    return nil
+	return nil
 }
 
 // getCombatRecipientsLocked returns the names of connected players
