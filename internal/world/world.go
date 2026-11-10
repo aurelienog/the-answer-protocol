@@ -27,9 +27,10 @@ type World struct {
 	groups       map[string]Group
 	playerGroups map[string]string
 
-	nextItemInstanceID uint64
-	nextGroupID        uint64
-	nextCombatID		uint64
+	nextItemInstanceID  uint64
+	nextGroupID         uint64
+	nextCombatID        uint64
+	playerCountRevision uint64
 
 	combats map[string]*Combat
 }

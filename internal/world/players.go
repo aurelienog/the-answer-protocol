@@ -7,16 +7,16 @@ import (
 )
 
 type Player struct {
-    Name        string      `json:"name"`
-    RoomID      string      `json:"room_id"`
-    CombatStats CombatStats `json:"combat_stats"`
+	Name        string      `json:"name"`
+	RoomID      string      `json:"room_id"`
+	CombatStats CombatStats `json:"combat_stats"`
 }
 
 // AddPlayer places a player in a room.
 // It fails if the player name is empty, the room does not exist,
 // or the player is already registered.
 func (w *World) AddPlayer(
-    playerName, roomID string,
+	playerName, roomID string,
 ) (*PlayerCountChanged, error) {
 	if w == nil {
 		return nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
@@ -121,14 +121,14 @@ func (w *World) AddPlayer(
 // and removes the player's state from the world.
 // It also returns the IDs of active combats that must be ended.
 func (w *World) RemovePlayer(
-    playerName string,
+	playerName string,
 ) (
-    PlayerLeft,
-    UniqueItemsReturned,
-    *CombatTurnChanged,
-    []string,
-    *PlayerCountChanged,
-    error,
+	PlayerLeft,
+	UniqueItemsReturned,
+	*CombatTurnChanged,
+	[]string,
+	*PlayerCountChanged,
+	error,
 ) {
 	if w == nil {
 		return PlayerLeft{}, UniqueItemsReturned{}, nil, nil, nil,
@@ -413,105 +413,106 @@ func (w *World) GetPlayerCombatStats(
 
 // GetActiveCombatForPlayer returns a copy of the player's active combat.
 func (w *World) GetActiveCombatForPlayer(
-    playerName string,
+	playerName string,
 ) (*Combat, error) {
-    if w == nil {
-        return nil, fmt.Errorf(
-            "%w: world is nil",
-            ErrInvalidWorldState,
-        )
-    }
+	if w == nil {
+		return nil, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
 
-    playerName = strings.TrimSpace(playerName)
+	playerName = strings.TrimSpace(playerName)
 
-    if playerName == "" {
-        return nil, fmt.Errorf(
-            "%w: player name cannot be empty",
-            ErrInvalidArgument,
-        )
-    }
+	if playerName == "" {
+		return nil, fmt.Errorf(
+			"%w: player name cannot be empty",
+			ErrInvalidArgument,
+		)
+	}
 
-    w.mu.RLock()
-    defer w.mu.RUnlock()
+	w.mu.RLock()
+	defer w.mu.RUnlock()
 
-    combat := w.findActiveCombatForPlayerLocked(playerName)
-    if combat == nil {
-        return nil, ErrPlayerNotInActiveCombat
-    }
+	combat := w.findActiveCombatForPlayerLocked(playerName)
+	if combat == nil {
+		return nil, ErrPlayerNotInActiveCombat
+	}
 
-    return cloneCombat(combat), nil
+	return cloneCombat(combat), nil
 }
 
 // GetPlayerReconnectRoom returns the room of an active combat
 // in which the player can reconnect.
 func (w *World) GetPlayerReconnectRoom(
-    playerName string,
+	playerName string,
 ) (string, error) {
-    if w == nil {
-        return "", fmt.Errorf(
-            "%w: world is nil",
-            ErrInvalidWorldState,
-        )
-    }
+	if w == nil {
+		return "", fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
 
-    playerName = strings.TrimSpace(playerName)
+	playerName = strings.TrimSpace(playerName)
 
-    if playerName == "" {
-        return "", fmt.Errorf(
-            "%w: player name cannot be empty",
-            ErrInvalidArgument,
-        )
-    }
+	if playerName == "" {
+		return "", fmt.Errorf(
+			"%w: player name cannot be empty",
+			ErrInvalidArgument,
+		)
+	}
 
-    w.mu.RLock()
-    defer w.mu.RUnlock()
+	w.mu.RLock()
+	defer w.mu.RUnlock()
 
-    var reconnectRoom string
+	var reconnectRoom string
 
-    for _, combat := range w.combats {
-        if combat == nil || !combat.Active {
-            continue
-        }
+	for _, combat := range w.combats {
+		if combat == nil || !combat.Active {
+			continue
+		}
 
-        for _, participant := range combat.Participants {
-            if !participant.IsPlayer ||
-                participant.ID != playerName ||
-                participant.Escaped ||
-                participant.Connected {
-                continue
-            }
+		for _, participant := range combat.Participants {
+			if !participant.IsPlayer ||
+				participant.ID != playerName ||
+				participant.Escaped ||
+				participant.Connected {
+				continue
+			}
 
-            if reconnectRoom != "" {
-                return "", fmt.Errorf(
-                    "%w: player %q belongs to multiple active combats",
-                    ErrInvalidWorldState,
-                    playerName,
-                )
-            }
+			if reconnectRoom != "" {
+				return "", fmt.Errorf(
+					"%w: player %q belongs to multiple active combats",
+					ErrInvalidWorldState,
+					playerName,
+				)
+			}
 
-            if _, exists := w.rooms[combat.RoomID]; !exists {
-                return "", fmt.Errorf(
-                    "%w: combat %q references nonexistent room %q",
-                    ErrInvalidWorldState,
-                    combat.ID,
-                    combat.RoomID,
-                )
-            }
+			if _, exists := w.rooms[combat.RoomID]; !exists {
+				return "", fmt.Errorf(
+					"%w: combat %q references nonexistent room %q",
+					ErrInvalidWorldState,
+					combat.ID,
+					combat.RoomID,
+				)
+			}
 
-            reconnectRoom = combat.RoomID
-        }
-    }
+			reconnectRoom = combat.RoomID
+		}
+	}
 
-    if reconnectRoom == "" {
-        return "", fmt.Errorf(
-            "%w: %q",
-            ErrPlayerNotInActiveCombat,
-            playerName,
-        )
-    }
+	if reconnectRoom == "" {
+		return "", fmt.Errorf(
+			"%w: %q",
+			ErrPlayerNotInActiveCombat,
+			playerName,
+		)
+	}
 
-    return reconnectRoom, nil
+	return reconnectRoom, nil
 }
+
 // deletePlayerInventoryLocked removes a player's inventory and its item instances.
 // The caller must hold w.mu.Lock().
 func (w *World) deletePlayerInventoryLocked(playerName string) {
@@ -525,7 +526,9 @@ func (w *World) deletePlayerInventoryLocked(playerName string) {
 // buildPlayerCountChangedLocked creates a player count event.
 // The caller must hold w.mu.Lock().
 func (w *World) buildPlayerCountChangedLocked() *PlayerCountChanged {
-    return &PlayerCountChanged{
-        Count: len(w.players),
-    }
+	w.playerCountRevision++
+	return &PlayerCountChanged{
+		Count:    len(w.players),
+		Revision: w.playerCountRevision,
+	}
 }

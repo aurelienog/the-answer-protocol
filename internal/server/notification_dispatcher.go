@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
@@ -11,6 +12,8 @@ import (
 // NotificationDispatcher translates internal game events into TAP notifications.
 type NotificationDispatcher struct {
 	registry *Registry
+	statsMu sync.Mutex
+	lastStatsRevision uint64
 }
 
 // NewNotificationDispatcher creates a notification dispatcher.
@@ -397,6 +400,17 @@ func (dispatcher *NotificationDispatcher) handleCombatPlayerJoined(
 func (dispatcher *NotificationDispatcher) handlePlayerCountChanged(
 	event world.PlayerCountChanged,
 ) {
+	dispatcher.statsMu.Lock()
+	defer dispatcher.statsMu.Unlock()
+
+	if event.Revision != 0 && event.Revision <= dispatcher.lastStatsRevision {
+		return
+	}
+
+	if event.Revision != 0 {
+		dispatcher.lastStatsRevision = event.Revision
+	}
+
 	dispatcher.registry.Broadcast(
 		protocol.EVT(
 			"STATS",

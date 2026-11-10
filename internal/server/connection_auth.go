@@ -102,10 +102,6 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	handler.lease.Authenticate()
 	handler.stopAuthenticationTimer()
 
-	if statsEvent != nil && handler.eventPublisher != nil {
-		handler.eventPublisher.Publish(*statsEvent)
-	}
-
 	log.Printf("Player %q connected from %s", username, handler.sessionID)
 	roomID, err := handler.gameWorld.GetPlayerRoom(username)
 	if err != nil {
@@ -129,6 +125,9 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	if err := SendMessage(handler.session, protocol.OK("connected")); err != nil {
 		log.Printf("Failed to queue CONNECT response for %s: %v", username, err)
 		return false
+	}
+	if statsEvent != nil && handler.eventPublisher != nil {
+		handler.eventPublisher.Publish(*statsEvent)
 	}
 	handler.connected = true
 	handler.resetIdleTimer()
