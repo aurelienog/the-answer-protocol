@@ -42,9 +42,9 @@ func authenticatePlayer(
 	session *Session,
 	registry *Registry,
 	gameWorld *world.World,
-) error {
+) (*world.PlayerCountChanged, error) {
 	if err := registry.Add(session); err != nil {
-		return err
+		return nil, err
 	}
 
 	roomID, err := gameWorld.GetPlayerReconnectRoom(session.PlayerName)
@@ -53,16 +53,17 @@ func authenticatePlayer(
 			roomID = initialRoomID
 		} else {
 			registry.Remove(session.ID)
-			return err
+			return nil, err
 		}
 	}
 
-	if err := gameWorld.AddPlayer(session.PlayerName, roomID); err != nil {
+	statsEvent, err := gameWorld.AddPlayer(session.PlayerName, roomID)
+	if err != nil {
 		registry.Remove(session.ID)
-		return err
+		return nil, err
 	}
 
-	return nil
+	return statsEvent, nil
 }
 
 // handleConnect processes a pre-authentication line. It returns false when the
@@ -74,7 +75,13 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	}
 
 	handler.session.PlayerName = username
-	if err := authenticatePlayer(handler.session, handler.registry, handler.gameWorld); err != nil {
+
+	statsEvent, err := authenticatePlayer(
+		handler.session,
+		handler.registry,
+		handler.gameWorld,
+	)
+	if err != nil {
 		if errors.Is(err, ErrNameInUse) {
 			return SendMessage(
 				handler.session,
@@ -94,6 +101,10 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	handler.authenticated = true
 	handler.lease.Authenticate()
 	handler.stopAuthenticationTimer()
+
+	if statsEvent != nil && handler.eventPublisher != nil {
+		handler.eventPublisher.Publish(*statsEvent)
+	}
 
 	log.Printf("Player %q connected from %s", username, handler.sessionID)
 	roomID, err := handler.gameWorld.GetPlayerRoom(username)

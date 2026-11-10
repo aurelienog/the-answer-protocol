@@ -168,3 +168,7 @@ type CombatHelpRequested struct {
 	RoomID     string
 	Recipients []string
 }
+
+type PlayerCountChanged struct {
+    Count     int
+}

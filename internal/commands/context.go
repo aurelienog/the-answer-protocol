@@ -5,6 +5,7 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
+// Context provides the execution boundary environment for any game command
 type Context struct {
 	PlayerName string
 	RawArgs    []string
@@ -13,6 +14,3 @@ type Context struct {
 	Events     events.Publisher
 }
 
-// Context provides the execution boundary environment for any game command
-// Here you will later inject pointers to:
-// - events.Bus (to broadcast observer notifications)

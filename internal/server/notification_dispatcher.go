@@ -27,6 +27,7 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 	}
 
 	switch event := event.(type) {
+
 	case world.PlayerMoved:
 		dispatcher.handlePlayerMoved(event)
 
@@ -88,6 +89,9 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 
 	case world.ItemUsed:
 		dispatcher.handleItemUsed(event)
+
+	case world.PlayerCountChanged:
+    	dispatcher.handlePlayerCountChanged(event)
 	}
 
 }
@@ -387,5 +391,16 @@ func (dispatcher *NotificationDispatcher) handleCombatPlayerJoined(
 		event.Recipients,
 		"",
 		notification,
+	)
+}
+
+func (dispatcher *NotificationDispatcher) handlePlayerCountChanged(
+	event world.PlayerCountChanged,
+) {
+	dispatcher.registry.Broadcast(
+		protocol.EVT(
+			"STATS",
+			"players="+strconv.Itoa(event.Count),
+		),
 	)
 }

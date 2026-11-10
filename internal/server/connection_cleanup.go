@@ -19,7 +19,7 @@ func cleanupPlayer(
 	eventPublisher events.Publisher,
 ) {
 	if authenticated {
-		playerLeft, uniqueItemsReturned, turnEvent, combatsToEnd, err :=
+		playerLeft, uniqueItemsReturned, turnEvent, combatsToEnd, statsEvent, err :=
 			gameWorld.RemovePlayer(session.PlayerName)
 
 		if err != nil {
@@ -29,21 +29,29 @@ func cleanupPlayer(
 				err,
 			)
 		} else {
-				if registered {
-					registry.Remove(sessionID)
-				}
-
-			if playerEnterBroadcast && eventPublisher != nil {
-				// The world state has already been updated before publishing.
-				if len(uniqueItemsReturned.ItemIDs) > 0 {
-					eventPublisher.Publish(uniqueItemsReturned)
-				}
-
-				eventPublisher.Publish(playerLeft)
+			// Remove the session before broadcasting the updated player count.
+			if registered {
+				registry.Remove(sessionID)
 			}
 
-			if turnEvent != nil && eventPublisher != nil {
-				eventPublisher.Publish(*turnEvent)
+			if eventPublisher != nil {
+				if playerEnterBroadcast {
+					if len(uniqueItemsReturned.ItemIDs) > 0 {
+						eventPublisher.Publish(uniqueItemsReturned)
+					}
+
+					eventPublisher.Publish(playerLeft)
+				}
+
+				// Publish the updated player count regardless of enterBroadcast.
+				if statsEvent != nil {
+					eventPublisher.Publish(*statsEvent)
+				}
+
+				// Notify players about the updated combat turn.
+				if turnEvent != nil {
+					eventPublisher.Publish(*turnEvent)
+				}
 			}
 
 			// End combats that no longer have active players.
@@ -56,7 +64,9 @@ func cleanupPlayer(
 						err,
 					)
 				} else if eventPublisher != nil {
-					eventPublisher.Publish(world.CombatEnded{CombatID: combatID})
+					eventPublisher.Publish(world.CombatEnded{
+						CombatID: combatID,
+					})
 				}
 			}
 		}
