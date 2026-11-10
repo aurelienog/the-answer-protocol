@@ -145,6 +145,14 @@ func (w *World) GetPlayerQuests(
 		)
 	}
 
+	if w.playerInActiveCombatLocked(playerName) {
+		return nil, fmt.Errorf(
+			"%w: player %q cannot access quests during combat",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+		)
+	}
+
 	playerQuests := w.playerQuests[playerName]
 	quests := make([]PlayerQuestSummary, 0)
 

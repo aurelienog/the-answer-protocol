@@ -350,8 +350,8 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 		!reflect.DeepEqual(helpEvent.Recipients, []string{"Alice", "Bob"}) {
 		t.Fatalf("combat help result = (%+v, %+v)", helpCombat, helpEvent)
 	}
-	if _, _, err := gameWorld.JoinCombat("Carol", combat.ID); !errors.Is(err, world.ErrInvalidWorldState) {
-		t.Fatalf("JoinCombat() from another room error = %v, want ErrInvalidWorldState", err)
+	if _, _, err := gameWorld.JoinCombat("Carol", combat.ID); !errors.Is(err, world.ErrPlayerNotInCombatRoom) {
+		t.Fatalf("JoinCombat() from another room error = %v, want ErrPlayerNotInCombatRoom", err)
 	}
 
 	joinedCombat, joinedEvent, err := gameWorld.JoinCombat("Bob", combat.ID)

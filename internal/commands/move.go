@@ -39,6 +39,12 @@ func (c *MoveCommand) Execute(ctx *Context) (protocol.Message, error) {
 	event, err := ctx.World.MovePlayer(ctx.PlayerName, direction)
 	if err != nil {
 		switch {
+		case errors.Is(err, world.ErrPlayerAlreadyInCombat):
+			return protocol.ERR(
+				protocol.CodeCommandFailed,
+				"PLAYER_ALREADY_IN_COMBAT",
+			), nil
+
 		case errors.Is(err, world.ErrNoExit):
 			return protocol.ERR(protocol.CodeNoExit, "NO_EXIT"), nil
 

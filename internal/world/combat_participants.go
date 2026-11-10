@@ -106,7 +106,7 @@ func (w *World) JoinCombat(
 	if player.RoomID != combat.RoomID {
 		return nil, nil, fmt.Errorf(
 			"%w: player %q is not in combat room %q",
-			ErrInvalidWorldState,
+			ErrPlayerNotInCombatRoom,
 			playerName,
 			combat.RoomID,
 		)

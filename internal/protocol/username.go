@@ -8,7 +8,7 @@ import (
 const MaxUsernameLength = 12
 
 // ValidUsername accepts usernames containing Unicode letters and numbers,
-// combining marks, and underscores, up to 24 Unicode code points.
+// combining marks, and underscores, up to MaxUsernameLength Unicode code points.
 func ValidUsername(username string) bool {
 	if !utf8.ValidString(username) || username == "" ||
 		utf8.RuneCountInString(username) > MaxUsernameLength {

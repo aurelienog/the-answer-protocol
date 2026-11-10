@@ -49,6 +49,14 @@ func (w *World) MovePlayer(
 		)
 	}
 
+	if w.playerInActiveCombatLocked(playerName) {
+		return PlayerMoved{}, fmt.Errorf(
+			"%w: player %q cannot move during combat",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+		)
+	}
+
 	currentRoomID := player.RoomID
 
 	// Verify that the current room exists.

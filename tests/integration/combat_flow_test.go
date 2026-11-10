@@ -578,3 +578,105 @@ func readUntilResponse(t *testing.T, env *connectionTestEnv) string {
 		}
 	}
 }
+
+func TestHandleConnectionRejectsNonCombatActionsDuringCombat(t *testing.T) {
+	alice := newConnectionTestEnv(t)
+	connectTestPlayer(t, alice, "Alice")
+
+	alice.sendRequest(t, "MOVE south")
+	if got := alice.readResponse(t); got != "OK room=docks" {
+		t.Fatalf("Alice's move to the docks = %q", got)
+	}
+
+	alice.sendRequest(t, "TAKE Brass Lantern")
+	if got, want := alice.readResponse(t), "OK taken=item.lantern"; got != want {
+		t.Fatalf("take lantern response = %q, want %q", got, want)
+	}
+
+	alice.sendRequest(t, "ATTACK Dock Warden")
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
+		t.Fatalf("combat-start event = %q", got)
+	}
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
+		t.Fatalf("combat-turn event = %q", got)
+	}
+	if got := readUntilResponse(t, alice); !strings.HasPrefix(got, "OK ") {
+		t.Fatalf("combat-start response = %q", got)
+	}
+
+	for _, request := range []string{
+		"MOVE north",
+		"TALK Dock Warden",
+		"QUEST Captain Eliza",
+		"TAKE Brass Lantern",
+		"DROP Brass Lantern",
+	} {
+		alice.sendRequest(t, request)
+		if got, want := alice.readResponse(t), "ERR 409 PLAYER_ALREADY_IN_COMBAT"; got != want {
+			t.Errorf("%s response = %q, want %q", request, got, want)
+		}
+	}
+
+	if roomID, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || roomID != "docks" {
+		t.Errorf("Alice's room after rejected actions = (%q, %v), want docks", roomID, err)
+	}
+	if _, err := alice.gameWorld.GetActiveCombatForPlayer("Alice"); err != nil {
+		t.Errorf("Alice no longer has an active combat after rejected actions: %v", err)
+	}
+}
+
+func TestHandleConnectionRejectsJoiningCombatFromAnotherRoom(t *testing.T) {
+	alice := newConnectionTestEnv(t)
+	connectTestPlayer(t, alice, "Alice")
+
+	carol := newSharedConnectionTestEnv(
+		t, alice.registry, alice.dispatcher, alice.gameWorld, alice.eventBus, "combat-wrong-room-carol",
+	)
+	connectTestPlayer(t, carol, "Carol")
+	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Carol" {
+		t.Fatalf("Alice's Carol-enter event = %q", got)
+	}
+
+	alice.sendRequest(t, "MOVE south")
+	if got := alice.readResponse(t); got != "OK room=docks" {
+		t.Fatalf("Alice's move to the docks = %q", got)
+	}
+	if got := carol.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
+		t.Fatalf("Carol's Alice-leave event = %q", got)
+	}
+
+	alice.sendRequest(t, "ATTACK Dock Warden")
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
+		t.Fatalf("combat-start event = %q", got)
+	}
+	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
+		t.Fatalf("combat-turn event = %q", got)
+	}
+	startResponse := readUntilResponse(t, alice)
+	var start struct {
+		CombatID string `json:"combat_id"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimPrefix(startResponse, "OK ")), &start); err != nil {
+		t.Fatalf("decode combat-start response: %v; response: %q", err, startResponse)
+	}
+
+	alice.sendRequest(t, "COMBAT HELP")
+	if got := readUntilResponse(t, alice); got != "OK help_requested=true combat="+start.CombatID {
+		t.Fatalf("combat-help response = %q", got)
+	}
+
+	carol.sendRequest(t, "COMBAT JOIN "+start.CombatID)
+	if got, want := readUntilResponse(t, carol), "ERR 409 NOT_IN_COMBAT_ROOM"; got != want {
+		t.Fatalf("combat-join response from another room = %q, want %q", got, want)
+	}
+
+	combat, err := alice.gameWorld.GetCombat(start.CombatID)
+	if err != nil {
+		t.Fatalf("GetCombat() returned an error: %v", err)
+	}
+	for _, participant := range combat.Participants {
+		if participant.IsPlayer && participant.ID == "Carol" {
+			t.Fatal("Carol joined the combat from another room")
+		}
+	}
+}

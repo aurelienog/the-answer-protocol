@@ -42,6 +42,12 @@ func (c *QuestsCommand) Execute(ctx *Context) (protocol.Message, error) {
 
 func mapQuestsError(err error) (protocol.Message, error) {
 	switch {
+	case errors.Is(err, world.ErrPlayerAlreadyInCombat):
+		return protocol.ERR(
+			protocol.CodeCommandFailed,
+			"PLAYER_ALREADY_IN_COMBAT",
+		), nil
+
 	case errors.Is(err, world.ErrPlayerNotFound),
 		errors.Is(err, world.ErrInvalidWorldState):
 		return protocol.ERR(

@@ -66,7 +66,7 @@ func TestMalformedFramingReturnsErrorAndKeepsConnectionOpen(t *testing.T) {
 	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
 		t.Fatalf("greeting = (%q, %v)", greeting, err)
 	}
-	if _, err := client.Write([]byte("CONNECT FramingTester\n")); err != nil {
+	if _, err := client.Write([]byte("CONNECT FramingTest\n")); err != nil {
 		t.Fatalf("send CONNECT: %v", err)
 	}
 	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {
@@ -408,7 +408,7 @@ func TestAdmittedConnectionRateLimitsGeneralCommands(t *testing.T) {
 	if greeting, err := reader.ReadString('\n'); err != nil || greeting != "OK hello proto=1\n" {
 		t.Fatalf("greeting = (%q, %v)", greeting, err)
 	}
-	if _, err := client.Write([]byte("CONNECT CommandTester\n")); err != nil {
+	if _, err := client.Write([]byte("CONNECT CommandTest\n")); err != nil {
 		t.Fatalf("send CONNECT: %v", err)
 	}
 	if response, err := reader.ReadString('\n'); err != nil || response != "OK connected\n" {

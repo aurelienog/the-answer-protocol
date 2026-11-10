@@ -88,6 +88,12 @@ func (c *QuestCommand) Execute(ctx *Context) (protocol.Message, error) {
 
 func mapQuestError(err error) (protocol.Message, error) {
 	switch {
+	case errors.Is(err, world.ErrPlayerAlreadyInCombat):
+		return protocol.ERR(
+			protocol.CodeCommandFailed,
+			"PLAYER_ALREADY_IN_COMBAT",
+		), nil
+
 	case errors.Is(err, world.ErrNPCNotFound):
 		return protocol.ERR(
 			protocol.CodeNPCNotFound,

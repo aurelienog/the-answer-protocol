@@ -60,6 +60,12 @@ func (c *DropCommand) Execute(ctx *Context) (protocol.Message, error) {
 	event, err := ctx.World.DropItem(ctx.PlayerName, itemID)
 	if err != nil {
 		switch {
+		case errors.Is(err, world.ErrPlayerAlreadyInCombat):
+			return protocol.ERR(
+				protocol.CodeCommandFailed,
+				"PLAYER_ALREADY_IN_COMBAT",
+			), nil
+
 		case errors.Is(err, world.ErrPlayerNotFound),
 			errors.Is(err, world.ErrInvalidWorldState):
 			return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil

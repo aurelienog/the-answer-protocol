@@ -104,6 +104,14 @@ func (w *World) TalkToNPC(
 		)
 	}
 
+	if w.playerInActiveCombatLocked(playerName) {
+		return NPCConversation{}, fmt.Errorf(
+			"%w: player %q cannot talk during combat",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+		)
+	}
+
 	roomID := player.RoomID
 
 	room, exists := w.rooms[roomID]

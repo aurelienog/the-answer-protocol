@@ -56,7 +56,7 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 	})
 
 	for i := range clients {
-		name := fmt.Sprintf("ConcurrentPlayer%03d", i)
+		name := fmt.Sprintf("P%03d", i)
 		clientConn, serverConn := net.Pipe()
 		wrappedConn := &connectionTestConn{
 			Conn:       serverConn,
@@ -125,7 +125,7 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 			_, err := fmt.Fprintf(
 				client.connection,
 				"GROUP CREATE Group%s\n",
-				strings.TrimPrefix(client.name, "ConcurrentPlayer"),
+				strings.TrimPrefix(client.name, "P"),
 			)
 			if err != nil {
 				sendErrors <- fmt.Errorf("send GROUP CREATE for %s: %w", client.name, err)
@@ -140,7 +140,7 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 	}
 
 	for _, client := range clients {
-		groupName := "Group" + strings.TrimPrefix(client.name, "ConcurrentPlayer")
+		groupName := "Group" + strings.TrimPrefix(client.name, "P")
 		response := readUntilConcurrentClientResponse(t, client, "OK group=")
 		if !strings.HasPrefix(response, "OK group=") ||
 			!strings.HasSuffix(response, " name="+groupName) {

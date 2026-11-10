@@ -14,6 +14,9 @@ func mapCombatError(err error) protocol.Message {
 	case errors.Is(err, world.ErrPlayerNotInActiveCombat):
 		return protocol.ERR(protocol.CodeCommandFailed, "NOT_IN_COMBAT")
 
+	case errors.Is(err, world.ErrPlayerNotInCombatRoom):
+		return protocol.ERR(protocol.CodeCommandFailed, "NOT_IN_COMBAT_ROOM")
+
 	case errors.Is(err, world.ErrInvalidCombatTurn):
 		return protocol.ERR(protocol.CodeCommandFailed, "NOT_YOUR_TURN")
 

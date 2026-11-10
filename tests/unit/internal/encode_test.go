@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"strings"
 	"testing"
 
 	"the-answer-protocol/internal/protocol"
@@ -35,8 +36,16 @@ func TestValidUsername(t *testing.T) {
 		{name: "ASCII", username: "Alice_42", want: true},
 		{name: "Unicode letters", username: "José李", want: true},
 		{name: "combining mark", username: "Jose\u0301", want: true},
-		{name: "24 Unicode code points", username: "界界界界界界界界界界界界界界界界界界界界界界界界", want: true},
-		{name: "too long", username: "界界界界界界界界界界界界界界界界界界界界界界界界界", want: false},
+		{
+			name:     "maximum length",
+			username: strings.Repeat("界", protocol.MaxUsernameLength),
+			want:     true,
+		},
+		{
+			name:     "too long",
+			username: strings.Repeat("界", protocol.MaxUsernameLength+1),
+			want:     false,
+		},
 		{name: "empty", username: "", want: false},
 		{name: "space", username: "Alice Smith", want: false},
 		{name: "punctuation", username: "invalid-name", want: false},

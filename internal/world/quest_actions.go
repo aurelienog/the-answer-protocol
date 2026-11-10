@@ -23,11 +23,19 @@ func (w *World) AcceptQuest(playerName, questID string) error {
 		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
+	if w.playerInActiveCombatLocked(playerName) {
+		return fmt.Errorf(
+			"%w: player %q cannot accept quests during combat",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+		)
+	}
+
 	quest, exists := w.quests[questID]
 	if !exists {
 		return fmt.Errorf("%w: %q", ErrQuestNotFound, questID)
 	}
-	
+
 	// The player must have discovered the quest by talking to its giver.
 	playerQuests := w.playerQuests[playerName]
 	progress, discovered := playerQuests[questID]

@@ -3,8 +3,8 @@ package world
 import "fmt"
 
 type InventoryItem struct {
-    ID       string `json:"id"`
-    Quantity int    `json:"quantity"`
+	ID       string `json:"id"`
+	Quantity int    `json:"quantity"`
 }
 
 // TakeItem moves one concrete item instance from the player's current room
@@ -20,6 +20,14 @@ func (w *World) TakeItem(playerName, itemID string) error {
 	player, exists := w.players[playerName]
 	if !exists {
 		return fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+	}
+
+	if w.playerInActiveCombatLocked(playerName) {
+		return fmt.Errorf(
+			"%w: player %q cannot take items during combat",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+		)
 	}
 
 	roomID := player.RoomID
@@ -131,6 +139,14 @@ func (w *World) DropItem(playerName, itemID string) (ItemDropped, error) {
 	player, exists := w.players[playerName]
 	if !exists {
 		return ItemDropped{}, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+	}
+
+	if w.playerInActiveCombatLocked(playerName) {
+		return ItemDropped{}, fmt.Errorf(
+			"%w: player %q cannot drop items during combat",
+			ErrPlayerAlreadyInCombat,
+			playerName,
+		)
 	}
 
 	roomID := player.RoomID
@@ -299,27 +315,27 @@ func (w *World) createItemInstanceLocked(itemID string) (string, error) {
 
 // GetInventoryWithQuantities returns the inventory grouped by item ID.
 func (w *World) GetInventoryWithQuantities(
-    playerName string,
+	playerName string,
 ) ([]InventoryItem, error) {
-    items, err := w.GetInventory(playerName)
-    if err != nil {
-        return nil, err
-    }
+	items, err := w.GetInventory(playerName)
+	if err != nil {
+		return nil, err
+	}
 
-    quantities := make(map[string]int)
+	quantities := make(map[string]int)
 
-    for _, item := range items {
-        quantities[item.ID]++
-    }
+	for _, item := range items {
+		quantities[item.ID]++
+	}
 
-    result := make([]InventoryItem, 0, len(quantities))
+	result := make([]InventoryItem, 0, len(quantities))
 
-    for id, quantity := range quantities {
-        result = append(result, InventoryItem{
-            ID:       id,
-            Quantity: quantity,
-        })
-    }
+	for id, quantity := range quantities {
+		result = append(result, InventoryItem{
+			ID:       id,
+			Quantity: quantity,
+		})
+	}
 
-    return result, nil
+	return result, nil
 }
