@@ -92,7 +92,9 @@ func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 
 	ctx.RawArgs = []string{"unknown"}
 	talk, err = commands.NewTalkCommand().Execute(ctx)
-	if err != nil || talk.Kind != protocol.KindERR || talk.Name != "NPC_NOT_AVAILABLE" {
+	if err != nil || talk.Kind != protocol.KindERR ||
+		talk.Code != protocol.CodeNPCNotFound ||
+		talk.Name != "NPC_NOT_FOUND" {
 		t.Fatalf("TALK unknown NPC response = (%+v, %v)", talk, err)
 	}
 }

@@ -532,7 +532,7 @@ Notifications are queued through the recipient sessions' outboxes. The dispatche
 
 ### TAP Error Codes
 
-The server uses standard error codes to communicate protocol errors, gameplay restrictions, and operational failures.
+The server uses error codes to communicate protocol errors, gameplay restrictions, and operational failures. It preserves the RFC's distinction between non-fatal `4xx` errors and system-level `9xx` errors, while defining more specific codes and symbolic names where that improves client handling.
 
 Each error response contains a numeric code and a symbolic error name. Clients should use these values to identify the error condition rather than relying on human-readable descriptions.
 
@@ -560,7 +560,13 @@ Each error response contains a numeric code and a symbolic error name. Clients s
 | `900` | `CONNECTION_FAILED` | The connection could not be established or the session could not be registered. |
 | `901` | `SEND_FAILED` | The server failed to transmit a message. |
 
-Some command handlers also use command-specific symbolic names with standard numeric codes, such as ITEM_REQUIRED, AMBIGUOUS_ITEM_NAME, GROUP_ALREADY_EXISTS, and NPC_NOT_AVAILABLE. These are not additional constants in the standard error-code list.
+#### Error-code extensions and recovery
+
+The RFC provides representative error codes, but requires that non-fatal `4xx` errors allow the client to continue and says `9xx` system errors may require reconnecting. This implementation extends the examples with more specific `4xx` codes, including `410`–`416` and `422`, so clients can distinguish gameplay and argument failures without treating them as fatal. These are intentional protocol deviations; clients should handle unknown `4xx` codes as recoverable and should not assume that every `4xx` value is listed in the RFC.
+
+The server also uses command-specific symbolic names for some errors, such as `ITEM_REQUIRED`, `AMBIGUOUS_ITEM_NAME`, and `GROUP_ALREADY_EXISTS`. These names refine the error condition while retaining the associated numeric code. A missing NPC consistently returns `414 NPC_NOT_FOUND` from commands that look up an NPC, including `TALK`, `QUEST`, and `ATTACK`.
+
+Clients should follow the RFC's recovery guidance: continue the session after non-fatal `4xx` responses, and consider re-establishing the connection after `9xx` system errors when necessary.
 
 ### Error Handling Principles
 

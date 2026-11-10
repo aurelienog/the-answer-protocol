@@ -69,8 +69,8 @@ func mapTalkError(err error) (protocol.Message, error) {
 
 	case errors.Is(err, world.ErrNPCNotFound):
 		return protocol.ERR(
-			protocol.CodeCommandFailed,
-			"NPC_NOT_AVAILABLE",
+			protocol.CodeNPCNotFound,
+			"NPC_NOT_FOUND",
 		), nil
 
 	default:
