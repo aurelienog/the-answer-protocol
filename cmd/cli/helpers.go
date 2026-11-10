@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"the-answer-protocol/cmd/cli/ui"
+	"the-answer-protocol/frontend/cli/ui"
 	"the-answer-protocol/internal/protocol"
 )
 
