@@ -373,6 +373,64 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 	}
 }
 
+func TestWorldGroupMemberCanJoinCombatWithoutHelpRequest(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if _, err := gameWorld.AddPlayer("Alice", "forest_edge"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+	if _, err := gameWorld.AddPlayer("Bob", "forest_edge"); err != nil {
+		t.Fatalf("AddPlayer(Bob) returned an error: %v", err)
+	}
+	combat, _, err := gameWorld.StartCombat("Alice", "Dire Wolf")
+	if err != nil {
+		t.Fatalf("StartCombat() returned an error: %v", err)
+	}
+	if combat.GroupID != "" {
+		t.Fatalf("combat group ID = %q, want no group at start", combat.GroupID)
+	}
+	if _, err := gameWorld.CreateGroup("Alice", "Rangers"); err != nil {
+		t.Fatalf("CreateGroup() returned an error: %v", err)
+	}
+	if _, err := gameWorld.InvitePlayer("Alice", "Bob"); err != nil {
+		t.Fatalf("InvitePlayer() returned an error: %v", err)
+	}
+	if _, _, err := gameWorld.JoinGroup("Bob", "Rangers"); err != nil {
+		t.Fatalf("JoinGroup() returned an error: %v", err)
+	}
+
+	joinedCombat, event, err := gameWorld.JoinCombat("Bob", combat.ID)
+	if err != nil {
+		t.Fatalf("JoinCombat(Bob) returned an error: %v", err)
+	}
+	if joinedCombat.HelpRequested {
+		t.Fatal("joining a group member unexpectedly requested help")
+	}
+	if event.PlayerName != "Bob" {
+		t.Fatalf("join event player = %q, want Bob", event.PlayerName)
+	}
+	joined := false
+	for _, participant := range joinedCombat.Participants {
+		if participant.IsPlayer && participant.ID == "Bob" {
+			joined = true
+			break
+		}
+	}
+	if !joined {
+		t.Fatal("Bob is not a participant after joining the group combat")
+	}
+}
+
+func TestWorldJoinCombatReturnsNotFoundForUnknownCombatID(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if _, err := gameWorld.AddPlayer("Alice", "forest_edge"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+
+	if _, _, err := gameWorld.JoinCombat("Alice", "1"); !errors.Is(err, world.ErrCombatNotFound) {
+		t.Fatalf("JoinCombat() error = %v, want ErrCombatNotFound", err)
+	}
+}
+
 func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 	gameWorld := loadWorldWithUniqueItemInHarbor(t)
 	for _, name := range []string{"Alice", "Bob"} {

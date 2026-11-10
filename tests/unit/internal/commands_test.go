@@ -223,6 +223,25 @@ func TestCommandsWithoutArgumentsRejectUnexpectedArguments(t *testing.T) {
 	}
 }
 
+func TestCombatJoinReportsUnknownCombatID(t *testing.T) {
+	gameWorld := createCommandTestWorld(t)
+	addTestPlayer(t, gameWorld, "Alice")
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+
+	message, err := dispatcher.Dispatch(
+		&commands.Context{PlayerName: "Alice", World: gameWorld},
+		"COMBAT JOIN 1",
+	)
+	assertProtocolError(
+		t,
+		message,
+		err,
+		protocol.CodeCommandFailed,
+		"COMBAT_NOT_FOUND",
+	)
+}
+
 // TestMoveCommandChangesRoom checks successful movement.
 func TestMoveCommandChangesRoom(t *testing.T) {
 	gameWorld := createCommandTestWorld(t)

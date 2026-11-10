@@ -5,11 +5,11 @@ import (
 	"strings"
 )
 
-// JoinCombat allows an external player to join a combat
-// when help has been requested.
+// JoinCombat allows members of the combat's group to join at any time.
+// Other players can join only after help has been requested.
 func (w *World) JoinCombat(
-    playerName string,
-    combatID string,
+	playerName string,
+	combatID string,
 ) (*Combat, *CombatPlayerJoined, error) {
 	if w == nil {
 		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
@@ -36,8 +36,8 @@ func (w *World) JoinCombat(
 	combat, exists := w.combats[combatID]
 	if !exists || combat == nil {
 		return nil, nil, fmt.Errorf(
-			"%w: combat %q does not exist",
-			ErrInvalidWorldState,
+			"%w: %q",
+			ErrCombatNotFound,
 			combatID,
 		)
 	}
@@ -60,14 +60,42 @@ func (w *World) JoinCombat(
 		)
 	}
 
-	// Members of the initiating group can always join.
-    // Other players require a help request.
-    playerGroupID, inGroup := w.playerGroups[playerName]
-    isGroupMember := combat.GroupID != "" &&
-        inGroup &&
-        playerGroupID == combat.GroupID
+	playerGroupID, isGroupMember := w.playerGroups[playerName]
+	if isGroupMember {
+		group, exists := w.groups[playerGroupID]
+		if !exists {
+			return nil, nil, fmt.Errorf(
+				"%w: player %q references nonexistent group %q",
+				ErrInvalidWorldState,
+				playerName,
+				playerGroupID,
+			)
+		}
 
-    if !isGroupMember && !combat.HelpRequested {
+		isGroupMember = false
+		for _, member := range group.Members {
+			if member == playerName {
+				isGroupMember = true
+				break
+			}
+		}
+
+		if isGroupMember {
+			isGroupMember = false
+			for _, participant := range combat.Participants {
+				if !participant.IsPlayer {
+					continue
+				}
+				if participantGroupID, exists := w.playerGroups[participant.ID]; exists &&
+					participantGroupID == playerGroupID {
+					isGroupMember = true
+					break
+				}
+			}
+		}
+	}
+
+	if !isGroupMember && !combat.HelpRequested {
 		return nil, nil, fmt.Errorf(
 			"%w: combat %q",
 			ErrCombatHelpNotRequested,
@@ -101,31 +129,31 @@ func (w *World) JoinCombat(
 	}
 
 	// Calculate effective stats, including equipment bonuses.
-    effectiveStats, err := w.calculatePlayerCombatStatsLocked(playerName)
-    if err != nil {
-        return nil, nil, err
-    }
+	effectiveStats, err := w.calculatePlayerCombatStatsLocked(playerName)
+	if err != nil {
+		return nil, nil, err
+	}
 
-    combat.Participants = append(
-        combat.Participants,
-        CombatParticipant{
-            ID:          playerName,
-            Name:        playerName,
-            IsPlayer:    true,
-            Connected:   true,
-            Stats:       effectiveStats,
-            SpeedPoints: 0,
-            Alive:       true,
-        },
-    )
+	combat.Participants = append(
+		combat.Participants,
+		CombatParticipant{
+			ID:          playerName,
+			Name:        playerName,
+			IsPlayer:    true,
+			Connected:   true,
+			Stats:       effectiveStats,
+			SpeedPoints: 0,
+			Alive:       true,
+		},
+	)
 
 	event := &CombatPlayerJoined{
-        CombatID:   combat.ID,
-        PlayerName: playerName,
-        Recipients: w.getCombatRecipientsLocked(combat),
-    }
+		CombatID:   combat.ID,
+		PlayerName: playerName,
+		Recipients: w.getCombatRecipientsLocked(combat),
+	}
 
-    return cloneCombat(combat), event, nil
+	return cloneCombat(combat), event, nil
 }
 
 // playerAlreadyParticipatedInCombatLocked reports whether a player

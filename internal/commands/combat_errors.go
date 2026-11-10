@@ -2,7 +2,7 @@ package commands
 
 import (
 	"errors"
-    "the-answer-protocol/internal/protocol"
+	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
 
@@ -23,10 +23,13 @@ func mapCombatError(err error) protocol.Message {
 	case errors.Is(err, world.ErrNPCNotFound):
 		return protocol.ERR(protocol.CodeNPCNotFound, "NPC_NOT_FOUND")
 
+	case errors.Is(err, world.ErrCombatNotFound):
+		return protocol.ERR(protocol.CodeCommandFailed, "COMBAT_NOT_FOUND")
+
 	case errors.Is(err, world.ErrPlayerNotFound),
 		errors.Is(err, world.ErrInvalidWorldState):
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR")
-	
+
 	case errors.Is(err, world.ErrItemNotInInventory):
 		return protocol.ERR(
 			protocol.CodeItemNotInInventory,
