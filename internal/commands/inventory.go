@@ -23,6 +23,13 @@ func (c *InventoryCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
+	if len(ctx.RawArgs) != 0 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
 	items, err := ctx.World.GetInventoryWithQuantities(ctx.PlayerName)
 	if err != nil {
 		switch {

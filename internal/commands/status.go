@@ -28,6 +28,13 @@ func (c *StatusCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
+	if len(ctx.RawArgs) != 0 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
 	stats, err := ctx.World.GetPlayerCombatStats(ctx.PlayerName)
 	if err != nil {
 		return mapStatusError(err)

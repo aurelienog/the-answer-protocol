@@ -30,6 +30,21 @@ func TestHandleConnectionConnectsPlayer(t *testing.T) {
 	}
 }
 
+func TestHandleConnectionConnectsUnicodeUsername(t *testing.T) {
+	env := newConnectionTestEnv(t)
+
+	_ = env.readResponse(t) // greeting
+	env.sendRequest(t, "CONNECT José李")
+
+	if got := env.readResponse(t); got != "OK connected" {
+		t.Fatalf("connect response = %q, want %q", got, "OK connected")
+	}
+
+	if _, exists := env.registry.GetByName("José李"); !exists {
+		t.Fatal("expected Unicode username to be present in the session registry")
+	}
+}
+
 func TestHandleConnectionRequiresConnectBeforeCommands(t *testing.T) {
 	env := newConnectionTestEnv(t)
 

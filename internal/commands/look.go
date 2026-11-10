@@ -29,6 +29,13 @@ func (c *LookCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
+	if len(ctx.RawArgs) != 0 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
 	roomID, err := ctx.World.GetPlayerRoom(ctx.PlayerName)
 	if err != nil {
 		return mapLookError(err)

@@ -124,6 +124,56 @@ func TestAttackCommandMapsHostileAndTargetErrors(t *testing.T) {
 	}
 }
 
+func TestGroupInviteAndCompleteRejectExtraArguments(t *testing.T) {
+	gameWorld := loadCommandTestWorld(t)
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+
+	tests := []struct {
+		name string
+		run  func() (protocol.Message, error)
+	}{
+		{
+			name: "GROUP INVITE extra name token",
+			run: func() (protocol.Message, error) {
+				return dispatcher.Dispatch(
+					&commands.Context{PlayerName: "Alice", World: gameWorld},
+					"GROUP INVITE Ana extra",
+				)
+			},
+		},
+		{
+			name: "GROUP INVITE invalid username",
+			run: func() (protocol.Message, error) {
+				return dispatcher.Dispatch(
+					&commands.Context{PlayerName: "Alice", World: gameWorld},
+					"GROUP INVITE Ana!",
+				)
+			},
+		},
+		{
+			name: "COMPLETE extra quest token",
+			run: func() (protocol.Message, error) {
+				return commands.NewCompleteCommand().Execute(&commands.Context{
+					PlayerName: "Alice",
+					World:      gameWorld,
+					RawArgs:    []string{"quest_id", "extra"},
+				})
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			response, err := test.run()
+			if err != nil || response.Kind != protocol.KindERR ||
+				response.Code != protocol.CodeInvalidArguments ||
+				response.Name != "INVALID_ARGUMENTS" {
+				t.Fatalf("response = (%+v, %v), want INVALID_ARGUMENTS", response, err)
+			}
+		})
+	}
+}
+
 func loadCommandTestWorld(t *testing.T) *world.World {
 	t.Helper()
 

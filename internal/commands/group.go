@@ -46,16 +46,12 @@ func (c *GroupCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.OK("group=" + groupID + " name=" + groupName), nil
 
 	case "INVITE":
-		if len(ctx.RawArgs) < 2 {
+		if len(ctx.RawArgs) != 2 ||
+			!protocol.ValidUsername(ctx.RawArgs[1]) {
 			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 		}
 
-		targetName := strings.TrimSpace(strings.Join(ctx.RawArgs[1:], " "))
-		if targetName == "" {
-			return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
-		}
-
-		event, err := ctx.World.InvitePlayer(ctx.PlayerName, targetName)
+		event, err := ctx.World.InvitePlayer(ctx.PlayerName, ctx.RawArgs[1])
 		if err != nil {
 			return mapGroupError(err), nil
 		}

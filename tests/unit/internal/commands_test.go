@@ -198,6 +198,31 @@ func TestLookCommandReturnsProtocolErrorForNilWorld(t *testing.T) {
 	)
 }
 
+func TestCommandsWithoutArgumentsRejectUnexpectedArguments(t *testing.T) {
+	gameWorld := createCommandTestWorld(t)
+	addTestPlayer(t, gameWorld, "Alice")
+
+	dispatcher := commands.NewDispatcher()
+	commands.RegisterCommands(dispatcher)
+
+	for _, command := range []string{"LOOK", "STATUS", "INVENTORY", "QUIT"} {
+		t.Run(command, func(t *testing.T) {
+			message, err := dispatcher.Dispatch(
+				&commands.Context{PlayerName: "Alice", World: gameWorld},
+				command+" unexpected",
+			)
+
+			assertProtocolError(
+				t,
+				message,
+				err,
+				protocol.CodeInvalidArguments,
+				"INVALID_ARGUMENTS",
+			)
+		})
+	}
+}
+
 // TestMoveCommandChangesRoom checks successful movement.
 func TestMoveCommandChangesRoom(t *testing.T) {
 	gameWorld := createCommandTestWorld(t)

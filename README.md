@@ -400,6 +400,8 @@ TAP messages are UTF-8 text lines exchanged over TCP.
 
 Each outgoing message is encoded as a line terminated by a line feed (\n). Embedded carriage returns and line feeds are rejected in protocol fields.
 
+Usernames may contain 1-24 Unicode letters or numbers, combining marks, and underscores. Whitespace and punctuation are not allowed.
+
 The protocol defines three primary message categories:
 
 | Prefix | Purpose | Example |

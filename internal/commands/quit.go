@@ -25,5 +25,12 @@ func (c *QuitCommand) Execute(
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
+	if len(ctx.RawArgs) != 0 {
+		return protocol.ERR(
+			protocol.CodeInvalidArguments,
+			"INVALID_ARGUMENTS",
+		), nil
+	}
+
 	return protocol.OK("bye"), ErrQuit
 }

@@ -26,6 +26,38 @@ func TestParseRequestRejectsEmptyInput(t *testing.T) {
 	}
 }
 
+func TestValidUsername(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		want     bool
+	}{
+		{name: "ASCII", username: "Alice_42", want: true},
+		{name: "Unicode letters", username: "José李", want: true},
+		{name: "combining mark", username: "Jose\u0301", want: true},
+		{name: "24 Unicode code points", username: "界界界界界界界界界界界界界界界界界界界界界界界界", want: true},
+		{name: "too long", username: "界界界界界界界界界界界界界界界界界界界界界界界界界", want: false},
+		{name: "empty", username: "", want: false},
+		{name: "space", username: "Alice Smith", want: false},
+		{name: "punctuation", username: "invalid-name", want: false},
+		{name: "leading combining mark", username: "\u0301Alice", want: false},
+		{name: "invalid UTF-8", username: string([]byte{0xff}), want: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := protocol.ValidUsername(test.username); got != test.want {
+				t.Errorf(
+					"ValidUsername(%q) = %t, want %t",
+					test.username,
+					got,
+					test.want,
+				)
+			}
+		})
+	}
+}
+
 func TestParseRequestNormalizesCommand(t *testing.T) {
 	tests := []struct {
 		input string

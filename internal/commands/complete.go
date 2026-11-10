@@ -23,7 +23,10 @@ func (c *CompleteCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), nil
 	}
 
-	questID := strings.TrimSpace(strings.Join(ctx.RawArgs, " "))
+	if len(ctx.RawArgs) != 1 {
+		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
+	}
+	questID := strings.TrimSpace(ctx.RawArgs[0])
 	if questID == "" {
 		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 	}
