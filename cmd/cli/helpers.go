@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"the-answer-protocol/cmd/cli/ui"
+	"the-answer-protocol/internal/protocol"
 )
 
 // sendCommand sends one line to the TAP server with a write timeout.
@@ -54,21 +55,7 @@ func readServerResponses(reader *bufio.Reader, signalDone func()) {
 	}
 }
 
-// validUsername mirrors the username rules enforced by the server:
-// 1-24 ASCII letters, digits, or underscores.
+// validUsername mirrors the username rules enforced by the server.
 func validUsername(username string) bool {
-	if len(username) < 1 || len(username) > 24 {
-		return false
-	}
-
-	for _, r := range username {
-		if !((r >= 'a' && r <= 'z') ||
-			(r >= 'A' && r <= 'Z') ||
-			(r >= '0' && r <= '9') ||
-			r == '_') {
-			return false
-		}
-	}
-
-	return true
+	return protocol.ValidUsername(username)
 }

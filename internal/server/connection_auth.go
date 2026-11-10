@@ -27,7 +27,7 @@ func parseConnectRequest(line string) (string, *protocol.Message) {
 		return "", &message
 	}
 
-	if len(request.Args) != 1 || !validUsername(request.Args[0]) {
+	if len(request.Args) != 1 || !protocol.ValidUsername(request.Args[0]) {
 		message := protocol.ERR(
 			protocol.CodeInvalidUsername,
 			"INVALID_USERNAME",
@@ -36,23 +36,6 @@ func parseConnectRequest(line string) (string, *protocol.Message) {
 	}
 
 	return request.Args[0], nil
-}
-
-func validUsername(username string) bool {
-	if len(username) < 1 || len(username) > 24 {
-		return false
-	}
-
-	for _, r := range username {
-		if !((r >= 'a' && r <= 'z') ||
-			(r >= 'A' && r <= 'Z') ||
-			(r >= '0' && r <= '9') ||
-			r == '_') {
-			return false
-		}
-	}
-
-	return true
 }
 
 func authenticatePlayer(
