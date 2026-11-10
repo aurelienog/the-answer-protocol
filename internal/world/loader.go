@@ -15,6 +15,10 @@ func Load(path string) (*World, error) {
 		return nil, fmt.Errorf("read world file %q: %w", path, err)
 	}
 
+	if err := validateWorldJSON(data); err != nil {
+		return nil, fmt.Errorf("decode world file %q: %w", path, err)
+	}
+
 	// Temporary structure used only to decode the JSON file.
 	var definition struct {
 		Rooms  map[string]Room  `json:"rooms"`

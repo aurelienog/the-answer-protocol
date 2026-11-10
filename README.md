@@ -778,6 +778,7 @@ A player can belong to only one group at a time. Group invitations and membershi
 ### World Initialization
 
 The server loads the initial world from data/world.json.
+The loader rejects malformed JSON, duplicate object keys, unknown fields, missing required entity fields, and inconsistent references between rooms, items, NPCs, and quests before the server starts.
 
 The world model is responsible for maintaining the runtime state after initialization, including player positions, item instances, inventories, NPC interactions, quest progress, and group membership.
 

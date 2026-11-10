@@ -246,7 +246,8 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 			name: "invalid NPC stats",
 			definition: `{"rooms":{"room":{"id":"room","name":"Room"}},` +
 				`"npcs":{"npc":{"id":"npc","name":"NPC",` +
-				`"combat_stats":{"hp":1,"max_hp":0}}}}`,
+				`"combat_stats":{"hp":1,"max_hp":0,"attack":1,` +
+				`"defense":0,"speed":1}}}}`,
 			expectedInError: `NPC "npc" has invalid max HP 0`,
 		},
 		{
@@ -266,6 +267,22 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 				`"giver_npc_id":"npc"},"quest.other":{"id":"quest.other",` +
 				`"name":"Other","giver_npc_id":"npc"}}}`,
 			expectedInError: `does not expose quest "quest.other" in its quest chain`,
+		},
+		{
+			name: "quest chain giver disagrees with existing NPC",
+			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+				`"name":"Room","npcs":["npc.first","npc.second"]}},` +
+				`"npcs":{"npc.first":{"id":"npc.first","name":"First",` +
+				`"quest_id":"quest.first","combat_stats":{"hp":1,"max_hp":1,` +
+				`"attack":1,"defense":0,"speed":1}},` +
+				`"npc.second":{"id":"npc.second","name":"Second",` +
+				`"combat_stats":{"hp":1,"max_hp":1,"attack":1,"defense":0,` +
+				`"speed":1}}},"quests":{"quest.first":{"id":"quest.first",` +
+				`"name":"First","giver_npc_id":"npc.first",` +
+				`"next_quest_id":"quest.second"},"quest.second":{` +
+				`"id":"quest.second","name":"Second",` +
+				`"giver_npc_id":"npc.second"}}}`,
+			expectedInError: `quest "quest.second" assigned to NPC "npc.second"`,
 		},
 	}
 
@@ -288,6 +305,58 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 					tt.expectedInError,
 					err,
 				)
+			}
+		})
+	}
+}
+
+func TestLoadWorldRejectsMissingRequiredFields(t *testing.T) {
+	tests := []struct {
+		name            string
+		definition      string
+		expectedInError string
+	}{
+		{
+			name:            "missing rooms section",
+			definition:      `{}`,
+			expectedInError: "required field world.rooms is missing",
+		},
+		{
+			name:            "missing room name",
+			definition:      `{"rooms":{"harbor_square":{"id":"harbor_square"}}}`,
+			expectedInError: `world.rooms["harbor_square"].name is missing or null`,
+		},
+		{
+			name: "missing item type",
+			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+				`"name":"Room"}},"items":{"item":{"id":"item","name":"Item"}}}`,
+			expectedInError: `world.items["item"].type is missing or null`,
+		},
+		{
+			name: "missing NPC combat statistic",
+			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+				`"name":"Room"}},"npcs":{"npc":{"id":"npc","name":"NPC",` +
+				`"combat_stats":{"hp":1,"max_hp":1,"attack":1,` +
+				`"speed":1}}}}`,
+			expectedInError: `world.npcs["npc"].combat_stats.defense is missing or null`,
+		},
+		{
+			name: "missing quest giver",
+			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+				`"name":"Room"}},"quests":{"quest":{"id":"quest",` +
+				`"name":"Quest"}}}`,
+			expectedInError: `world.quests["quest"].giver_npc_id is missing or null`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := world.Load(writeWorldDefinition(t, test.definition))
+			if err == nil {
+				t.Fatal("world.Load() succeeded with a missing required field")
+			}
+			if !strings.Contains(err.Error(), test.expectedInError) {
+				t.Fatalf("error = %q, want it to contain %q", err, test.expectedInError)
 			}
 		})
 	}
@@ -450,6 +519,21 @@ func TestLoadWorldJSONParsing(t *testing.T) {
 			name:            "unknown nested field",
 			definition:      `{"rooms":{"room":{"id":"room","name":"Room","unexpected":true}}}`,
 			expectedInError: `unknown field "unexpected"`,
+		},
+		{
+			name:            "duplicate top-level key",
+			definition:      `{"rooms":{},"rooms":{}}`,
+			expectedInError: `duplicate JSON object key "rooms"`,
+		},
+		{
+			name:            "duplicate nested key",
+			definition:      `{"rooms":{"harbor_square":{"id":"harbor_square","name":"Room","name":"Other"}}}`,
+			expectedInError: `duplicate JSON object key "name"`,
+		},
+		{
+			name:            "incompatible JSON field type",
+			definition:      `{"rooms":{"harbor_square":{"id":1,"name":"Room"}}}`,
+			expectedInError: "cannot unmarshal number into Go struct field",
 		},
 		{
 			name:            "multiple JSON values",
