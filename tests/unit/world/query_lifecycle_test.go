@@ -15,7 +15,7 @@ func TestWorldPlayerAndRoomQueries(t *testing.T) {
 		"Alice": "harbor_square",
 		"Bob":   "market_street",
 	} {
-		if err := gameWorld.AddPlayer(name, roomID); err != nil {
+		if _, err := gameWorld.AddPlayer(name, roomID); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -47,20 +47,48 @@ func TestWorldPlayerAndRoomQueries(t *testing.T) {
 	if _, err := gameWorld.GetPlayersInRoom("missing_room"); !errors.Is(err, world.ErrInvalidWorldState) {
 		t.Fatalf("GetPlayersInRoom(missing room) error = %v, want ErrInvalidWorldState", err)
 	}
-	if err := gameWorld.AddPlayer("Alice", "market_street"); !errors.Is(err, world.ErrPlayerAlreadyExists) {
+	if _, err := gameWorld.AddPlayer("Alice", "market_street"); !errors.Is(err, world.ErrPlayerAlreadyExists) {
 		t.Fatalf("AddPlayer(duplicate) error = %v, want ErrPlayerAlreadyExists", err)
 	}
-	if err := gameWorld.AddPlayer(" ", "market_street"); !errors.Is(err, world.ErrInvalidArgument) {
+	if _, err := gameWorld.AddPlayer(" ", "market_street"); !errors.Is(err, world.ErrInvalidArgument) {
 		t.Fatalf("AddPlayer(empty name) error = %v, want ErrInvalidArgument", err)
 	}
-	if err := gameWorld.AddPlayer("Eve", "missing_room"); !errors.Is(err, world.ErrInvalidWorldState) {
+	if _, err := gameWorld.AddPlayer("Eve", "missing_room"); !errors.Is(err, world.ErrInvalidWorldState) {
 		t.Fatalf("AddPlayer(missing room) error = %v, want ErrInvalidWorldState", err)
+	}
+}
+
+func TestWorldPlayerCountEventsTrackCommittedChanges(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+
+	aliceEvent, err := gameWorld.AddPlayer("Alice", "harbor_square")
+	if err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+	if aliceEvent == nil || aliceEvent.Count != 1 || aliceEvent.Revision != 1 {
+		t.Fatalf("Alice player-count event = %+v, want count 1 at revision 1", aliceEvent)
+	}
+
+	bobEvent, err := gameWorld.AddPlayer("Bob", "harbor_square")
+	if err != nil {
+		t.Fatalf("AddPlayer(Bob) returned an error: %v", err)
+	}
+	if bobEvent == nil || bobEvent.Count != 2 || bobEvent.Revision != 2 {
+		t.Fatalf("Bob player-count event = %+v, want count 2 at revision 2", bobEvent)
+	}
+
+	_, _, _, _, removalEvent, err := gameWorld.RemovePlayer("Alice")
+	if err != nil {
+		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
+	}
+	if removalEvent == nil || removalEvent.Count != 1 || removalEvent.Revision != 3 {
+		t.Fatalf("removal player-count event = %+v, want count 1 at revision 3", removalEvent)
 	}
 }
 
 func TestWorldResolvesNPCIDsAndNamesInPlayerRoom(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	for _, identifier := range []string{"captain_eliza", "CAPTAIN ELIZA"} {
@@ -82,7 +110,7 @@ func TestWorldResolvesNPCIDsAndNamesInPlayerRoom(t *testing.T) {
 func TestWorldDisconnectRemovesPlayerFromActiveCombat(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if err := gameWorld.AddPlayer(name, "docks"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "docks"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -106,7 +134,7 @@ func TestWorldDisconnectRemovesPlayerFromActiveCombat(t *testing.T) {
 	if combat.TurnIndex < 0 || combat.Participants[combat.TurnIndex].ID != "Alice" {
 		t.Fatalf("initial turn = %+v, want Alice to own the active turn", combat)
 	}
-	_, _, turnEvent, combatsToEnd, err := gameWorld.RemovePlayer("Alice")
+	_, _, turnEvent, combatsToEnd, _, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
@@ -120,7 +148,7 @@ func TestWorldDisconnectRemovesPlayerFromActiveCombat(t *testing.T) {
 		t.Fatalf("turn after Alice disconnects = %+v, want Bob", turnEvent)
 	}
 
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) after combat disconnect returned an error: %v", err)
 	}
 	if count, err := gameWorld.GetPlayerCount(); err != nil || count != 2 {
@@ -139,7 +167,7 @@ func TestWorldDisconnectRemovesPlayerFromActiveCombat(t *testing.T) {
 
 func TestWorldCombatRoundQueriesAndTurnAdvancement(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
@@ -200,7 +228,7 @@ func TestWorldCombatRoundQueriesAndTurnAdvancement(t *testing.T) {
 
 func TestWorldSkipPlayerCombatTurnRequiresCurrentParticipant(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
@@ -236,7 +264,7 @@ func TestWorldSkipPlayerCombatTurnRequiresCurrentParticipant(t *testing.T) {
 
 func TestWorldUseItemReportsMissingAndNonConsumableItems(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	if _, err := gameWorld.UseItem("Alice", "item.healing_potion"); !errors.Is(err, world.ErrItemNotInInventory) {
@@ -255,7 +283,7 @@ func TestWorldUseItemReportsMissingAndNonConsumableItems(t *testing.T) {
 
 func TestWorldUseItemHealsAfterCombatAndPreservesUnusedPotion(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	if err := gameWorld.TakeItem("Alice", "item.healing_potion"); err != nil {
@@ -330,7 +358,7 @@ func TestWorldUseItemHealsAfterCombatAndPreservesUnusedPotion(t *testing.T) {
 
 func TestWorldCombatRejectsInvalidAttackAndEffectRequests(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")

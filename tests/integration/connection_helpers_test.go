@@ -124,6 +124,17 @@ func newConnectionTestEnvWithWorld(t *testing.T, gameWorld *world.World) *connec
 func (env *connectionTestEnv) readResponse(t *testing.T) string {
 	t.Helper()
 
+	for {
+		line := env.readRawResponse(t)
+		if !strings.HasPrefix(line, "EVT STATS ") {
+			return line
+		}
+	}
+}
+
+func (env *connectionTestEnv) readRawResponse(t *testing.T) string {
+	t.Helper()
+
 	line, err := env.reader.ReadString('\n')
 	if err != nil {
 		t.Fatalf("read response: %v", err)

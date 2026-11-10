@@ -14,7 +14,7 @@ import (
 func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if err := gameWorld.AddPlayer(name, "forest_edge"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "forest_edge"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -127,7 +127,7 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 
 func TestWorldCombatHealingItemRestoresHealthWithoutSpendingTurn(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	if err := gameWorld.TakeItem("Alice", "item.healing_potion"); err != nil {
@@ -218,7 +218,7 @@ func TestWorldCombatHealingItemRestoresHealthWithoutSpendingTurn(t *testing.T) {
 
 func TestWorldFleeCombatAppliesNonlethalPenaltyAndEndsEncounter(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
@@ -266,7 +266,7 @@ func TestWorldChatScopesSortRecipientsAndRequireGroupMembership(t *testing.T) {
 		"Bob":   "harbor_square",
 		"Carol": "market_street",
 	} {
-		if err := gameWorld.AddPlayer(name, roomID); err != nil {
+		if _, err := gameWorld.AddPlayer(name, roomID); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -325,7 +325,7 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 		"Bob":   "forest_edge",
 		"Carol": "harbor_square",
 	} {
-		if err := gameWorld.AddPlayer(name, roomID); err != nil {
+		if _, err := gameWorld.AddPlayer(name, roomID); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -376,7 +376,7 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 	gameWorld := loadWorldWithUniqueItemInHarbor(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -384,7 +384,7 @@ func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 		t.Fatalf("TakeItem(gold coins) returned an error: %v", err)
 	}
 
-	left, returned, _, combatsToEnd, err := gameWorld.RemovePlayer("Alice")
+	left, returned, _, combatsToEnd, _, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 
 func TestWorldUniqueItemAddsCombatStats(t *testing.T) {
 	gameWorld := loadWorldWithUniqueItemInHarbor(t)
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	if err := gameWorld.TakeItem("Alice", "item.gold_coins"); err != nil {

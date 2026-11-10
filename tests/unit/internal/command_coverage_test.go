@@ -12,7 +12,7 @@ import (
 
 func TestInventoryDropAndStatusCommands(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	ctx := &commands.Context{PlayerName: "Alice", World: gameWorld}
@@ -57,7 +57,7 @@ func TestInventoryDropAndStatusCommands(t *testing.T) {
 
 func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	ctx := &commands.Context{PlayerName: "Alice", World: gameWorld}
@@ -101,7 +101,7 @@ func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 
 func TestAttackCommandMapsHostileAndTargetErrors(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	ctx := &commands.Context{PlayerName: "Alice", World: gameWorld}

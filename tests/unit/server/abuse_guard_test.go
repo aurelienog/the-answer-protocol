@@ -436,7 +436,7 @@ func TestCombatTurnTimeoutSkipsPlayerTurnAndProcessesNPC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice): %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
@@ -480,7 +480,7 @@ func TestCombatTurnTimeoutIsCancelledWhenTurnChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice): %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")

@@ -318,6 +318,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 					t.Errorf("%s notification = %q, want %q", name, got, want)
 				}
 			}
+
 		})
 	}
 }

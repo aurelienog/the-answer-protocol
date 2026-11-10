@@ -9,7 +9,7 @@ import (
 
 func TestWorldInventoryTakeDropAndQuantities(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	if err := gameWorld.TakeItem("Alice", "item.rope"); err != nil {
@@ -67,7 +67,7 @@ func TestWorldInventoryTakeDropAndQuantities(t *testing.T) {
 func TestWorldGroupInvitationJoinAndLeaveLifecycle(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -126,7 +126,7 @@ func TestWorldGroupInvitationJoinAndLeaveLifecycle(t *testing.T) {
 func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	gameWorld := loadWorldWithUniqueItemInHarbor(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -165,7 +165,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
 	}
 
-	_, returned, _, combatsToEnd, err := gameWorld.RemovePlayer("Alice")
+	_, returned, _, combatsToEnd, _, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 		t.Fatalf("EndCombat() after disconnect returned an error: %v", err)
 	}
 
-	if err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
 		t.Fatalf("AddPlayer(Alice) after removal returned an error: %v", err)
 	}
 	quests, err := gameWorld.GetPlayerQuests("Alice")
@@ -219,7 +219,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 
 func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 
@@ -299,7 +299,7 @@ func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 
 func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 
@@ -379,7 +379,7 @@ func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testi
 
 func TestWorldCombatEffectsAndDefendAction(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")

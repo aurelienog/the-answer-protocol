@@ -32,6 +32,44 @@ func TestHandleConnectionQuit(t *testing.T) {
 	}
 }
 
+func TestPlayerCountChangedIsBroadcastToConnectedPlayers(t *testing.T) {
+	alice := newConnectionTestEnv(t)
+	connectTestPlayer(t, alice, "Alice")
+	if got := alice.readRawResponse(t); got != "EVT STATS players=1" {
+		t.Fatalf("Alice's initial player-count event = %q", got)
+	}
+
+	bob := newSharedConnectionTestEnv(
+		t,
+		alice.registry,
+		alice.dispatcher,
+		alice.gameWorld,
+		alice.eventBus,
+		"stats-bob",
+	)
+	connectTestPlayer(t, bob, "Bob")
+
+	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Bob" {
+		t.Fatalf("Alice's Bob-enter event = %q", got)
+	}
+	if got := alice.readRawResponse(t); got != "EVT STATS players=2" {
+		t.Fatalf("Alice's player-count event after Bob connects = %q", got)
+	}
+	if got := bob.readRawResponse(t); got != "EVT STATS players=2" {
+		t.Fatalf("Bob's player-count event after connecting = %q", got)
+	}
+
+	if err := bob.client.Close(); err != nil {
+		t.Fatalf("close Bob's connection: %v", err)
+	}
+	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Bob" {
+		t.Fatalf("Alice's Bob-leave event = %q", got)
+	}
+	if got := alice.readRawResponse(t); got != "EVT STATS players=1" {
+		t.Fatalf("Alice's player-count event after Bob disconnects = %q", got)
+	}
+}
+
 func TestHandleConnectionCleansUpAfterAbruptDisconnect(t *testing.T) {
 	env := newConnectionTestEnv(t)
 	playerLeftRegistryState := make(chan bool, 1)

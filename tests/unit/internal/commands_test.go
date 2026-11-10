@@ -81,7 +81,7 @@ func createCommandTestWorld(t *testing.T) *world.World {
 func addTestPlayer(t *testing.T, gameWorld *world.World, name string) {
 	t.Helper()
 
-	if err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
 		t.Fatalf("add test player: %v", err)
 	}
 }
