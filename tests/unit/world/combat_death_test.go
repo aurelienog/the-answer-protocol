@@ -52,6 +52,9 @@ func TestJoinedPlayerGetsNextRoundAfterOriginalPlayerDies(t *testing.T) {
 	if _, err := gameWorld.GetActiveCombatForPlayer("Alice"); err != nil {
 		t.Fatalf("dead Alice's active combat lookup returned an error: %v", err)
 	}
+	if _, err := gameWorld.MovePlayer("Alice", "north"); !errors.Is(err, world.ErrPlayerAlreadyInCombat) {
+		t.Fatalf("MovePlayer(Alice) after death returned %v, want ErrPlayerAlreadyInCombat", err)
+	}
 	if _, _, err := gameWorld.RequestCombatHelp("Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
 		t.Fatalf("RequestCombatHelp(Alice) after death returned %v, want ErrInvalidCombatTurn", err)
 	}
