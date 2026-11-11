@@ -12,7 +12,6 @@ func (w *World) playerInActiveCombatLocked(playerName string) bool {
 		for _, participant := range combat.Participants {
 			if participant.IsPlayer &&
 				participant.ID == playerName &&
-				participant.Alive &&
 				!participant.Escaped {
 				return true
 			}
