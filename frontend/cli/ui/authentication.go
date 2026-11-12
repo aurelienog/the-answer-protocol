@@ -7,7 +7,6 @@ import (
 func (m Model) handleAuthenticationResult(
     msg authenticationResultMsg,
 ) (tea.Model, tea.Cmd) {
-
     m.authInProgress = false
 
     if msg.err != nil {
@@ -20,7 +19,7 @@ func (m Model) handleAuthenticationResult(
     m.status = "Successfully connected"
 
     return m, tea.Batch(
-        sendCommand(m.client, "QUESTS"),
-        sendCommand(m.client, "GROUP INFO"),
+        sendCommand(m.client, "STATUS"),
+        waitForServerEvent(m.client),
     )
 }

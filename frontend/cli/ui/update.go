@@ -17,7 +17,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case authenticationResultMsg:
     	return m.handleAuthenticationResult(msg)
+
+    case serverEventMsg:
+        return m.handleServerEvent(msg)
+
+    case clientDoneMsg:
+        m.status = "Connection to server closed"
+        return m, nil
+
     }
+    
     return m, nil
 }
 

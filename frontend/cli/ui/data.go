@@ -14,3 +14,9 @@ type Group struct {
     Members     []string        `json:"Members"`
     Invitations map[string]bool `json:"Invitations"`
 }
+
+type PlayerStatus struct {
+    HP     int    `json:"hp"`
+    MaxHP  int    `json:"max_hp"`
+    Status string `json:"status"`
+}

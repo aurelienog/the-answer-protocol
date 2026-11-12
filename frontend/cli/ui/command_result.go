@@ -31,6 +31,20 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
     }
 
     switch strings.ToUpper(strings.TrimSpace(msg.command)) {
+    case "STATUS":
+        var playerStatus PlayerStatus
+
+        if err := json.Unmarshal(
+            []byte(msg.response.Payload),
+            &playerStatus,
+        ); err != nil {
+            m.status = "Error parsing player status: " + err.Error()
+            return m, nil
+        }
+
+        m.playerStatus = playerStatus
+        m.status = "Player status updated"
+        
     case "QUESTS":
         var quests []Quest
 

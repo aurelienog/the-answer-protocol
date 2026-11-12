@@ -61,12 +61,13 @@ func (m Model) renderView() string {
 	}
 
 	header := layout.RenderHeader(
-		"Aragorn",
-		85,
-		100,
+		m.username,
+		m.playerStatus.HP,
+		m.playerStatus.MaxHP,
 	)
 
 	body := panelStyle.Render(content)
+	eventLog := m.renderEventLog()
 	input := inputStyle.Render("> " + m.input)
 	status := statusStyle.Render(m.status)
 
@@ -74,6 +75,7 @@ func (m Model) renderView() string {
 		lipgloss.Left,
 		header,
 		body,
+		eventLog,
 		input,
 		status,
 	)
@@ -105,4 +107,19 @@ func (m Model) renderGroup() string {
 
 func (m Model) renderCombat() string {
 	return "Combat View"
+}
+
+func (m Model) renderEventLog() string {
+    content := "EVENT LOG\n\n"
+
+    start := 0
+    if len(m.eventLog) > 8 {
+        start = len(m.eventLog) - 8
+    }
+
+    for _, event := range m.eventLog[start:] {
+        content += event + "\n"
+    }
+
+    return panelStyle.Render(content)
 }

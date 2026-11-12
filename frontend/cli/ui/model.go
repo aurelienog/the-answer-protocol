@@ -28,7 +28,11 @@ type Model struct {
 
     input    string
     username string
+    playerStatus PlayerStatus
+
     status   string
+
+    eventLog []string
 
     group  Group
     quests []Quest

@@ -32,3 +32,17 @@ func authenticateUser(client *network.Client, username string) tea.Cmd {
         }
     }
 }
+
+func waitForServerEvent(client *network.Client) tea.Cmd {
+    return func() tea.Msg {
+        select {
+        case event := <-client.Events():
+            return serverEventMsg{
+                event: event,
+            }
+
+        case <-client.Done():
+            return clientDoneMsg{}
+        }
+    }
+}
