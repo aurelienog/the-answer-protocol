@@ -23,6 +23,7 @@ const GameState = {
     inventory: [],
     inventoryCounts: {},
     quests: [],
+    worldQuests: {},
     selectedInventoryItem: null,
 
     currentGroup: null,
@@ -39,7 +40,6 @@ const GameState = {
         LOG: []
     },
 
-    // Generates a nicely formatted line of item bonuses based on the actual attack, defense, speed, and HP fields.
     formatItemStats(itemObj) {
         const parts = [];
         if (itemObj.attack)  parts.push(`+${itemObj.attack} Atk`);
@@ -54,11 +54,9 @@ const GameState = {
         return 'Utility';
     },
 
-    // Automatically synchronizes all items, NPCs, rooms, and quests from data/world.json!
     syncWorldDefinition(worldData) {
         if (!worldData) return;
 
-        // 1. Synchronizing items and their actual combat bonuses
         if (worldData.items) {
             if (typeof StatusModal !== 'undefined') {
                 StatusModal.gearBonuses = {};
@@ -68,7 +66,6 @@ const GameState = {
             });
         }
 
-        // 2. Synchronizing NPC (HP, Attack, Defense, Speed, Hostile, Quests, Rewards)
         if (worldData.npcs) {
             Object.values(worldData.npcs).forEach(npc => {
                 const existing = ASSETS.npcs[npc.id] || ASSETS.npcs.default;
@@ -81,7 +78,7 @@ const GameState = {
                 ASSETS.npcs[npc.id] = {
                     ...existing,
                     id:       npc.id,
-                    name:     npc.name || existing.name,
+                    name:     npc.name || existing.name || npc.id,
                     role:     npc.role ? (npc.role.charAt(0).toUpperCase() + npc.role.slice(1).replace(/_/g, ' ')) : existing.role,
                     hostile:  !!npc.hostile,
                     hasQuest: !!npc.quest_id,
@@ -95,7 +92,6 @@ const GameState = {
             });
         }
 
-        // 3. We save the quest dictionary (to know the exact rewards - reward_item_ids!)
         if (worldData.quests) {
             this.worldQuests = worldData.quests;
         }
@@ -106,9 +102,9 @@ const GameState = {
             const existing = ASSETS.items[entry.id] || ASSETS.items.default;
             ASSETS.items[entry.id] = {
                 ...existing,
-                name:    entry.name || existing.name,
-                type:    entry.type || existing.type,
-                desc:    entry.description || existing.desc,
+                name:    entry.name || existing.name || entry.id,
+                type:    entry.type || existing.type || "common",
+                desc:    entry.description || existing.desc || "",
                 attack:  entry.attack || 0,
                 defense: entry.defense || 0,
                 speed:   entry.speed || 0,
@@ -116,13 +112,14 @@ const GameState = {
                 stats:   this.formatItemStats(entry)
             };
 
-            // We are dynamically updating equipment bonuses for the STATUS window!
-            if (typeof StatusModal !== 'undefined' && entry.type === 'equipment') {
-                StatusModal.gearBonuses[entry.id] = {
-                    atk: entry.attack || 0,
-                    def: entry.defense || 0,
-                    spd: entry.speed || 0
-                };
+            if (typeof StatusModal !== 'undefined' && (entry.type === 'equipment' || entry.type === 'unique')) {
+                if (entry.attack || entry.defense || entry.speed) {
+                    StatusModal.gearBonuses[entry.id] = {
+                        atk: entry.attack || 0,
+                        def: entry.defense || 0,
+                        spd: entry.speed || 0
+                    };
+                }
             }
             return entry.id;
         }
@@ -130,19 +127,23 @@ const GameState = {
     },
 
     getItemMeta(id) {
-        if (ASSETS.items[id]) return ASSETS.items[id];
+        if (ASSETS.items[id] && ASSETS.items[id].name) return ASSETS.items[id];
+        const existing = ASSETS.items[id] || ASSETS.items.default;
         const cleanName = String(id).replace(/^item\./, "").replace(/_/g, " ");
         return {
             name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
-            icon: ASSETS.items.default.icon,
-            img: "",
-            type: "common",
-            desc: ASSETS.items.default.desc
+            icon: existing.icon || ASSETS.items.default.icon,
+            img:  existing.img || "",
+            type: existing.type || "common",
+            stats: existing.stats || "Utility",
+            desc: existing.desc || ASSETS.items.default.desc
         };
     },
 
     getNpcMeta(keyOrName) {
-        if (ASSETS.npcs[keyOrName]) return ASSETS.npcs[keyOrName];
+        if (ASSETS.npcs[keyOrName] && ASSETS.npcs[keyOrName].name) {
+            return ASSETS.npcs[keyOrName];
+        }
         const lower = String(keyOrName).toLowerCase();
         for (const k in ASSETS.npcs) {
             const npc = ASSETS.npcs[k];
@@ -150,10 +151,12 @@ const GameState = {
                 return npc;
             }
         }
+        const fallback = ASSETS.npcs[keyOrName] || ASSETS.npcs.default;
         return {
             ...ASSETS.npcs.default,
+            ...fallback,
             id: keyOrName,
-            name: String(keyOrName)
+            name: fallback.name || String(keyOrName)
         };
     }
 };

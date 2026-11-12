@@ -186,7 +186,11 @@ const SelectorModal = {
         } else if (mode === 'attack') {
             CombatModal.enemyId = val;
             UI.closeAllModals();
-            App.sendCommand(`ATTACK ${val}`);
+            if (GameState.activeHelpCombatId) {
+                App.sendCommand(`COMBAT JOIN ${GameState.activeHelpCombatId}`);
+            } else {
+                App.sendCommand(`ATTACK ${val}`);
+            }
         } else if (mode === 'talk') {
             DialogueModal.open(val);
         }

@@ -1,3 +1,22 @@
+frontend/cli/ui/
+├── model.go
+├── update.go
+├── view.go
+├── messages.go
+│
+├── views/
+│   ├── world.go
+│   ├── room.go
+│   ├── inventory.go
+│   ├── character.go
+│   ├── quests.go
+│   ├── party.go
+│   └── combat.go
+│
+└── styles/
+    └── styles.go
+
+
 Dial()
   │
   ▼

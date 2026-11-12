@@ -10,7 +10,6 @@ const StageView = {
         const hudRoomEl = document.getElementById('hud-room-name');
         if (hudRoomEl) hudRoomEl.textContent = room.name;
 
-        // 1. Location icon in the top banner
         const stageIconEl = document.getElementById('stage-icon');
         if (meta.iconImg) {
             stageIconEl.innerHTML = `<img src="${meta.iconImg}" alt="${room.name} icon" class="stage-banner-icon-img">`;
@@ -21,7 +20,6 @@ const StageView = {
         document.getElementById('stage-room-title').textContent = room.name;
         document.getElementById('stage-room-region').textContent = meta.region;
 
-        // 2. Main scene background
         const bgImg = document.getElementById('stage-bg-img');
         const worldStage = document.getElementById('world-stage');
         if (bgImg && meta.img) {
@@ -31,7 +29,6 @@ const StageView = {
             worldStage.style.backgroundImage = `url('${meta.img}')`;
         }
 
-        // 3. LEFT NPC DOCK (Under Hero Avatar: Green = TALK, Red = ATTACK!)
         const npcDock = document.getElementById('left-npcs-dock');
         if (npcDock) {
             npcDock.innerHTML = '';
@@ -60,7 +57,11 @@ const StageView = {
                     if (isHostile) {
                         CombatModal.enemyId = m.id;
                         UI.closeAllModals();
-                        App.sendCommand(`ATTACK ${m.id}`);
+                        if (GameState.activeHelpCombatId) {
+                            App.sendCommand(`COMBAT JOIN ${GameState.activeHelpCombatId}`);
+                        } else {
+                            App.sendCommand(`ATTACK ${m.id}`);
+                        }
                     } else {
                         DialogueModal.open(m.id);
                     }
@@ -69,7 +70,6 @@ const StageView = {
             });
         }
 
-        // 4. COMPASS NAVIGATION (Square Right-Menu style buttons: Icon on top + 1 Short Word below!)
         const shortRoomNames = {
             "harbor_square":    "Harbor",
             "market_street":    "Market",
@@ -108,18 +108,7 @@ const StageView = {
             }
         });
 
-        // 5. Urgent Aid Button if an ally called COMBAT HELP
         const aidSlot = document.getElementById('compass-aid-slot');
-        if (aidSlot) {
-            aidSlot.innerHTML = '';
-            if (GameState.activeHelpCombatId && !GameState.inCombat) {
-                const helpBtn = document.createElement('button');
-                helpBtn.type = 'button';
-                helpBtn.className = 'btn-gold-sm';
-                helpBtn.dataset.cmd = `COMBAT JOIN ${GameState.activeHelpCombatId}`;
-                helpBtn.innerHTML = `⚔️ Aid ${GameState.activeHelpPlayer || 'Ally'}`;
-                aidSlot.appendChild(helpBtn);
-            }
-        }
+        if (aidSlot) aidSlot.innerHTML = '';
     }
 };

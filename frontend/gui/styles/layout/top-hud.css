@@ -185,3 +185,23 @@
     letter-spacing: 0.5px !important;
     color: var(--gold-bright) !important;
 }
+
+.hud-left.gold-frame,
+.hud-right.gold-frame {
+    flex-shrink: 0 !important;
+}
+
+@media (max-width: 1150px) {
+    .hud-left.gold-frame {
+        transform: scale(0.82);
+        transform-origin: top left;
+    }
+    .hud-center {
+        transform: translateX(-50%) scale(0.82);
+        transform-origin: top center;
+    }
+    .hud-right.gold-frame {
+        transform: scale(0.82);
+        transform-origin: top right;
+    }
+}

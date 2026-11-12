@@ -5,9 +5,20 @@
 const App = {
     eventSource: null,
 
+    async loadWorldMeta() {
+        try {
+            const res = await fetch('/api/world');
+            if (res.ok) {
+                const worldData = await res.json();
+                GameState.syncWorldDefinition(worldData);
+            }
+        } catch (e) {
+            console.warn("Could not pre-load world metadata:", e);
+        }
+    },
+
     async restoreSessionIfActive() {
         await this.loadWorldMeta();
-
         this.initStream();
         try {
             const res = await fetch('/api/session');
@@ -24,27 +35,13 @@ const App = {
 
                 const savedEnemy = sessionStorage.getItem('tap_active_combat_enemy');
                 if (savedEnemy && savedEnemy !== 'default') {
-                    CombatModal.open(savedEnemy, undefined, undefined);
+                    CombatModal.open(savedEnemy, undefined, undefined, true);
                 }
             }
         } catch (_) {}
     },
 
-    async loadWorldMeta() {
-        try {
-            const res = await fetch('/api/world');
-            if (res.ok) {
-                const worldData = await res.json();
-                GameState.syncWorldDefinition(worldData);
-            }
-        } catch (e) {
-            console.warn("Could not pre-load world metadata:", e);
-        }
-    },
-
     async connect() {
-        await this.loadWorldMeta();
-
         const username = document.getElementById('login-username').value.trim();
         const host = document.getElementById('login-host').value.trim();
         const port = document.getElementById('login-port').value.trim();
@@ -55,6 +52,7 @@ const App = {
         }
 
         UI.showLoginError("");
+        await this.loadWorldMeta();
         if (!this.eventSource) this.initStream();
 
         try {
@@ -158,6 +156,26 @@ const App = {
         this.sendCommand(`CHAT ${scope} ${text}`);
     },
 
+    // Translates raw protocol ERR codes into friendly RPG messages for the Room chat
+    formatFriendlyError(raw) {
+        if (raw.includes('NO_EXIT'))                 return ['🧭 No Exit', 'There is no passage in that direction. Check the compass for available routes!'];
+        if (raw.includes('NPC_NOT_HOSTILE'))         return ['🛡️ Friendly NPC', 'This character is peaceful and cannot be attacked.'];
+        if (raw.includes('NPC_RESPAWNING'))          return ['⏳ Respawning', 'This enemy was recently defeated and is recovering. Try again shortly!'];
+        if (raw.includes('NPC_ALREADY_IN_COMBAT'))   return ['⚔️ Busy in Combat', 'This enemy is already fighting another player! Wait for them to press "📯 Help" to join!'];
+        if (raw.includes('COMBAT_HELP_REQUIRED'))    return ['📯 Help Not Requested', 'You can only join an ongoing battle if the player calls for help (📯 Help) or is in your party.'];
+        if (raw.includes('NOT_YOUR_TURN'))           return ['⏳ Wait Your Turn', 'It is not your turn to act yet!'];
+        if (raw.includes('NOT_IN_COMBAT'))           return ['⚔️ Combat Ended', 'You are no longer in an active combat.'];
+        if (raw.includes('ITEM_ALREADY_OWNED'))      return ['🎒 Already Owned', 'You already carry this item in your inventory.'];
+        if (raw.includes('ITEM_CANNOT_BE_DROPPED'))  return ['🔒 Bound Item', 'Equipment, Unique, and Quest items are bound to you and cannot be dropped.'];
+        if (raw.includes('ITEM_NOT_CONSUMABLE'))     return ['🧪 Not Consumable', 'This item cannot be consumed directly.'];
+        if (raw.includes('ITEM_HAS_NO_EFFECT'))      return ['❤️ Full Health', 'You are already at maximum health!'];
+        if (raw.includes('NO_QUEST_AVAILABLE'))      return ['📜 No Quest Available', 'This character has no new quests for you right now.'];
+        if (raw.includes('ALREADY_IN_GROUP'))        return ['👥 Already in Party', 'You are already a member of a party. Leave your current party first.'];
+        if (raw.includes('GROUP_ALREADY_EXISTS'))    return ['👥 Name Taken', 'A party with that name already exists. Choose another name!'];
+        if (raw.includes('RATE_LIMITED'))            return ['⏳ Slow Down', 'You are performing actions too quickly! Wait a moment.'];
+        return ['⚠️ Notice', raw.replace(/^ERR\s+\d+\s+/, '').replace(/_/g, ' ')];
+    },
+
     handleServerPacket(packet) {
         const raw = packet.raw;
 
@@ -168,22 +186,32 @@ const App = {
         }
 
         if (packet.type === 'ERR') {
+            // 1. Raw protocol error goes ONLY to the System Log tab!
             UI.addChatLine('LOG', 'Server ←', raw, 'chat-err');
             const failedVerb = GameState.commandQueue.shift();
 
-            // If the server says we are not in a group, we clear the local group state!
             if (raw.includes('NOT_IN_GROUP')) {
                 GroupModal.renderCurrentGroup(null);
-                if (failedVerb === 'GROUP_INFO') return; // Do not spam the chat during a silent check.
+                if (failedVerb === 'GROUP_INFO') return;
             }
 
-            if (raw.includes('ALREADY_IN_COMBAT')) {
+            if (raw.includes('PLAYER_ALREADY_IN_COMBAT')) {
                 const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || CombatModal.enemyId || 'dire_wolf';
-                CombatModal.open(enemyInRoom, GameState.hp, undefined);
+                CombatModal.open(enemyInRoom, GameState.hp, undefined, true);
                 return;
             }
 
-            UI.addChatLine('ROOM', '⚠️ Error', raw, 'chat-err');
+            if (raw.includes('NOT_IN_COMBAT') && GameState.inCombat) {
+                CombatModal.close();
+                this.sendCommand('LOOK');
+                this.sendCommand('STATUS');
+            } else if (GameState.inCombat) {
+                CombatModal.syncActionButtonsState();
+            }
+
+            // 2. Human-friendly RPG explanation goes to the Room chat!
+            const [title, friendlyMsg] = this.formatFriendlyError(raw);
+            UI.addChatLine('ROOM', title, friendlyMsg, 'chat-err');
             return;
         }
 
@@ -275,17 +303,19 @@ const App = {
             return;
         }
         if (payload.startsWith('joined=')) {
+            const caller = GameState.activeHelpPlayer || CombatModal.activeTurnOwner || 'Ally';
             GameState.activeHelpCombatId = null;
             const thpMatch = payload.match(/target_hp=(\d+)/);
             const currentEnemyHp = thpMatch ? parseInt(thpMatch[1], 10) : undefined;
             const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || GameState.npcsInRoom[0] || 'dire_wolf';
+            sessionStorage.setItem('tap_combat_turn_owner', caller);
             CombatModal.open(enemyInRoom, GameState.hp, currentEnemyHp);
+            CombatModal.queueTurnBanner(caller, CombatModal.currentRound);
             UI.addChatLine('ROOM', '⚔️ Joined Battle', `You joined the battle against ${CombatModal.enemyName}!`, 'chat-sys');
             UI.renderRoom();
             return;
         }
         if (payload.startsWith('target=')) {
-            // Response to COMBAT ATTACK (the strikes themselves have already occurred via EVT COMBAT DAMAGE)
             return;
         }
         if (payload.startsWith('players=')) {
@@ -413,7 +443,6 @@ const App = {
         const parts = raw.split(' ');
         const category = parts[1];
 
-        // 1. Presence events (both RFC space-separated and underscore formats)
         if (category === 'ROOM' && parts[2] === 'PRESENCE') {
             const isEnter = parts[3] === 'ENTER';
             const user = parts.slice(4).join(' ');
@@ -431,7 +460,6 @@ const App = {
             return;
         }
 
-        // 2. Chat events
         if ((category === 'ROOM' || category === 'GLOBAL' || category === 'GROUP') && parts[2] === 'CHAT') {
             const rest = parts.slice(3).join(' ');
             const kvMatch = rest.match(/^player=(\S+)\s+message=(.*)$/);
@@ -445,7 +473,6 @@ const App = {
             return;
         }
 
-        // 3. Group events
         if (category === 'GROUP') {
             const action = parts[2];
             const details = parts.slice(3).join(' ');
@@ -460,20 +487,24 @@ const App = {
             return;
         }
 
-        // 4. Item events
         if (category === 'ITEM_DROPPED' || category === 'UNIQUE_ITEMS_RETURNED') {
             UI.addChatLine('ROOM', '🧰 World', `Items updated in room (${parts.slice(2).join(' ')}).`, 'chat-sys');
             this.sendCommand('LOOK');
             return;
         }
 
-        // 5. Combat events
         if (category === 'COMBAT') {
             const sub = parts[2];
             const rest = parts.slice(3).join(' ');
 
             if (sub === 'STARTED') {
-                // If a group ally starts a battle — we open the arena too!
+                const partMatch = rest.match(/participants=([^\s]+)/);
+                if (partMatch) {
+                    const firstPlayer = partMatch[1].split(',')[0];
+                    if (firstPlayer) {
+                        sessionStorage.setItem('tap_combat_turn_owner', firstPlayer);
+                    }
+                }
                 if (!GameState.inCombat) {
                     const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || GameState.npcsInRoom[0] || 'dire_wolf';
                     CombatModal.open(enemyInRoom, GameState.hp, undefined);
@@ -485,9 +516,8 @@ const App = {
                 const roundMatch = rest.match(/round=(\d+)/);
                 const partMatch = rest.match(/participant=(.+?)\s+round=/);
                 const roundNum = roundMatch ? parseInt(roundMatch[1], 10) : undefined;
-                const who = partMatch ? partMatch[1] : '';
-                const label = (who === GameState.playerName ? 'YOUR TURN' : `${who.toUpperCase()}'S TURN`);
-                CombatModal.queueTurnBanner(label, roundNum);
+                const who = partMatch ? partMatch[1].trim() : GameState.playerName;
+                CombatModal.queueTurnBanner(who, roundNum);
                 return;
             }
 
@@ -495,8 +525,8 @@ const App = {
                 const dmgMatch = rest.match(/^attacker=(.+?)\s+target=(.+?)\s+amount=(\d+)\s+remaining_hp=(\d+)$/);
                 if (!dmgMatch) return;
 
-                const attackerName = dmgMatch[1];
-                const targetName = dmgMatch[2];
+                const attackerName = dmgMatch[1].trim();
+                const targetName = dmgMatch[2].trim();
                 const dmg = parseInt(dmgMatch[3], 10);
                 const remHp = parseInt(dmgMatch[4], 10);
 
@@ -505,13 +535,16 @@ const App = {
                 const targetIsNpc = (targetName === CombatModal.enemyName) || (ASSETS.npcs[targetNpcMeta.id] !== undefined && targetNpcMeta.id !== 'default');
 
                 if (targetIsNpc) {
-                    CombatModal.playHitEffect(true, dmg, remHp);
+                    const banner = (attackerName.toLowerCase() === GameState.playerName.toLowerCase())
+                        ? 'YOUR STRIKE ⚔️'
+                        : `${attackerName.toUpperCase()} STRIKES ⚔️`;
+                    CombatModal.playHitEffect('enemy_hit', dmg, remHp, banner);
                     UI.addChatLine('ROOM', '🗡️ Strike', `${attackerName} hits ${targetName} for ${dmg} damage! (Enemy HP: ${remHp})`, 'chat-sys');
                 } else if (targetIsMe) {
-                    CombatModal.playHitEffect(false, dmg, remHp);
+                    CombatModal.playHitEffect('me_hit', dmg, remHp);
                     UI.addChatLine('ROOM', '🛡️ Enemy Strike', `${attackerName} attacks you for ${dmg} damage! (HP: ${remHp})`, 'chat-err');
                 } else {
-                    CombatModal.playHitEffect(false, dmg, undefined);
+                    CombatModal.playHitEffect('ally_hit', dmg, undefined, '', targetName);
                     UI.addChatLine('ROOM', '🛡️ Ally Hit', `${attackerName} strikes ${targetName} for ${dmg} damage! (${targetName} HP: ${remHp})`, 'chat-err');
                 }
                 return;
@@ -527,7 +560,7 @@ const App = {
                     GameState.activeHelpPlayer = caller;
                     UI.renderRoom();
                 }
-                UI.addChatLine('ROOM', '📯 Call for Arms!', `${caller} is requesting help in combat! Click "⚔️ Join Battle" on the stage or player list!`, 'chat-err');
+                UI.addChatLine('ROOM', '📯 Call for Arms!', `${caller} is requesting help in combat! Click "⚔️ Aid" on the compass or player list!`, 'chat-err');
                 return;
             }
 
@@ -547,7 +580,10 @@ const App = {
 
             if (sub === 'NPC_DIED') {
                 UI.addChatLine('ROOM', '🏆 Victory!', `${CombatModal.enemyName} defeated! Rewards added to your bag!`, 'chat-sys');
-                CombatModal.showOutcome(true, `${CombatModal.enemyName} defeated! Rewards claimed!`);
+                if (GameState.inCombat) {
+                    CombatModal.showOutcome(true, `${CombatModal.enemyName} defeated! Rewards claimed!`);
+                }
+                // Always sync room & status for all participants (including fallen allies who get respawned & rewarded now!)
                 this.sendCommand('INVENTORY');
                 this.sendCommand('STATUS');
                 this.sendCommand('LOOK');
@@ -556,13 +592,18 @@ const App = {
             }
 
             if (sub === 'PLAYER_DIED') {
-                if (rest.includes(`participant=${GameState.playerName}`)) {
-                    UI.addChatLine('ROOM', '💀 Defeated', `You were defeated and respawned at Central Harbor Square!`, 'chat-err');
-                    CombatModal.showOutcome(false, 'You were defeated! Respawning at Harbor Square...');
-                    this.sendCommand('LOOK');
-                    this.sendCommand('STATUS');
-                    GameState.activeHelpCombatId = null;
+                const pMatch = rest.match(/^participant=(.+?)\s+killer=/);
+                const fallenName = pMatch ? pMatch[1].trim() : '';
+                const diedIsMe = (fallenName.toLowerCase() === GameState.playerName.toLowerCase());
+
+                if (diedIsMe) {
+                    UI.addChatLine('ROOM', '💀 Fallen', 'You fell in battle!', 'chat-err');
+                } else {
+                    UI.addChatLine('ROOM', '💀 Ally Fallen', `${fallenName || 'Your ally'} has fallen in battle!`, 'chat-err');
                 }
+
+                CombatModal.handlePlayerDeath(diedIsMe, fallenName);
+                GameState.activeHelpCombatId = null;
                 return;
             }
             return;

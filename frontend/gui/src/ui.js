@@ -76,7 +76,12 @@ const UI = {
 
             const cmdBtn = e.target.closest('[data-cmd]');
             if (cmdBtn) {
-                App.sendCommand(cmdBtn.dataset.cmd);
+                const cmd = cmdBtn.dataset.cmd || '';
+                if (GameState.inCombat && cmd.toUpperCase().startsWith('MOVE ')) {
+                    UI.addChatLine('ROOM', '⚔️ In Combat', 'You cannot leave the room during combat! Use "🏃 Flee" to retreat.', 'chat-err');
+                    return;
+                }
+                App.sendCommand(cmd);
                 return;
             }
 
