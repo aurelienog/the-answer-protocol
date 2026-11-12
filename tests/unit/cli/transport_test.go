@@ -6,7 +6,7 @@ import (
 	"net"
 	"testing"
 
-	"the-answer-protocol/frontend/cli/internal/network"
+	"the-answer-protocol/frontend/cli/network"
 )
 
 func TestReadLine(t *testing.T) {
@@ -33,23 +33,23 @@ func TestReadLine(t *testing.T) {
 		},
 		{
 			name:    "too long",
-			input:   string(make([]byte, MaxLineBytes+1)) + "\n",
-			wantErr: ErrLineTooLong,
+			input:   string(make([]byte, network.MaxLineBytes+1)) + "\n",
+			wantErr: network.ErrLineTooLong,
 		},
 		{
 			name:    "invalid UTF-8",
 			input:   string([]byte{0xff, '\n'}),
-			wantErr: ErrInvalidUTF8,
+			wantErr: network.ErrInvalidUTF8,
 		},
 		{
 			name:    "control character",
 			input:   "OK\tconnected\n",
-			wantErr: ErrControlChar,
+			wantErr: network.ErrControlChar,
 		},
 		{
 			name:    "unterminated message",
 			input:   "OK connected",
-			wantErr: ErrUnterminatedLine,
+			wantErr: network.ErrUnterminatedLine,
 		},
 	}
 
@@ -59,7 +59,7 @@ func TestReadLine(t *testing.T) {
 			defer server.Close()
 			defer client.Close()
 
-			transport := NewTransport(client)
+			transport := network.NewTransport(client)
 
 			go func() {
 				_, _ = io.WriteString(server, tt.input)
@@ -91,9 +91,9 @@ func TestReadLineMaximumLength(t *testing.T) {
 	defer server.Close()
 	defer client.Close()
 
-	transport := NewTransport(client)
+	transport := network.NewTransport(client)
 
-	message := make([]byte, MaxLineBytes)
+	message := make([]byte, network.MaxLineBytes)
 	for i := range message {
 		message[i] = 'A'
 	}
@@ -107,8 +107,8 @@ func TestReadLineMaximumLength(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(got) != MaxLineBytes {
-		t.Fatalf("expected %d bytes, got %d", MaxLineBytes, len(got))
+	if len(got) != network.MaxLineBytes {
+		t.Fatalf("expected %d bytes, got %d", network.MaxLineBytes, len(got))
 	}
 }
 
@@ -117,9 +117,9 @@ func TestReadLineContinuesAfterOversizedMessage(t *testing.T) {
 	defer server.Close()
 	defer client.Close()
 
-	transport := NewTransport(client)
+	transport := network.NewTransport(client)
 
-	oversized := make([]byte, MaxLineBytes+10)
+	oversized := make([]byte, network.MaxLineBytes+10)
 	for i := range oversized {
 		oversized[i] = 'A'
 	}
@@ -131,7 +131,7 @@ func TestReadLineContinuesAfterOversizedMessage(t *testing.T) {
 
 	_, err := transport.ReadLine()
 
-	if !errors.Is(err, ErrLineTooLong) {
+	if !errors.Is(err, network.ErrLineTooLong) {
 		t.Fatalf("expected ErrLineTooLong, got %v", err)
 	}
 
@@ -150,7 +150,7 @@ func TestWriteLine(t *testing.T) {
 	defer server.Close()
 	defer client.Close()
 
-	transport := NewTransport(client)
+	transport := network.NewTransport(client)
 
 	go func() {
 		buffer := make([]byte, len("LOOK\n"))
@@ -171,7 +171,7 @@ func TestWriteLineRejectsInvalidMessages(t *testing.T) {
 	defer server.Close()
 	defer client.Close()
 
-	transport := NewTransport(client)
+	transport := network.NewTransport(client)
 
 	tests := []struct {
 		name    string
@@ -187,7 +187,7 @@ func TestWriteLineRejectsInvalidMessages(t *testing.T) {
 		},
 		{
 			name:    "too long",
-			message: string(make([]byte, MaxLineBytes+1)),
+			message: string(make([]byte, network.MaxLineBytes+1)),
 		},
 	}
 
