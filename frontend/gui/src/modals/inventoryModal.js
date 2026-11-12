@@ -1,5 +1,5 @@
 // ==========================================================================
-// MODAL MODULE: INVENTORY (4x4 Slots Grid, Quantities, Stats & Drop/Use)
+// MODAL MODULE: INVENTORY (4x4 Slots Grid with .webp Icons & Card Preview!)
 // ==========================================================================
 
 const InventoryModal = {
@@ -7,7 +7,10 @@ const InventoryModal = {
         const grid = document.getElementById('inventory-slots');
         grid.innerHTML = '';
 
-        // If the selected item is no longer in the inventory, clear the right-hand description panel!
+        if (!GameState.selectedInventoryItem && GameState.inventory.length > 0) {
+            GameState.selectedInventoryItem = GameState.inventory[0];
+        }
+
         if (!GameState.selectedInventoryItem || !GameState.inventory.includes(GameState.selectedInventoryItem)) {
             this.clearInspector();
         } else {
@@ -23,9 +26,16 @@ const InventoryModal = {
                 const meta = GameState.getItemMeta(itemId);
                 const qty = (GameState.inventoryCounts && GameState.inventoryCounts[itemId]) || 1;
                 if (GameState.selectedInventoryItem === itemId) slot.classList.add('selected');
+
+                const iconUrl = meta.iconImg || meta.img;
+                slot.title = meta.name;
                 slot.innerHTML = `
-                    <span>${meta.icon}</span>
-                    <span class="inv-slot-label">${meta.name.split(' ')[0]}${qty > 1 ? ` ×${qty}` : ''}</span>
+                    ${iconUrl
+                        ? `<img src="${iconUrl}" alt="${meta.name}" class="inv-slot-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                           <span style="display:none;">${meta.icon}</span>`
+                        : `<span>${meta.icon}</span>`
+                    }
+                    ${qty > 1 ? `<span class="inv-slot-qty">${qty}</span>` : ''}
                 `;
                 slot.addEventListener('click', () => this.selectItem(itemId));
             } else {
@@ -37,7 +47,7 @@ const InventoryModal = {
 
     clearInspector() {
         GameState.selectedInventoryItem = null;
-        UI.setArt(document.getElementById('inv-item-icon'), '', '🗡️');
+        UI.setArt(document.getElementById('inv-item-icon'), '/assets/ui/card/look-items.jpeg', '🗡️');
         document.getElementById('inv-item-name').textContent = 'Select an Item';
         document.getElementById('inv-stat-type').textContent = '-';
         document.getElementById('inv-stat-weight').textContent = '-';
@@ -52,7 +62,8 @@ const InventoryModal = {
         const itemType = (meta.type || 'common').toLowerCase();
         const qty = (GameState.inventoryCounts && GameState.inventoryCounts[itemId]) || 1;
 
-        UI.setArt(document.getElementById('inv-item-icon'), meta.img, meta.icon);
+        // On the right, in the description window, we display a large illustration from /assets/items/card/*.webp!
+        UI.setArt(document.getElementById('inv-item-icon'), meta.img || meta.iconImg, meta.icon, meta.name);
         document.getElementById('inv-item-name').textContent = qty > 1 ? `${meta.name} (×${qty})` : meta.name;
         document.getElementById('inv-stat-type').textContent = itemType.toUpperCase();
         document.getElementById('inv-stat-weight').textContent = meta.stats || (itemType === 'common' ? 'Droppable' : 'Bound to Player');

@@ -5,6 +5,26 @@
 // ==========================================================================
 
 const ASSETS = {
+    combat: {
+        heroes: {
+            male:   "/assets/combat/hero_male.webp",
+            female: "/assets/combat/hero_female.webp"
+        },
+        enemies: {
+            "dire_wolf":   "/assets/combat/dire_wolf.webp",
+            "smuggler":    "/assets/combat/smuggler.webp",
+            "dock_warden": "/assets/combat/dock_warden.webp"
+        },
+        backgrounds: {
+            "docks":       "/assets/combat/bg_docks.webp",
+            "forest_edge": "/assets/combat/bg_forest_edge.webp",
+            "warehouse":   "/assets/combat/bg_warehouse.webp",
+            "dock_warden": "/assets/combat/bg_docks.webp",
+            "dire_wolf":   "/assets/combat/bg_forest_edge.webp",
+            "smuggler":    "/assets/combat/bg_warehouse.webp"
+        }
+    },
+
     avatars: {
         male: {
             img:     "/assets/avatars/hero_male.jpeg",
@@ -92,24 +112,100 @@ const ASSETS = {
     },
 
     items: {
-        "item.iron_sword":           { icon: "🗡️", img: "/assets/items/iron_sword.jpg" },
-        "item.oak_shield":           { icon: "🛡️", img: "/assets/items/oak_shield.jpg" },
-        "item.leather_boots":        { icon: "🥾", img: "/assets/items/leather_boots.jpg" },
-        "item.iron_gauntlets":       { icon: "🧤", img: "/assets/items/iron_gauntlets.jpg" },
-        "item.steel_breastplate":    { icon: "🦺", img: "/assets/items/steel_breastplate.jpg" },
-        "item.royal_helmet":         { icon: "🪖", img: "/assets/items/royal_helmet.jpg" },
-        "item.healing_potion":       { icon: "🧪", img: "/assets/items/healing_potion.jpg" },
-        "item.bread":                { icon: "🍞", img: "/assets/items/bread.jpg" },
-        "item.wine":                 { icon: "🍷", img: "/assets/items/wine.jpg" },
-        "item.explorer_token":       { icon: "🏅", img: "/assets/items/explorer_token.jpg" },
-        "item.herbs":                { icon: "🌿", img: "/assets/items/herbs.jpg" },
-        "item.compromise_letter":    { icon: "✉️", img: "/assets/items/compromise_letter.jpg" },
-        "item.missing_ships_report": { icon: "📋", img: "/assets/items/missing_ships_report.jpg" },
-        "item.gold_coins":           { icon: "🪙", img: "/assets/items/gold_coins.jpg" },
-        "item.rope":                 { icon: "🪢", img: "/assets/items/rope.jpg" },
-        "item.lantern":              { icon: "🏮", img: "/assets/items/lantern.jpg" },
-        "item.pouch":                { icon: "👝", img: "/assets/items/pouch.jpg" },
-        "default":                   { name: "Item", icon: "🎒", img: "/assets/ui/card/look-items.jpeg", type: "common", stats: "Utility", desc: "An interactive object discovered in the world." }
+        "item.iron_sword": {
+            icon:    "🗡️",
+            img:     "/assets/items/card/iron_sword.webp",
+            iconImg: "/assets/items/icons/iron_sword.webp"
+        },
+        "item.oak_shield": {
+            icon:    "🛡️",
+            img:     "/assets/items/card/oak_shield.webp",
+            iconImg: "/assets/items/icons/oak_shield.webp"
+        },
+        "item.leather_boots": {
+            icon:    "🥾",
+            img:     "/assets/items/card/leather_boots.webp",
+            iconImg: "/assets/items/icons/leather_boots.webp"
+        },
+        "item.iron_gauntlets": {
+            icon:    "🧤",
+            img:     "/assets/items/card/iron_gauntlets.webp",
+            iconImg: "/assets/items/icons/iron_gauntlets.webp"
+        },
+        "item.steel_breastplate": {
+            icon:    "🦺",
+            img:     "/assets/items/card/iron_chest_armor.webp",
+            iconImg: "/assets/items/icons/iron_chest_armor.webp"
+        },
+        "item.royal_helmet": {
+            icon:    "🪖",
+            img:     "/assets/items/card/iron_helmet.webp",
+            iconImg: "/assets/items/icons/iron_helmet.webp"
+        },
+        "item.healing_potion": {
+            icon:    "🧪",
+            img:     "/assets/items/card/health_potion.webp",
+            iconImg: "/assets/items/icons/health_potion.webp"
+        },
+        "item.bread": {
+            icon:    "🍞",
+            img:     "/assets/items/card/fresh_bread.webp",
+            iconImg: "/assets/items/icons/fresh_bread.webp"
+        },
+        "item.wine": {
+            icon:    "🍷",
+            img:     "/assets/items/card/harbor_vintage_wine.webp",
+            iconImg: "/assets/items/icons/harbor_vintage_wine.webp"
+        },
+        "item.explorer_token": {
+            icon:    "🏅",
+            img:     "/assets/items/card/explorer_token.webp",
+            iconImg: "/assets/items/icons/explorer_token.webp"
+        },
+        "item.herbs": {
+            icon:    "🌿",
+            img:     "/assets/items/card/healing_herbs.webp",
+            iconImg: "/assets/items/icons/healing_herbs.webp"
+        },
+        "item.compromise_letter": {
+            icon:    "✉️",
+            img:     "/assets/items/card/incriminating_letter.webp",
+            iconImg: "/assets/items/icons/incriminating_letter.webp"
+        },
+        "item.missing_ships_report": {
+            icon:    "📋",
+            img:     "/assets/items/card/missing_ships_report.webp",
+            iconImg: "/assets/items/icons/missing_ships_report.webp"
+        },
+        "item.gold_coins": {
+            icon:    "🪙",
+            img:     "/assets/items/card/gold_coins.webp",
+            iconImg: "/assets/items/icons/gold_coins.webp"
+        },
+        "item.rope": {
+            icon:    "🪢",
+            img:     "/assets/items/card/hempen_rope.webp",
+            iconImg: "/assets/items/icons/hempen_rope.webp"
+        },
+        "item.lantern": {
+            icon:    "🏮",
+            img:     "/assets/items/card/brass_lantern.webp",
+            iconImg: "/assets/items/icons/brass_lantern.webp"
+        },
+        "item.pouch": {
+            icon:    "👝",
+            img:     "/assets/items/card/leather_pouch.webp",
+            iconImg: "/assets/items/icons/leather_pouch.webp"
+        },
+        "default": {
+            name:    "Item",
+            icon:    "🎒",
+            img:     "/assets/ui/card/look-items.jpeg",
+            iconImg: "/assets/icons/command/inventory.png",
+            type:    "common",
+            stats:   "Utility",
+            desc:    "An interactive object discovered in the world."
+        }
     },
 
     npcs: {

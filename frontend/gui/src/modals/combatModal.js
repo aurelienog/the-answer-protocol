@@ -8,6 +8,12 @@ const CombatModal = {
     enemyHp: 50,
     enemyMaxHp: 50,
 
+    roundPlayers: [],
+    allCombatPlayers: [],
+    actedInRound: {},
+    soleSurvivor: false,
+    outcomeShown: false,
+
     animQueue: [],
     isPlayingAnim: false,
     isMyTurn: true,
@@ -16,16 +22,24 @@ const CombatModal = {
     deathCheckTimer: null,
     activeTurnOwner: "",
     currentRound: 1,
+    roundKnown: true,
     turnSeconds: 30,
     timerInterval: null,
 
     startTurnTimer(roundNum, resetClock = true) {
         if (roundNum !== undefined && roundNum > 0) {
+            if (roundNum !== this.currentRound) {
+                this.actedInRound = {};
+                this.roundPlayers = this.allCombatPlayers.slice();
+            }
             this.currentRound = roundNum;
+            this.roundKnown = true;
             sessionStorage.setItem('tap_combat_round', String(this.currentRound));
         } else {
             const savedRound = parseInt(sessionStorage.getItem('tap_combat_round'), 10);
-            if (!isNaN(savedRound) && savedRound > 0) this.currentRound = savedRound;
+            if (!isNaN(savedRound) && savedRound > 0) {
+                this.currentRound = savedRound;
+            }
         }
 
         let deadline = parseInt(sessionStorage.getItem('tap_combat_deadline'), 10);
@@ -52,21 +66,80 @@ const CombatModal = {
     updateTimerUI() {
         const rEl = document.getElementById('combat-round-label');
         const tEl = document.getElementById('combat-timer-label');
-        if (rEl) rEl.textContent = `Round ${this.currentRound}`;
+        if (rEl) rEl.textContent = this.roundKnown ? `Round ${this.currentRound}` : 'Joined';
         if (tEl) tEl.textContent = `${this.turnSeconds}s`;
+    },
+
+    // Sets the dedicated combat arena background (.webp) by enemyId or roomId!
+    syncRoomBackground() {
+        const bgMap = (ASSETS.combat && ASSETS.combat.backgrounds) || {};
+        const roomMeta = ASSETS.rooms[GameState.room.id] || ASSETS.rooms.default;
+
+        const bgUrl = bgMap[this.enemyId] || bgMap[GameState.room.id] || roomMeta.img;
+        const combatBg = document.getElementById('combat-bg-img');
+        if (combatBg && bgUrl) {
+            combatBg.src = bgUrl;
+            combatBg.alt = `Battle against ${this.enemyName}`;
+        }
+    },
+
+    setInitialParticipants(playerList) {
+        if (Array.isArray(playerList) && playerList.length > 0) {
+            this.roundPlayers = playerList.slice();
+            this.allCombatPlayers = playerList.slice();
+            this.actedInRound = {};
+            this.soleSurvivor = (playerList.length === 1 && playerList[0].toLowerCase() === GameState.playerName.toLowerCase());
+            sessionStorage.setItem('tap_combat_participants', JSON.stringify(this.allCombatPlayers));
+        }
+    },
+
+    addJoinedParticipant(playerName) {
+        if (!playerName) return;
+        if (!this.allCombatPlayers.some(p => p.toLowerCase() === playerName.toLowerCase())) {
+            this.allCombatPlayers.push(playerName);
+            sessionStorage.setItem('tap_combat_participants', JSON.stringify(this.allCombatPlayers));
+        }
+        if (this.allCombatPlayers.length > 1) {
+            this.soleSurvivor = false;
+        }
+    },
+
+    advanceWithinCurrentRound(actingPlayerName) {
+        if (actingPlayerName) {
+            this.actedInRound[actingPlayerName.toLowerCase()] = true;
+        }
+
+        if (this.roundPlayers.length < this.allCombatPlayers.length && this.currentRound > 1) {
+            this.roundPlayers = this.allCombatPlayers.slice();
+        }
+
+        const nextInRound = this.roundPlayers.find(p => !this.actedInRound[p.toLowerCase()]);
+        if (nextInRound) {
+            this.activeTurnOwner = nextInRound;
+            sessionStorage.setItem('tap_combat_turn_owner', nextInRound);
+            sessionStorage.setItem('tap_combat_deadline', String(Date.now() + 30000));
+        }
     },
 
     updateBannerFromOwner() {
         const turnEl = document.getElementById('combat-turn-text');
         if (!turnEl) return;
 
-        const owner = this.activeTurnOwner || GameState.playerName;
         if (this.isFallen) {
             this.isMyTurn = false;
+            const owner = this.activeTurnOwner || 'ALLY';
             turnEl.textContent = `💀 SPECTATING (${owner.toUpperCase()})`;
             return;
         }
 
+        if (this.soleSurvivor) {
+            this.activeTurnOwner = GameState.playerName;
+            this.isMyTurn = true;
+            turnEl.textContent = 'YOUR TURN';
+            return;
+        }
+
+        const owner = this.activeTurnOwner || GameState.playerName;
         this.isMyTurn = (owner.toLowerCase() === GameState.playerName.toLowerCase());
         turnEl.textContent = this.isMyTurn ? 'YOUR TURN' : `${owner.toUpperCase()}'S TURN`;
     },
@@ -85,6 +158,7 @@ const CombatModal = {
                 if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
                 this.isMyTurn = false;
                 this.setButtonsDisabled(true);
+                this.advanceWithinCurrentRound(GameState.playerName);
                 App.sendCommand('COMBAT DEFEND');
             });
         }
@@ -130,7 +204,7 @@ const CombatModal = {
         });
     },
 
-    enqueueAnim(fn, durationMs = 1200) {
+    enqueueAnim(fn, durationMs = 1100) {
         this.animQueue.push({ fn, durationMs });
         if (!this.isPlayingAnim) {
             this.processNextAnim();
@@ -157,6 +231,9 @@ const CombatModal = {
     },
 
     syncActionButtonsState() {
+        if (this.soleSurvivor && !this.isFallen) {
+            this.isMyTurn = true;
+        }
         const lockTurnActions = this.isPlayingAnim || !this.isMyTurn || this.isFallen;
         ['btn-combat-strike', 'btn-combat-defend', 'btn-combat-heal', 'btn-combat-flee'].forEach(id => {
             const btn = document.getElementById(id);
@@ -173,12 +250,36 @@ const CombatModal = {
         });
     },
 
-    open(npcIdentifier, initialHeroHp, initialEnemyHp, isRestoring = false) {
+    open(npcIdentifier, initialHeroHp, initialEnemyHp, isRestoring = false, isJoiningMidCombat = false) {
         const alreadyOpen = GameState.inCombat && !document.getElementById('modal-combat').classList.contains('hidden');
 
         UI.closeAllModals();
         UI.activeModalId = 'combat';
         GameState.inCombat = true;
+        this.outcomeShown = false;
+
+        if (isJoiningMidCombat) {
+            this.roundKnown = false;
+        } else if (!alreadyOpen && !isRestoring) {
+            this.roundKnown = true;
+        }
+
+        if (!alreadyOpen && !isRestoring) {
+            this.actedInRound = {};
+            this.soleSurvivor = false;
+            if (this.allCombatPlayers.length === 0) {
+                this.roundPlayers = [GameState.playerName];
+                this.allCombatPlayers = [GameState.playerName];
+            }
+        } else if (isRestoring && this.allCombatPlayers.length === 0) {
+            try {
+                const savedParts = JSON.parse(sessionStorage.getItem('tap_combat_participants') || '[]');
+                if (Array.isArray(savedParts) && savedParts.length > 0) {
+                    this.allCombatPlayers = savedParts;
+                    this.roundPlayers = savedParts.slice();
+                }
+            } catch (_) {}
+        }
 
         let npcMeta = GameState.getNpcMeta(npcIdentifier);
         if (npcMeta.id === 'default') {
@@ -219,15 +320,10 @@ const CombatModal = {
         } else {
             this.activeTurnOwner = GameState.playerName;
             this.updateBannerFromOwner();
-            this.startTurnTimer(1, true);
+            this.startTurnTimer(isJoiningMidCombat ? undefined : 1, true);
         }
 
-        const roomMeta = ASSETS.rooms[GameState.room.id] || ASSETS.rooms.default;
-        const combatBg = document.getElementById('combat-bg-img');
-        if (combatBg && roomMeta.img) {
-            combatBg.src = roomMeta.img;
-            combatBg.alt = `Battle in ${GameState.room.name}`;
-        }
+        this.syncRoomBackground();
 
         document.getElementById('combat-hero-name').textContent = GameState.playerName;
         document.getElementById('combat-enemy-name').textContent = this.enemyName;
@@ -238,14 +334,16 @@ const CombatModal = {
         heroFallback.textContent = GameState.gender === 'male' ? '🧙‍♂️' : '🧝‍♀️';
         heroSprite.style.display = 'block';
         heroFallback.style.display = 'none';
-        heroSprite.src = `/assets/combat/hero_${GameState.gender}.png`;
+        heroSprite.src = (ASSETS.combat && ASSETS.combat.heroes && ASSETS.combat.heroes[GameState.gender])
+            || `/assets/combat/hero_${GameState.gender}.webp`;
 
         const enemySprite = document.getElementById('combat-enemy-sprite');
         const enemyFallback = document.getElementById('combat-enemy-fallback');
         enemyFallback.textContent = npcMeta.icon;
         enemySprite.style.display = 'block';
         enemyFallback.style.display = 'none';
-        enemySprite.src = `/assets/combat/${this.enemyId}.png`;
+        enemySprite.src = (ASSETS.combat && ASSETS.combat.enemies && ASSETS.combat.enemies[this.enemyId])
+            || `/assets/combat/${this.enemyId}.webp`;
 
         document.getElementById('combat-outcome-banner').classList.add('hidden');
         document.getElementById('fighter-enemy-box').style.opacity = '1';
@@ -288,7 +386,11 @@ const CombatModal = {
         }, 1250);
     },
 
-    playHitEffect(mode, damageAmount, remainingHp, customBannerText = '', allyTargetName = '') {
+    playHitEffect(mode, damageAmount, remainingHp, customBannerText = '', allyTargetName = '', attackerName = '') {
+        if ((mode === 'enemy_hit' || mode === true) && attackerName) {
+            this.advanceWithinCurrentRound(attackerName);
+        }
+
         this.enqueueAnim(() => {
             const heroBox = document.getElementById('fighter-hero-box');
             const enemyBox = document.getElementById('fighter-enemy-box');
@@ -319,12 +421,17 @@ const CombatModal = {
     queueTurnBanner(participantName, roundNum) {
         this.turnEventCounter = (this.turnEventCounter || 0) + 1;
         const cleanOwner = (participantName || '').trim();
+        if (roundNum !== undefined && roundNum > 0) {
+            if (roundNum !== this.currentRound) {
+                this.actedInRound = {};
+                this.roundPlayers = this.allCombatPlayers.slice();
+            }
+            this.roundKnown = true;
+            sessionStorage.setItem('tap_combat_round', String(roundNum));
+        }
         this.activeTurnOwner = cleanOwner;
         sessionStorage.setItem('tap_combat_turn_owner', cleanOwner);
         sessionStorage.setItem('tap_combat_deadline', String(Date.now() + 30000));
-        if (roundNum !== undefined && roundNum > 0) {
-            sessionStorage.setItem('tap_combat_round', String(roundNum));
-        }
 
         this.enqueueAnim(() => {
             this.activeTurnOwner = cleanOwner;
@@ -353,34 +460,81 @@ const CombatModal = {
     },
 
     handlePlayerDeath(diedIsMe, fallenName) {
+        if (fallenName) {
+            this.roundPlayers = this.roundPlayers.filter(p => p.toLowerCase() !== fallenName.toLowerCase());
+            this.allCombatPlayers = this.allCombatPlayers.filter(p => p.toLowerCase() !== fallenName.toLowerCase());
+            sessionStorage.setItem('tap_combat_participants', JSON.stringify(this.allCombatPlayers));
+        }
+
         if (diedIsMe) {
             this.isFallen = true;
+            this.soleSurvivor = false;
             this.isMyTurn = false;
             GameState.hp = 0;
             this.updateBars();
             this.setButtonsDisabled(true);
             this.updateBannerFromOwner();
+        } else if (!this.isFallen) {
+            this.soleSurvivor = true;
+            this.allCombatPlayers = [GameState.playerName];
+            this.roundPlayers = [GameState.playerName];
+            this.actedInRound = {};
+            this.activeTurnOwner = GameState.playerName;
+            this.isMyTurn = true;
+            sessionStorage.setItem('tap_combat_turn_owner', GameState.playerName);
+            sessionStorage.setItem('tap_combat_participants', JSON.stringify(this.allCombatPlayers));
+
+            this.enqueueAnim(() => {
+                this.soleSurvivor = true;
+                this.activeTurnOwner = GameState.playerName;
+                this.isMyTurn = true;
+                this.updateBannerFromOwner();
+                this.startTurnTimer(this.currentRound, false);
+                this.syncActionButtonsState();
+            }, 200);
         }
 
         if (this.deathCheckTimer) clearTimeout(this.deathCheckTimer);
-        const turnCountBefore = this.turnEventCounter || 0;
-
         this.deathCheckTimer = setTimeout(() => {
-            if (!GameState.inCombat) return;
-            const turnCountAfter = this.turnEventCounter || 0;
-
-            if (turnCountAfter === turnCountBefore) {
-                this.showOutcome(false, 'Your party was defeated! Respawning at Harbor Square...');
+            if (GameState.inCombat && this.isFallen) {
                 App.sendCommand('LOOK');
-                App.sendCommand('STATUS');
-            } else if (diedIsMe) {
-                UI.addChatLine('ROOM', '💀 Spectating', 'You fell in battle! Spectating your ally until the fight ends...', 'chat-err');
             }
         }, 450);
     },
 
+    handleAllyFled(runnerName) {
+        if (runnerName) {
+            this.roundPlayers = this.roundPlayers.filter(p => p.toLowerCase() !== runnerName.toLowerCase());
+            this.allCombatPlayers = this.allCombatPlayers.filter(p => p.toLowerCase() !== runnerName.toLowerCase());
+            sessionStorage.setItem('tap_combat_participants', JSON.stringify(this.allCombatPlayers));
+        }
+
+        if (this.isFallen) {
+            setTimeout(() => {
+                if (GameState.inCombat) {
+                    App.sendCommand('LOOK');
+                }
+            }, 350);
+        } else {
+            this.soleSurvivor = true;
+            this.activeTurnOwner = GameState.playerName;
+            this.isMyTurn = true;
+            this.updateBannerFromOwner();
+            this.syncActionButtonsState();
+        }
+    },
+
     showOutcome(victory, subtitle) {
         if (this.deathCheckTimer) clearTimeout(this.deathCheckTimer);
+        if (this.outcomeShown) return;
+        this.outcomeShown = true;
+
+        sessionStorage.removeItem('tap_active_combat_enemy');
+        sessionStorage.removeItem('tap_active_combat_enemy_hp');
+        sessionStorage.removeItem('tap_combat_deadline');
+        sessionStorage.removeItem('tap_combat_round');
+        sessionStorage.removeItem('tap_combat_turn_owner');
+        sessionStorage.removeItem('tap_combat_participants');
 
         this.enqueueAnim(() => {
             this.isMyTurn = false;
@@ -392,16 +546,14 @@ const CombatModal = {
 
             if (victory) {
                 document.getElementById('fighter-enemy-box').style.opacity = '0.25';
-            } else {
-                App.sendCommand('STATUS');
-                App.sendCommand('LOOK');
             }
 
             setTimeout(() => {
                 this.close();
                 App.sendCommand('STATUS');
-            }, 3500);
-        }, 3600);
+                App.sendCommand('LOOK');
+            }, 3200);
+        }, 3300);
     },
 
     close() {
@@ -410,11 +562,18 @@ const CombatModal = {
         sessionStorage.removeItem('tap_combat_deadline');
         sessionStorage.removeItem('tap_combat_round');
         sessionStorage.removeItem('tap_combat_turn_owner');
+        sessionStorage.removeItem('tap_combat_participants');
 
         if (this.timerInterval) clearInterval(this.timerInterval);
         if (this.deathCheckTimer) clearTimeout(this.deathCheckTimer);
 
         GameState.inCombat = false;
+        this.outcomeShown = false;
+        this.soleSurvivor = false;
+        this.roundKnown = true;
+        this.roundPlayers = [];
+        this.allCombatPlayers = [];
+        this.actedInRound = {};
         this.animQueue = [];
         this.isPlayingAnim = false;
         this.isMyTurn = true;

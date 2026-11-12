@@ -55,11 +55,12 @@ const LookModal = {
             li.className = 'select-card';
             li.innerHTML = `
                 <div class="card-left">
-                    <div class="card-thumb">${m.icon}</div>
+                    <div class="card-thumb"></div>
                     <div><strong class="card-title">${qty > 1 ? `${m.name} (×${qty})` : m.name}</strong><span class="card-sub">${m.desc}</span></div>
                 </div>
                 <button type="button" class="btn-gold-sm" data-cmd="TAKE ${itemId}">Take</button>
             `;
+            UI.setArt(li.querySelector('.card-thumb'), m.iconImg || m.img, m.icon, m.name);
             lItems.appendChild(li);
         });
 

@@ -131,12 +131,13 @@ const GameState = {
         const existing = ASSETS.items[id] || ASSETS.items.default;
         const cleanName = String(id).replace(/^item\./, "").replace(/_/g, " ");
         return {
-            name: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
-            icon: existing.icon || ASSETS.items.default.icon,
-            img:  existing.img || "",
-            type: existing.type || "common",
-            stats: existing.stats || "Utility",
-            desc: existing.desc || ASSETS.items.default.desc
+            name:    cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+            icon:    existing.icon || ASSETS.items.default.icon,
+            img:     existing.img || ASSETS.items.default.img,
+            iconImg: existing.iconImg || existing.img || ASSETS.items.default.iconImg,
+            type:    existing.type || "common",
+            stats:   existing.stats || "Utility",
+            desc:    existing.desc || ASSETS.items.default.desc
         };
     },
 

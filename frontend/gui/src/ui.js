@@ -30,6 +30,36 @@ const UI = {
             App.sendChatMessage();
         });
 
+        // Dock controls: Expand Chat (+30%) & Independent Minimize/Restore for Chat and Players panels
+        const chatPanel = document.getElementById('dock-chat-panel');
+        const playersPanel = document.getElementById('dock-players-panel');
+        const btnChatTall = document.getElementById('btn-chat-tall');
+        const btnChatCollapse = document.getElementById('btn-chat-collapse');
+        const btnPlayersCollapse = document.getElementById('btn-players-collapse');
+
+        if (btnChatTall && chatPanel) {
+            btnChatTall.addEventListener('click', () => {
+                chatPanel.classList.remove('dock-collapsed');
+                if (btnChatCollapse) btnChatCollapse.textContent = '▾';
+                const isTall = chatPanel.classList.toggle('chat-tall');
+                btnChatTall.classList.toggle('active', isTall);
+            });
+        }
+
+        if (btnChatCollapse && chatPanel) {
+            btnChatCollapse.addEventListener('click', () => {
+                const collapsed = chatPanel.classList.toggle('dock-collapsed');
+                btnChatCollapse.textContent = collapsed ? '▴' : '▾';
+            });
+        }
+
+        if (btnPlayersCollapse && playersPanel) {
+            btnPlayersCollapse.addEventListener('click', () => {
+                const collapsed = playersPanel.classList.toggle('dock-collapsed');
+                btnPlayersCollapse.textContent = collapsed ? '▴' : '▾';
+            });
+        }
+
         document.getElementById('btn-sel-confirm').addEventListener('click', () => {
             SelectorModal.confirmAction();
         });
@@ -42,10 +72,11 @@ const UI = {
         });
         document.getElementById('dlg-btn-quest').addEventListener('click', () => {
             if (!DialogueModal.activeNpcId) return;
-            if (DialogueModal.activeQuestStatus === 'active') {
-                App.sendCommand(`TALK ${DialogueModal.activeNpcId}`);
-            } else {
+            if (DialogueModal.activeQuestStatus === 'available') {
                 App.sendCommand(`QUEST ${DialogueModal.activeNpcId}`);
+            } else {
+                // If quest is active, talking to the NPC checks progress or turns in the item!
+                App.sendCommand(`TALK ${DialogueModal.activeNpcId}`);
             }
         });
 
