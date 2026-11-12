@@ -169,6 +169,45 @@ func (w *World) NextCombatTurn(
 	return cloneCombat(combat), event, nil
 }
 
+// GetCurrentCombatTurn returns the current participant's turn event.
+func (w *World) GetCurrentCombatTurn(
+	combatID string,
+) (*CombatTurnChanged, error) {
+	if w == nil {
+		return nil, fmt.Errorf(
+			"%w: world is nil",
+			ErrInvalidWorldState,
+		)
+	}
+
+	combatID = strings.TrimSpace(combatID)
+	if combatID == "" {
+		return nil, ErrInvalidArgument
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	combat, exists := w.combats[combatID]
+	if !exists || combat == nil || !combat.Active || !combat.TurnsInitialized {
+		return nil, fmt.Errorf(
+			"%w: active combat %q not found",
+			ErrInvalidWorldState,
+			combatID,
+		)
+	}
+
+	if combat.TurnIndex < 0 ||
+		combat.TurnIndex >= len(combat.Participants) {
+		return nil, fmt.Errorf(
+			"%w: invalid combat turn index",
+			ErrInvalidWorldState,
+		)
+	}
+
+	return w.buildCombatTurnChangedLocked(combat), nil
+}
+
 // SkipPlayerCombatTurn consumes a player's remaining actions and advances the
 // combat turn if the specified participant still owns the active turn.
 func (w *World) SkipPlayerCombatTurn(

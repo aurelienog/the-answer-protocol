@@ -165,6 +165,7 @@ func (c *CombatCommand) processNPCTurns(
 			damageEvent *world.CombatDamage
 			deathEvent  *world.ParticipantDied
 		)
+		previousParticipantID := participant.ID
 
 		// Execute the NPC action.
 		combat, _, attackEvent, damageEvent, deathEvent, err =
@@ -194,6 +195,19 @@ func (c *CombatCommand) processNPCTurns(
 
 		if deathEvent != nil && ctx.Events != nil {
 			ctx.Events.Publish(*deathEvent)
+		}
+
+		if !combatEnded &&
+			combat.TurnIndex >= 0 &&
+			combat.TurnIndex < len(combat.Participants) &&
+			combat.Participants[combat.TurnIndex].ID != previousParticipantID {
+			turnEvent, err := ctx.World.GetCurrentCombatTurn(combatID)
+			if err != nil {
+				return err
+			}
+			if turnEvent != nil && ctx.Events != nil {
+				ctx.Events.Publish(*turnEvent)
+			}
 		}
 
 		if combatEnded {
