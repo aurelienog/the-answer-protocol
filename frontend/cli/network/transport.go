@@ -282,27 +282,3 @@ func (t *Transport) SetReadDeadline(deadline time.Time) error {
 
 	return nil
 }
-
-// | Test | Resultado esperado |
-// |---|---|
-// | Lectura con LF | Correcta |
-// | Lectura con CRLF | Correcta |
-// | Mensaje de 1024 bytes | Correcta |
-// | Mensaje de 1024 bytes + CRLF | Correcta |
-// | Mensaje superior a 1024 bytes | `ErrLineTooLong` |
-// | Línea demasiado larga seguida de otra válida | La segunda se lee correctamente |
-// | UTF-8 inválido | `ErrInvalidUTF8` |
-// | Caracteres de control | `ErrControlChar` |
-// | Conexión cerrada | Error de lectura/escritura |
-// | Escrituras concurrentes | Mensajes completos, sin mezclarse |
-// | Cierre durante una lectura bloqueada | La lectura termina |
-// También necesitamos tests específicos para:
-// - Greeting correcto.
-// - Versión de protocolo incompatible.
-// - Greeting incorrecto.
-// - Timeout del greeting.
-// - Autenticación correcta.
-// - Nombre ocupado y segundo intento.
-// - Username inválido.
-// - Dos autenticaciones concurrentes.
-// - Cancelación del contexto durante el greeting.
