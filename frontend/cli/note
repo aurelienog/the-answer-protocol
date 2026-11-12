@@ -1,0 +1,288 @@
+Dial()
+  │
+  ▼
+Connection
+  │
+  ├── Greeting
+  │
+  └── Authenticate()
+         │
+         ▼
+       Client
+         │
+         ├── Writer.Start()
+         └── Reader.Start()
+ 
+ 
+ 
+ envio:
+ Client.Send()
+      │
+      ▼
+RequestManager
+      │
+      ▼
+Writer.Send()
+      │
+      ▼
+Outbox
+      │
+      ▼
+Writer
+      │
+      ▼
+Transport
+      │
+      ▼
+TCP
+ 
+ 
+ reception:
+ TCP
+ │
+ ▼
+Transport.ReadLine()
+ │
+ ▼
+Reader
+ │
+ ├── OK / ERR ──► RequestManager
+ │
+ └── EVT ───────► Events ──► Aplicación
+ 
+ 
+ 
+ 
+ 
+ 
+                       CLIENT
+                         |
+          +--------------+--------------+
+          |              |              |
+      Connection     RequestManager   Reader
+          |              |              |
+       Transport <-------+--------------+
+          |                             |
+          |                         TCP Read
+          |                             |
+       TCP Write                    Protocol
+                                        |
+                             +----------+----------+
+                             |                     |
+                         OK / ERR                 EVT
+                             |                     |
+                       Responses                 Events
+                             |                     |
+                       RequestManager           Client / App
+
+
+                   TCP
+                    |
+                    v
+              Transport
+               ReadLine()
+                    |
+                    v
+             protocol.ParseMessage()
+                    |
+                    v
+                  Reader
+                    |
+             +------+------+
+             |             |
+          OK / ERR         EVT
+             |             |
+             v             v
+        responses        events
+        capacity 1       capacity 128
+             |             |
+             v             v
+       RequestManager    Client / App
+
+
+En general, la separación está bien planteada:
+- Connection: establecimiento de conexión y autenticación.
+- Transport: comunicación TCP.
+- Reader: recepción y clasificación de mensajes.
+- RequestManager: serialización de peticiones y recepción de respuestas.
+- Client: propietario del ciclo de vida de todos los componentes.
+cli/
+├── cmd/
+│   └── mud/
+│       └── main.go
+│
+├── internal/
+│   │
+│   ├── app/
+│   │   ├── model.go
+│   │   ├── update.go
+│   │   ├── view.go
+│   │   ├── messages.go
+│   │   └── commands.go
+│   │
+│   ├── network/
+│   │   ├── client.go
+│   │   ├── connection.go
+│   │   ├── transport.go
+│   │   ├── reader.go
+│   │   ├── writer.go
+│   │   ├── outbox.go
+│   │   ├── requests.go
+│   │   ├── parser.go
+│   │   ├── events.go
+│   │   └── errors.go
+│   │
+│   ├── game/
+│   │   ├── state.go
+│   │   ├── player.go
+│   │   ├── room.go
+│   │   ├── inventory.go
+│   │   ├── quests.go
+│   │   ├── party.go
+│   │   └── chat.go
+│   │
+│   ├── commands/
+│   │   ├── parser.go
+│   │   ├── registry.go
+│   │   └── local.go
+│   │
+│   └── ui/
+│       ├── layout.go
+│       ├── components/
+│       ├── screens/
+│       └── theme/
+│
+└── go.mod
+
+TCP
+ │
+ ▼
+Transport.ReadLine()
+ │
+ ▼
+Reader
+ │
+ ▼
+protocol.ParseMessage(raw)
+ │
+ ▼
+network.IncomingMessage
+ ├── Message: protocol.Message
+ └── Raw:     string
+ │
+ ▼
+RequestManager / Event Channel
+```
+                    TCP SERVER
+                        │
+                        ▼
+                 Transport.ReadLine()
+                        │
+                        ▼
+                    Reader
+                        │
+                        ▼
+                     Parser
+                        │
+              ┌─────────┴─────────┐
+              │                   │
+              ▼                   ▼
+        OK / ERR                  EVT
+              │                   │
+              ▼                   ▼
+       Response Channel       Event Channel
+              │                   │
+              ▼                   ▼
+       Request Manager        Application
+              │                   │
+              ▼                   ▼
+       Libera siguiente       Actualiza estado
+          comando             y notificaciones
+```
+
+| Evento | Prioridad |
+|---|---|
+| `GLOBAL_CHAT` | Baja |
+| `ROOM_CHAT` | Media |
+| `COMBAT_ATTACK` | Alta |
+| `PLAYER_DIED` | Muy alta |
+| `ITEM_DROPPED` | Alta |
+| `STATS` | Baja |
+```
+| Archivo | Responsabilidad |
+|---|---|
+| `client.go` | Coordinar todo el ciclo de vida del cliente. |
+| `connection.go` | Conexión TCP, greeting y autenticación. |
+| `transport.go` | Lectura y escritura TCP de bajo nivel. |
+| `reader.go` | ReadPump: único lector del socket. |
+| `writer.go` | WritePump: único escritor del socket. |
+| `outbox.go` | Cola de comandos pendientes de envío. |
+| `requests.go` | Request Manager: controla las peticiones y sus respuestas. |
+| `parser.go` | Convierte mensajes TAP en estructuras tipadas. |
+| `events.go` | Representa y clasifica los eventos asíncronos. |
+| `errors.go` | Errores propios de la capa de red. |
+```
+
+
+                   CLI / Bubble Tea
+                          |
+                          v
+                    network.Client
+                          |
+              +-----------+-----------+
+              |                       |
+              v                       v
+         Request Manager          Event Channel
+              |                       ^
+              v                       |
+            Outbox                    |
+              |                       |
+              v                       |
+          WritePump               ReadPump
+              |                       ^
+              v                       |
+              +------ TCP Socket -----+
+
+6. Responsabilidad de Game y UI
+Hay otra separación importante.
+Game
+Mantiene una representación local del estado del juego:
+- Personaje.
+- Sala actual.
+- Inventario.
+- Misiones.
+- Grupo.
+- Chat.
+No decide qué ocurre en el servidor. El servidor sigue siendo la autoridad.
+UI
+Se encarga de representar ese estado:
+- Character Panel.
+- Main View.
+- World Status.
+- Event Log.
+- Command Input.
+La UI no debe acceder directamente al socket ni modificar el estado interno de Network.
+7. Orden definitivo de implementación
+No implementaría todo de golpe. Seguiría este orden:
+Orden	Archivo	Objetivo
+1	transport.go	Transporte TCP robusto.
+2	connection.go	Conexión y autenticación.
+3	reader.go	ReadPump.
+4	writer.go	WritePump.
+5	outbox.go	Cola de salida.
+6	parser.go	Interpretación de mensajes TAP.
+7	events.go	Clasificación de eventos.
+8	requests.go	Coordinación de peticiones y respuestas.
+9	client.go	Integración y ciclo de vida.
+10	Tests de Network	Concurrencia, errores y protocolo.
+11	game/	Estado local del juego.
+12	commands/	Comandos locales y remotos.
+13	app/ y ui/	Interfaz Bubble Tea.
+
+8. Tres decisiones que considero innegociables
+1. El servidor es la autoridad del juego. El cliente nunca inventa resultados de combate, movimientos o inventario.
+2. Un único lector y un único escritor TCP. Evitamos condiciones de carrera y mensajes mezclados.
+3. Una sola petición en vuelo. Hasta que TAP tenga Request IDs, no enviaremos otro comando que espere respuesta hasta completar el anterior.
+Con esta arquitectura podemos implementar el cliente sin tener que rehacer la comunicación cuando aparezcan los eventos de combate, chat y grupos.
+
+El siguiente paso es terminar transport.go como componente definitivo y escribir sus tests. Después seguiremos archivo por archivo, sin avanzar hasta que cada pieza esté bien diseñada y probada.

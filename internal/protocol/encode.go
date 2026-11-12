@@ -26,6 +26,9 @@ func Encode(message Message) ([]byte, error) {
 		if message.Code < 100 || message.Code > 999 {
 			return nil, fmt.Errorf("invalid TAP error code: %d", message.Code)
 		}
+		if strings.ContainsAny(message.Name, " \t") {
+			return nil, fmt.Errorf("invalid TAP error name")
+		}
 
 		if err := validateField(message.Name); err != nil {
 			return nil, fmt.Errorf("invalid TAP error name: %w", err)
@@ -40,6 +43,10 @@ func Encode(message Message) ([]byte, error) {
 	case KindEVT:
 		if err := validateField(message.EventType); err != nil {
 			return nil, fmt.Errorf("invalid TAP event type: %w", err)
+		}
+
+		if strings.ContainsAny(message.EventType, " \t") {
+			return nil, fmt.Errorf("invalid TAP event type")
 		}
 
 		if err := validateField(message.Data); err != nil {

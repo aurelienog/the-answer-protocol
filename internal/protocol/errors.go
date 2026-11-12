@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"errors"
 )
+
+var ErrInvalidUsername = errors.New("invalid username")
 
 // ServerError represents an error returned by the TAP server.
 type ServerError struct {

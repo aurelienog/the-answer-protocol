@@ -2,23 +2,18 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"os"
 	"strings"
-	"sync"
-	"time"
 
+	"the-answer-protocol/frontend/cli/network"
 	"the-answer-protocol/frontend/cli/ui"
 	"the-answer-protocol/internal/config"
-)
-
-const (
-	connectTimeout = 10 * time.Second
-	writeTimeout   = 10 * time.Second
+	"the-answer-protocol/internal/protocol"
 )
 
 func main() {
@@ -27,76 +22,53 @@ func main() {
 	cfg := config.LoadConfig()
 	addr := cfg.ServerAddr()
 
+	ctx := context.Background()
+
 	ui.PrintInfo("Connecting to TAP Game Server...")
 	ui.PrintServerStatus(addr, ui.StatusConnecting)
 
-	conn, err := net.DialTimeout("tcp", addr, connectTimeout)
+	// Establish TCP connection and validate server greeting.
+	connection, err := network.Dial(ctx, addr)
 	if err != nil {
 		ui.PrintError("Failed to connect to server.")
 		log.Printf("Connection error: %v", err)
 		return
 	}
-	defer conn.Close()
 
-	reader := bufio.NewReader(conn)
-	inputReader := bufio.NewReader(os.Stdin)
-
-	// Read and validate the server greeting.
-	greeting, err := reader.ReadString('\n')
+	// Create the network client.
+	client, err := network.NewClient(ctx, connection)
 	if err != nil {
-		ui.PrintError("Failed to receive server greeting.")
-		log.Printf("Greeting error: %v", err)
+		ui.PrintError("Failed to initialize network client.")
+		log.Printf("Client initialization error: %v", err)
 		return
 	}
+	defer client.Close()
 
-	greeting = strings.TrimSpace(greeting)
-
-	if greeting != "OK hello proto=1" {
-		ui.PrintError("Unexpected server greeting.")
-		log.Printf("Received greeting: %q", greeting)
-		return
-	}
-
-	ui.HandleResponse(greeting)
 	ui.PrintServerStatus(addr, ui.StatusConnected)
 
-	// Authenticate explicitly using CONNECT <username>.
-	username, err := authenticate(conn, reader, inputReader, addr)
+	inputReader := bufio.NewReader(os.Stdin)
+
+	// Authenticate before starting the game session.
+	username, err := authenticate(client, inputReader)
 	if err != nil {
 		ui.PrintError("Authentication failed.")
 		log.Printf("Authentication error: %v", err)
 		return
 	}
 
-	// An empty username means the user reached EOF before authenticating.
 	if username == "" {
 		return
 	}
+
 	ui.PrintServerStatus(addr, ui.StatusAuthenticated)
 	ui.PrintInfo("Connected as " + username + ".")
 	ui.PrintInfo("You can now enter game commands.")
 
-	// Coordinate the asynchronous server reader's lifecycle.
-	done := make(chan struct{})
-	var doneOnce sync.Once
+	// Receive asynchronous server events.
+	go readServerEvents(client)
 
-	signalDone := func() {
-		doneOnce.Do(func() {
-			close(done)
-		})
-	}
-
-	go readServerResponses(reader, signalDone)
-
-	// The main goroutine manages command validation and user input.
+	// Read and send player commands.
 	for {
-		select {
-		case <-done:
-			ui.PrintInfo("Disconnected from the game server.")
-			return
-		default:
-		}
-
 		ui.PrintPrompt()
 
 		input, err := inputReader.ReadString('\n')
@@ -116,44 +88,47 @@ func main() {
 		fields := strings.Fields(command)
 		commandName := strings.ToUpper(fields[0])
 
-		// CONNECT is only valid before authentication.
 		if commandName == "CONNECT" {
 			ui.PrintError("You are already authenticated.")
 			continue
 		}
 
-		// Validate QUIT and other commands before sending.
 		if commandName == "QUIT" && len(fields) != 1 {
 			ui.PrintError("Usage: QUIT")
 			continue
 		}
 
-		// Send the command to the server.
-		if err := sendCommand(conn, command); err != nil {
-			ui.PrintError("Failed to send command to server.")
-			log.Printf("Command send error: %v", err)
+		// Send the command and wait for its response.
+		response, err := client.Send(ctx, command)
+
+		if response.Kind == protocol.KindOK ||
+			response.Kind == protocol.KindERR {
+			ui.HandleResponse(formatMessage(response))
+		}
+
+		if err != nil {
+			var serverErr *protocol.ServerError
+
+			if errors.As(err, &serverErr) {
+				continue
+			}
+
+			ui.PrintError("Connection to server lost.")
+			log.Printf("Command error: %v", err)
 			return
 		}
 
 		if commandName == "QUIT" {
-			ui.PrintInfo("Waiting for the server to close the session...")
-
-			// Wait until the server reader detects the connection closure.
-			<-done
-
 			ui.PrintInfo("Disconnected from the game server.")
 			return
 		}
 	}
 }
 
-// authenticate waits for CONNECT <username> and returns only after
-// the server confirms successful authentication.
+// authenticate handles the initial CONNECT exchange.
 func authenticate(
-	conn net.Conn,
-	reader *bufio.Reader,
+	client *network.Client,
 	inputReader *bufio.Reader,
-	address string,
 ) (string, error) {
 	for {
 		ui.PrintInfo("Authenticate using CONNECT <username>.")
@@ -164,6 +139,7 @@ func authenticate(
 			if errors.Is(err, io.EOF) {
 				return "", nil
 			}
+
 			return "", fmt.Errorf("read CONNECT command: %w", err)
 		}
 
@@ -183,39 +159,60 @@ func authenticate(
 			return "", nil
 		}
 
-		// Only CONNECT with exactly one username is allowed.
-		if len(fields) != 2 || !strings.EqualFold(fields[0], "CONNECT") {
-			ui.PrintError("You must authenticate first. Usage: CONNECT <username>.")
-			continue
-		}
-
-		username := fields[1]
-		if !validUsername(username) {
+		if len(fields) != 2 ||
+			!strings.EqualFold(fields[0], "CONNECT") {
 			ui.PrintError(
-				"Invalid username. Use 1-12 Unicode letters, numbers, combining marks, or underscores.",
+				"You must authenticate first. Usage: CONNECT <username>.",
 			)
 			continue
 		}
 
-		if err := sendCommand(conn, command); err != nil {
-			return "", fmt.Errorf("send CONNECT command: %w", err)
-		}
+		username := fields[1]
 
-		response, err := reader.ReadString('\n')
+		err = client.Authenticate(username)
 		if err != nil {
-			return "", fmt.Errorf("read CONNECT response: %w", err)
+			if errors.Is(err, network.ErrNameInUse) ||
+				errors.Is(err, protocol.ErrInvalidUsername) {
+				ui.PrintError(err.Error())
+				continue
+			}
+
+			return "", err
 		}
 
-		response = strings.TrimSpace(response)
-		message := ui.ParseServerMessage(response)
+		return username, nil
+	}
+}
 
-		ui.HandleResponse(response)
+// readServerEvents handles asynchronous EVT messages.
+func readServerEvents(client *network.Client) {
+	for {
+		select {
+		case event, ok := <-client.Events():
+			if !ok {
+				return
+			}
+			ui.HandleResponse(event.Raw)
 
-		// Authentication succeeds only when confirmed by the server.
-		if message.Type == ui.MessageOK &&
-			strings.EqualFold(message.Payload, "connected") {
-			return username, nil
+		case <-client.Done():
+			return
 		}
-		// On an authentication error, let the user try another username.
+	}
+}
+
+// formatMessage reconstructs the textual representation of a response.
+func formatMessage(message protocol.Message) string {
+	switch message.Kind {
+	case protocol.KindOK:
+		if message.Payload == "" {
+			return "OK"
+		}
+		return "OK " + message.Payload
+
+	case protocol.KindERR:
+		return fmt.Sprintf("ERR %03d %s", message.Code, message.Name)
+
+	default:
+		return ""
 	}
 }
