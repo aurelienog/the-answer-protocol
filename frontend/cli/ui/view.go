@@ -5,19 +5,6 @@ import (
 	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
-var (
-	panelStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			Padding(1, 2)
-
-	statusStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241"))
-
-	inputStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("42"))
-)
-
 func (m Model) View() string {
     if m.appState == StateAuthentication {
         return m.renderAuthentication()
@@ -27,15 +14,22 @@ func (m Model) View() string {
 }
 
 func (m Model) renderAuthentication() string {
-    title := panelStyle.Render(
-        "THE ANSWER PROTOCOL\n\n" +
-            "Welcome, adventurer!\n\n" +
-            "Enter your username:\n\n" +
-            "> " + m.input + "\n\n" +
-            m.status,
+    title := layout.TitleStyle.Render("THE ANSWER PROTOCOL")
+
+    content := lipgloss.JoinVertical(
+        lipgloss.Left,
+        title,
+        "",
+        "Welcome, adventurer!",
+        "",
+        "Enter your username:",
+        "",
+        layout.InputStyle.Render("> "+m.input),
+        "",
+        layout.StatusStyle.Render(m.status),
     )
 
-    return title
+    return layout.PanelStyle.Render(content)
 }
 
 func (m Model) renderView() string {
@@ -72,10 +66,10 @@ func (m Model) renderView() string {
 	)
 
 	eventLog := m.renderEventLog()
-	input := inputStyle.Render("> " + m.input)
-	status := statusStyle.Render(m.status)
+	input := layout.InputStyle.Render("> " + m.input)
+	status := layout.StatusStyle.Render(m.status)
 
-	if m.width == 0 {
+	if m.width == 0 || m.height == 0 {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			header,
@@ -86,7 +80,18 @@ func (m Model) renderView() string {
 		)
 	}
 
-	body := layout.RenderMain(content, sidebar, m.width)
+	availableHeight := m.height -
+		lipgloss.Height(header) -
+		lipgloss.Height(eventLog) -
+		lipgloss.Height(input) -
+		lipgloss.Height(status)
+
+	body := layout.RenderMain(
+		content,
+		sidebar,
+		m.width,
+		availableHeight,
+	)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -127,16 +132,21 @@ func (m Model) renderCombat() string {
 }
 
 func (m Model) renderEventLog() string {
-    content := "EVENT LOG\n\n"
+    title := layout.TitleStyle.Render("EVENT LOG")
+    content := title + "\n\n"
+
+    visibleEvents := layout.EventLogHeight - 4
 
     start := 0
-    if len(m.eventLog) > 8 {
-        start = len(m.eventLog) - 8
+    if len(m.eventLog) > visibleEvents {
+        start = len(m.eventLog) - visibleEvents
     }
 
     for _, event := range m.eventLog[start:] {
         content += event + "\n"
     }
 
-    return panelStyle.Render(content)
+    return layout.PanelStyle.
+        Height(layout.EventLogHeight - 4).
+        Render(content)
 }

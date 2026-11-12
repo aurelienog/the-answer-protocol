@@ -4,9 +4,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var sidebarStyle = lipgloss.NewStyle().
-	Border(lipgloss.RoundedBorder()).
-	Padding(1, 2)
+var sidebarStyle = PanelStyle
 
 func RenderSidebar(groupContent string, questContent string) string {
     content := lipgloss.JoinVertical(

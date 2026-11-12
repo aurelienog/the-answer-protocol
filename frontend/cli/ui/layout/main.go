@@ -2,16 +2,25 @@ package layout
 
 import "github.com/charmbracelet/lipgloss"
 
-const minWidthForSidebar = 90
+const (
+    minWidthForSidebar = 90
 
-var mainViewStyle = lipgloss.NewStyle().
-    Border(lipgloss.RoundedBorder()).
-    Padding(1, 2)
+    panelBorderWidth  = 2
+    panelBorderHeight = 2
+    panelPaddingWidth  = 4
+    panelPaddingHeight = 2
 
-func RenderMain(mainContent, sidebarContent string, width int) string {
+    panelWidthOffset  = panelBorderWidth + panelPaddingWidth
+    panelHeightOffset = panelBorderHeight + panelPaddingHeight
+)
+
+var mainViewStyle = PanelStyle
+
+func RenderMain(mainContent, sidebarContent string, width, height int) string {
     if width < minWidthForSidebar {
         return mainViewStyle.
-            Width(width - 6).
+            Width(width - panelWidthOffset).
+            Height(height - panelHeightOffset).
             Render(mainContent)
     }
 
@@ -19,11 +28,13 @@ func RenderMain(mainContent, sidebarContent string, width int) string {
     sidebarWidth := width - mainWidth
 
     main := mainViewStyle.
-        Width(mainWidth - 6).
+        Width(mainWidth - panelWidthOffset).
+        Height(height - panelHeightOffset).
         Render(mainContent)
 
     sidebar := sidebarStyle.
-        Width(sidebarWidth - 6).
+        Width(sidebarWidth - panelWidthOffset).
+        Height(height - panelHeightOffset).
         Render(sidebarContent)
 
     return lipgloss.JoinHorizontal(
