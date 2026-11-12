@@ -11,6 +11,9 @@ type AppState uint8
 const (
     StateAuthentication AppState = iota
     StateGame
+)
+
+const (
     ViewWorld View = iota
     ViewRoom
     ViewInventory
@@ -38,6 +41,9 @@ type Model struct {
     quests []Quest
 
     authInProgress bool
+
+    width  int
+    height int
 }
 
 func NewModel(client *network.Client) Model {

@@ -66,10 +66,27 @@ func (m Model) renderView() string {
 		m.playerStatus.MaxHP,
 	)
 
-	body := panelStyle.Render(content)
+	sidebar := layout.RenderSidebar(
+		m.renderCharacter(),
+		m.renderQuests(),
+	)
+
 	eventLog := m.renderEventLog()
 	input := inputStyle.Render("> " + m.input)
 	status := statusStyle.Render(m.status)
+
+	if m.width == 0 {
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			header,
+			content,
+			eventLog,
+			input,
+			status,
+		)
+	}
+
+	body := layout.RenderMain(content, sidebar, m.width)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,

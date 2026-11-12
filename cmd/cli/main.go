@@ -31,7 +31,10 @@ func main() {
 
     model := ui.NewModel(client)
 
-    program := tea.NewProgram(model)
+    program := tea.NewProgram(
+        model,
+        tea.WithAltScreen(),
+    )
 
     if _, err := program.Run(); err != nil {
         log.Printf("UI error: %v", err)
