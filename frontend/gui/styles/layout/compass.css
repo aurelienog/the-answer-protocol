@@ -1,57 +1,81 @@
 /* ==========================================================================
-   LAYOUT: CENTER COMPASS ROSE WIDGET (3x3 Symmetric Grid)
+   LAYOUT: CENTER COMPASS ROSE WIDGET (Larger, Golden Glow & Fullscreen Scale!)
    ========================================================================== */
 
+:root {
+    --compass-offset-y: 12px;
+    --compass-offset-y-fullscreen: 16px;
+}
+
 .compass-dock {
-    width: 244px;
+    width: 268px;
+    height: 232px;
+    align-self: flex-end;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
+    bottom: var(--compass-offset-y);
     pointer-events: auto;
+    transition: transform 0.25s ease, width 0.25s ease, bottom 0.25s ease;
 }
 
 .compass-rose-wrap {
     display: grid;
-    grid-template-columns: 64px 96px 64px;
-    grid-template-rows: 56px 96px 56px;
+    grid-template-columns: 70px 108px 70px;
+    grid-template-rows: 60px 108px 60px;
     align-items: center;
     justify-items: center;
-    gap: 4px;
+    gap: 5px;
 }
 
 .compass-rose-emblem {
     grid-column: 2;
     grid-row: 2;
-    width: 96px;
-    height: 96px;
+    width: 108px;
+    height: 108px;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
     z-index: 2;
     pointer-events: none;
+}
+
+.compass-rose-emblem::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(243, 210, 140, 0.42) 0%, rgba(212, 163, 70, 0.18) 52%, transparent 75%);
+    filter: blur(6px);
+    z-index: -1;
 }
 
 .compass-rose-emblem img {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.95));
+    filter:
+        drop-shadow(0 0 10px rgba(243, 210, 140, 0.65))
+        drop-shadow(0 0 22px rgba(212, 163, 70, 0.38))
+        drop-shadow(0 4px 12px rgba(0, 0, 0, 0.95));
+    transition: transform 0.3s ease, filter 0.3s ease;
 }
 
 .compass-plus-fallback {
-    font-size: 26px;
+    font-size: 30px;
     color: var(--gold-main);
-    text-shadow: 0 0 10px rgba(212, 163, 70, 0.8);
+    text-shadow: 0 0 12px rgba(212, 163, 70, 0.85);
 }
 
-/* Square Compass Buttons (Centered inside their Grid cells!) */
+/* Square Compass Buttons */
 .comp-pin {
     position: relative;
-    width: 62px !important;
-    height: 54px !important;
+    width: 68px !important;
+    height: 58px !important;
     padding: 4px 2px !important;
     margin: 0 !important;
     background-image: url('/assets/buttons/bg-sq-base.png') !important;
@@ -61,15 +85,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 3px;
     cursor: pointer;
     z-index: 5;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.85), 0 0 8px rgba(212, 163, 70, 0.2);
     transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
     overflow: hidden;
 }
 
-/* Smooth gold texture overlay on hover */
 .comp-pin::before {
     content: "";
     position: absolute;
@@ -87,8 +110,8 @@
 }
 
 .comp-pin:hover {
-    transform: scale(1.07) !important;
-    box-shadow: 0 0 14px rgba(212, 163, 70, 0.65);
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 16px rgba(243, 210, 140, 0.75);
 }
 
 .comp-pin.hidden {
@@ -102,16 +125,16 @@
 }
 
 .comp-sq-icon {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     object-fit: contain;
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
 }
 
 .comp-sq-label {
-    font-size: 9.5px;
+    font-size: 10.5px;
     color: var(--gold-bright);
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
     line-height: 1;
     text-shadow: 0 2px 4px #000000;
 }
@@ -125,3 +148,39 @@
 .comp-pin.pin-west  { grid-column: 1; grid-row: 2; }
 .comp-pin.pin-east  { grid-column: 3; grid-row: 2; }
 .comp-pin.pin-south { grid-column: 2; grid-row: 3; }
+
+/* FULLSCREEN / WIDE SCREEN */
+@media (min-width: 1480px) {
+    .compass-dock {
+        width: 310px;
+        height: 256px;
+    }
+    .compass-rose-wrap {
+        grid-template-columns: 78px 124px 78px;
+        grid-template-rows: 66px 124px 66px;
+        gap: 6px;
+    }
+    .compass-rose-emblem {
+        width: 124px;
+        height: 124px;
+    }
+    .comp-pin {
+        width: 76px !important;
+        height: 64px !important;
+    }
+    .comp-sq-icon {
+        width: 27px;
+        height: 27px;
+    }
+    .comp-sq-label {
+        font-size: 11.5px;
+    }
+}
+
+@media (min-width: 1480px) {
+    .compass-dock {
+        width: 310px;
+        height: 256px;
+        bottom: var(--compass-offset-y-fullscreen);
+    }
+}

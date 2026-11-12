@@ -12,7 +12,7 @@
     <main id="login-screen" class="screen">
         <section class="login-container" aria-labelledby="game-title">
             <header class="logo-header">
-                <img src="/assets/ui/logo-tap.png" alt="TAP — The Answer Protocol" class="login-logo-img">
+                <img src="/assets/ui/logo-tap.webp" alt="TAP — The Answer Protocol" class="login-logo-img">
             </header>
 
             <form id="login-form" class="gold-panel login-box">
@@ -26,8 +26,8 @@
                         <span class="input-icon" aria-hidden="true">👤</span>
                         <input type="text" id="login-username" name="username"
                                placeholder="Enter your character name..."
-                               value="Arthas" required minlength="1" maxlength="24"
-                               pattern="[A-Za-z0-9_]+">
+                               value="Arthas" required minlength="1" maxlength="12"
+                               pattern="[^\s]+">
                     </span>
                 </label>
 
@@ -571,7 +571,7 @@
                         <div class="combat-stage-fighters">
                             <div class="fighter-spot spot-hero" id="fighter-hero-box">
                                 <div class="floating-dmg hidden" id="dmg-on-hero">-10</div>
-                                <img id="combat-hero-sprite" class="fighter-sprite" src="/assets/combat/hero_female.png" alt="Hero"
+                                <img id="combat-hero-sprite" class="fighter-sprite" src="/assets/combat/hero_male.webp" alt="Hero"
                                      onerror="this.style.display='none'; document.getElementById('combat-hero-fallback').style.display='block';">
                                 <span id="combat-hero-fallback" class="fighter-fallback">🧙‍♂️</span>
                             </div>
@@ -583,7 +583,7 @@
 
                             <div class="fighter-spot spot-enemy" id="fighter-enemy-box">
                                 <div class="floating-dmg hidden" id="dmg-on-enemy">-12</div>
-                                <img id="combat-enemy-sprite" class="fighter-sprite" src="/assets/combat/dire_wolf.png" alt="Enemy"
+                                <img id="combat-enemy-sprite" class="fighter-sprite" src="/assets/combat/dire_wolf.webp" alt="Enemy"
                                      onerror="this.style.display='none'; document.getElementById('combat-enemy-fallback').style.display='block';">
                                 <span id="combat-enemy-fallback" class="fighter-fallback">🐺</span>
                             </div>
@@ -677,7 +677,7 @@
         <footer class="bottom-dock">
             
             <!-- 1. LEFT: CHAT PANEL -->
-            <section class="chat-panel gold-panel" aria-label="Communications">
+            <section id="dock-chat-panel" class="chat-panel gold-panel" aria-label="Communications">
                 <nav class="chat-tabs" role="tablist">
                     <button type="button" class="chat-tab active" data-chat-scope="ROOM">Room</button>
                     <button type="button" class="chat-tab" data-chat-scope="GLOBAL">World</button>
@@ -685,6 +685,12 @@
                     <button type="button" class="chat-tab system-tab" data-chat-scope="LOG">
                         <img src="/assets/icons/command/system-log.png" alt="" class="tab-mini-icon"> System
                     </button>
+
+                    <!-- Chat height and collapse controls -->
+                    <div class="dock-window-controls">
+                        <button type="button" class="dock-ctrl-btn" id="btn-chat-tall" title="Expand Chat Height (+30%)">⤢</button>
+                        <button type="button" class="dock-ctrl-btn" id="btn-chat-collapse" title="Minimize / Restore Chat">▾</button>
+                    </div>
                 </nav>
 
                 <section id="chat-messages" class="chat-history" role="log" aria-live="polite"></section>
@@ -711,7 +717,7 @@
             </nav>
 
             <!-- 3. RIGHT: PLAYERS & PARTY DOCK (Expands columns on Fullscreen!) -->
-            <section class="players-panel gold-panel" aria-label="Players in Location and Party">
+            <section id="dock-players-panel" class="players-panel gold-panel" aria-label="Players in Location and Party">
                 <nav class="chat-tabs" role="tablist">
                     <button type="button" class="chat-tab active" data-dock-tab="players" id="tab-btn-players">
                         Location (<span id="dock-room-count">1</span>)
@@ -719,6 +725,11 @@
                     <button type="button" class="chat-tab" data-dock-tab="group" id="tab-btn-group">
                         Party (<span id="dock-group-count">0</span>)
                     </button>
+
+                    <!-- Player panel collapse/expand button -->
+                    <div class="dock-window-controls">
+                        <button type="button" class="dock-ctrl-btn" id="btn-players-collapse" title="Minimize / Restore Players Panel">▾</button>
+                    </div>
                 </nav>
 
                 <!-- TAB 1: PLAYERS IN CURRENT ROOM -->
