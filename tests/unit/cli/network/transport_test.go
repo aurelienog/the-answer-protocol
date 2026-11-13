@@ -26,22 +26,22 @@ func TestTransportReadLine(t *testing.T) {
 		{
 			name: "exactly maximum bytes",
 			input: append(
-				[]byte(strings.Repeat("a", network.MaxLineBytes)),
+				[]byte(strings.Repeat("a", network.MaxIncomingLineBytes)),
 				'\n',
 			),
-			want: strings.Repeat("a", network.MaxLineBytes),
+			want: strings.Repeat("a", network.MaxIncomingLineBytes),
 		},
 		{
 			name: "maximum bytes followed by CRLF",
 			input: append(
-				[]byte(strings.Repeat("a", network.MaxLineBytes)+"\r"),
+				[]byte(strings.Repeat("a", network.MaxIncomingLineBytes)+"\r"),
 				'\n',
 			),
-			want: strings.Repeat("a", network.MaxLineBytes),
+			want: strings.Repeat("a", network.MaxIncomingLineBytes),
 		},
 		{
 			name:    "message exceeds maximum",
-			input:   []byte(strings.Repeat("a", network.MaxLineBytes+1) + "\n"),
+			input:   []byte(strings.Repeat("a", network.MaxIncomingLineBytes+1) + "\n"),
 			wantErr: network.ErrLineTooLong,
 		},
 		{
@@ -103,7 +103,7 @@ func TestTransportReadLineDiscardsOversizedLine(t *testing.T) {
 	go func() {
 		_, _ = io.WriteString(
 			peer,
-			strings.Repeat("a", network.MaxLineBytes+20)+"\nvalid\n",
+			strings.Repeat("a", network.MaxIncomingLineBytes+20)+"\nvalid\n",
 		)
 	}()
 

@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	MaxLineBytes     = 1024
-	WriteTimeout     = 10 * time.Second
-	readerBufferSize = 4096
+	MaxLineBytes         = 1024      // Maximum outgoing TAP request size.
+	MaxIncomingLineBytes = 64 * 1024 // Responses can contain serialized room snapshots.
+	WriteTimeout         = 10 * time.Second
+	readerBufferSize     = 4096
 )
 
 var (
@@ -86,7 +87,7 @@ func (t *Transport) ReadLine() (string, error) {
 	t.readMu.Lock()
 	defer t.readMu.Unlock()
 
-	line, err := t.readBoundedLine(MaxLineBytes)
+	line, err := t.readBoundedLine(MaxIncomingLineBytes)
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +97,7 @@ func (t *Transport) ReadLine() (string, error) {
 		line = line[:len(line)-1]
 	}
 
-	if len(line) > MaxLineBytes {
+	if len(line) > MaxIncomingLineBytes {
 		return "", ErrLineTooLong
 	}
 
@@ -115,7 +116,7 @@ func (t *Transport) ReadLine() (string, error) {
 
 // readBoundedLine reads until LF while limiting memory usage.
 //
-// It allows MaxLineBytes+1 bytes to accommodate a possible CR
+// It allows maxBytes+1 bytes to accommodate a possible CR
 // immediately before LF.
 func (t *Transport) readBoundedLine(maxBytes int) ([]byte, error) {
 	line := make([]byte, 0, maxBytes+1)
