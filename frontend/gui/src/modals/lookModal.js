@@ -25,7 +25,7 @@ const LookModal = {
         document.getElementById('look-room-region').textContent = meta.region;
         document.getElementById('look-room-desc').textContent = room.description;
 
-        // Exits Tab
+        // Exits Tab (Interactive rows — keep hover highlight)
         const lExits = document.getElementById('look-exits-list');
         lExits.innerHTML = '';
         Object.keys(exits).forEach(dir => {
@@ -45,32 +45,32 @@ const LookModal = {
             lExits.appendChild(li);
         });
 
-        // Items Tab
+        // Items Tab (Static row — only the larger "Take" button highlights on hover!)
         const lItems = document.getElementById('look-items-list');
         lItems.innerHTML = GameState.itemsInRoom.length ? '' : '<li class="card-sub">No items in this location.</li>';
         GameState.itemsInRoom.forEach(itemId => {
             const m = GameState.getItemMeta(itemId);
             const qty = (GameState.roomItemCounts && GameState.roomItemCounts[itemId]) || 1;
             const li = document.createElement('li');
-            li.className = 'select-card';
+            li.className = 'select-card static-card';
             li.innerHTML = `
                 <div class="card-left">
                     <div class="card-thumb"></div>
                     <div><strong class="card-title">${qty > 1 ? `${m.name} (×${qty})` : m.name}</strong><span class="card-sub">${m.desc}</span></div>
                 </div>
-                <button type="button" class="btn-gold-sm" data-cmd="TAKE ${itemId}">Take</button>
+                <button type="button" class="btn-gold-sm btn-take-look" data-cmd="TAKE ${itemId}">Take</button>
             `;
             UI.setArt(li.querySelector('.card-thumb'), m.iconImg || m.img, m.icon, m.name);
             lItems.appendChild(li);
         });
 
-        // NPCs Tab
+        // NPCs Tab (Static info row)
         const lNpcs = document.getElementById('look-npcs-list');
         lNpcs.innerHTML = GameState.npcsInRoom.length ? '' : '<li class="card-sub">No NPCs in this location.</li>';
         GameState.npcsInRoom.forEach(npcId => {
             const m = GameState.getNpcMeta(npcId);
             const li = document.createElement('li');
-            li.className = 'select-card';
+            li.className = 'select-card static-card';
             li.innerHTML = `
                 <div class="card-left">
                     <div class="card-thumb"></div>
