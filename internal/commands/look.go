@@ -8,10 +8,10 @@ import (
 )
 
 type lookResponse struct {
-	Room    world.Room   `json:"room"`
-	Players []string     `json:"players"`
-	Items   []world.Item `json:"items"`
-	NPCs    []string     `json:"npcs"`
+    Room    world.Room         `json:"room"`
+    Players []string           `json:"players"`
+    Items   []world.Item       `json:"items"`
+    NPCs    []world.NPCSummary `json:"npcs"`
 }
 
 type LookCommand struct{}
@@ -61,16 +61,23 @@ func (c *LookCommand) Execute(ctx *Context) (protocol.Message, error) {
 		return mapLookError(err)
 	}
 
-	npcNames := make([]string, 0, len(npcs))
+	npcSummaries := make([]world.NPCSummary, 0, len(npcs))
+
 	for _, npc := range npcs {
-		npcNames = append(npcNames, npc.Name)
+		npcSummaries = append(npcSummaries, world.NPCSummary{
+			ID:          npc.ID,
+			Name:        npc.Name,
+			Role:        npc.Role,
+			Hostile:     npc.Hostile,
+			CombatStats: npc.CombatStats,
+		})
 	}
 
 	response := lookResponse{
 		Room:    room,
 		Players: players,
 		Items:   items,
-		NPCs:    npcNames,
+		NPCs:    npcSummaries,
 	}
 
 	return protocol.OKJSON(response)
