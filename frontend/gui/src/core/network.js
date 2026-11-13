@@ -149,8 +149,11 @@ const App = {
         }
 
         let verb = upper.split(/\s+/)[0];
-        if (upper.startsWith('GROUP LEAVE')) verb = 'GROUP_LEAVE';
-        if (upper.startsWith('GROUP INFO')) verb = 'GROUP_INFO';
+        if (upper.startsWith('GROUP CREATE'))      verb = 'GROUP_CREATE';
+        if (upper.startsWith('GROUP JOIN'))        verb = 'GROUP_JOIN';
+        if (upper.startsWith('GROUP INVITE '))     verb = 'GROUP_INVITE';
+        if (upper.startsWith('GROUP LEAVE'))       verb = 'GROUP_LEAVE';
+        if (upper.startsWith('GROUP INFO'))        verb = 'GROUP_INFO';
         if (upper.startsWith('GROUP INVITATIONS')) verb = 'GROUP_INVITATIONS';
         GameState.commandQueue.push(verb);
 
@@ -185,7 +188,7 @@ const App = {
         this.sendCommand(`CHAT ${scope} ${text}`);
     },
 
-    formatFriendlyError(raw) {
+    formatFriendlyError(raw, failedVerb = '') {
         if (raw.includes('NO_EXIT'))                 return ['🧭 No Exit', 'There is no passage in that direction. Check the compass for available routes!'];
         if (raw.includes('NPC_NOT_HOSTILE'))         return ['🛡️ Friendly NPC', 'This character is peaceful and cannot be attacked.'];
         if (raw.includes('NPC_RESPAWNING'))          return ['⏳ Respawning', 'This enemy was recently defeated and is recovering. Try again shortly!'];
@@ -202,7 +205,12 @@ const App = {
         if (raw.includes('REQUIRED_ITEM_MISSING'))   return ['📜 Missing Objective', 'You do not have the required quest item in your bag yet.'];
         if (raw.includes('QUEST_GIVER_NOT_AVAILABLE')) return ['📜 Quest Giver Away', 'You must be in the same room as the quest giver to complete this quest.'];
         if (raw.includes('NO_QUEST_AVAILABLE'))      return ['📜 No Quest Available', 'This character has no new quests for you right now.'];
-        if (raw.includes('ALREADY_IN_GROUP'))        return ['👥 Already in Party', 'You are already a member of a party. Leave your current party first.'];
+        if (raw.includes('ALREADY_IN_GROUP')) {
+            if (failedVerb === 'GROUP_INVITE') {
+                return ['👥 Player Unavailable', 'That player is already a member of another party and cannot be invited.'];
+            }
+            return ['👥 Already in Party', 'You are already in a party! Leave your current party first before creating or joining another.'];
+        }
         if (raw.includes('GROUP_ALREADY_EXISTS'))    return ['👥 Name Taken', 'A party with that name already exists. Choose another name!'];
         if (raw.includes('RATE_LIMITED'))            return ['⏳ Slow Down', 'You are performing actions too quickly! Wait a moment.'];
         return ['⚠️ Notice', raw.replace(/^ERR\s+\d+\s+/, '').replace(/_/g, ' ')];
@@ -247,7 +255,7 @@ const App = {
                 CombatModal.syncActionButtonsState();
             }
 
-            const [title, friendlyMsg] = this.formatFriendlyError(raw);
+            const [title, friendlyMsg] = this.formatFriendlyError(raw, failedVerb);
             UI.addChatLine('ROOM', title, friendlyMsg, 'chat-err');
             return;
         }

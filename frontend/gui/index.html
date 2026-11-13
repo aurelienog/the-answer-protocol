@@ -362,12 +362,12 @@
                     <hr class="sapphire-divider">
 
                     <div class="modal-split-body">
-                        <!-- Ліворуч: Портрет персонажа на все віконце без зайвої внутрішньої рамки! -->
+                        <!-- On the left: A character portrait filling the entire window, without any extra inner frame! -->
                         <aside class="split-left-preview inner-gold-box flush-portrait">
                             <img id="status-hero-art" class="full-panel-img" src="/assets/avatars/hero_male.jpeg" alt="Character portrait">
                         </aside>
 
-                        <!-- Праворуч: Ім'я + опис над HP, нижче Combat та Miscellaneous у стовпчик на всю ширину! -->
+                        <!-- On the right: Name + description above the HP; below, 'Combat' and 'Miscellaneous' listed vertically, spanning the full width! -->
                         <section class="split-right-list inner-gold-box" style="gap:10px;">
                             <header class="status-hero-header">
                                 <h3 class="preview-title" id="status-char-name">Arthas</h3>
@@ -472,25 +472,25 @@
                             <p class="preview-desc">Form a party with other adventurers to coordinate via Group Chat and explore dungeons together.</p>
                         </aside>
 
-                        <section class="split-right-list inner-gold-box" style="gap:10px;">
-                            <div style="margin-bottom:6px;">
-                                <h4 style="color:var(--gold-light);margin-bottom:6px;">👑 Create or Join Group</h4>
-                                <div style="display:flex;gap:8px;align-items:center;">
-                                    <input type="text" id="group-name-input" placeholder="Group name (e.g. Heroes)..." value="Arvendale_Watch">
-                                    <button type="button" class="btn-gold-sm" data-group-act="CREATE">Create</button>
-                                    <button type="button" class="btn-gold-sm" data-group-act="JOIN">Join</button>
-                                    <button type="button" class="btn-gold-sm" data-cmd="GROUP LEAVE">Leave</button>
+                        <section class="split-right-list inner-gold-box" style="gap:12px;">
+                            <div class="group-form-block">
+                                <h4 class="group-sec-title">👑 Create or Join Group</h4>
+                                <input type="text" id="group-name-input" placeholder="Group name (e.g. Heroes)..." value="Arvendale_Watch">
+                                <div class="group-btn-grid-3">
+                                    <button type="button" class="btn-gold-sm group-act-btn" data-group-act="CREATE">Create</button>
+                                    <button type="button" class="btn-gold-sm group-act-btn" data-group-act="JOIN">Join</button>
+                                    <button type="button" class="btn-gold-sm group-act-btn" data-cmd="GROUP LEAVE">Leave</button>
                                 </div>
                             </div>
 
-                            <hr class="sapphire-divider">
+                            <hr class="sapphire-divider" style="margin:2px 0;">
 
-                            <div>
-                                <h4 style="color:var(--gold-light);margin-bottom:6px;">🤝 Invite Player to Group</h4>
-                                <div style="display:flex;gap:8px;align-items:center;">
-                                    <input type="text" id="group-modal-input" placeholder="Enter player username...">
-                                    <button type="button" class="btn-gold-sm" data-group-act="INVITE">Invite</button>
-                                    <button type="button" class="btn-gold-sm" data-cmd="GROUP INVITATIONS">Check Invites</button>
+                            <div class="group-form-block">
+                                <h4 class="group-sec-title">🤝 Invite Player to Group</h4>
+                                <input type="text" id="group-modal-input" placeholder="Enter player username...">
+                                <div class="group-btn-grid-2">
+                                    <button type="button" class="btn-gold-sm group-act-btn" data-group-act="INVITE">Invite Player</button>
+                                    <button type="button" class="btn-gold-sm group-act-btn" data-cmd="GROUP INVITATIONS">Check Invites</button>
                                 </div>
                             </div>
 

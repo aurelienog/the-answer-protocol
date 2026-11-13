@@ -193,3 +193,38 @@
     color: var(--gold-bright);
     box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7);
 }
+
+/* ==================== GROUP MODAL FORM & BUTTON GRIDS ==================== */
+.group-form-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.group-sec-title {
+    color: var(--gold-light);
+    font-size: 14.5px;
+    font-weight: normal;
+}
+
+.group-btn-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.group-btn-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.group-act-btn {
+    width: 100%;
+    padding: 8px 10px !important;
+    font-size: 14px !important;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-align: center;
+}
