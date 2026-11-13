@@ -1,19 +1,16 @@
 package layout
 
-import (
-	"github.com/charmbracelet/lipgloss"
-)
+import "github.com/charmbracelet/lipgloss"
 
 var sidebarStyle = PanelStyle
 
-func RenderSidebar(groupContent string, questContent string) string {
+func RenderSidebar(questContent string, groupContent string) string {
     content := lipgloss.JoinVertical(
         lipgloss.Left,
-        "GROUP",
-        groupContent,
-        "",
-        "QUESTS",
+        TitleStyle.Render(IconQuest + " QUESTS"),
         questContent,
+        TitleStyle.Render(IconGroup + " GROUP"),
+        groupContent,
     )
 
     return sidebarStyle.Render(content)

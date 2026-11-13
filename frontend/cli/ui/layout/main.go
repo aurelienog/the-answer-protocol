@@ -4,23 +4,18 @@ import "github.com/charmbracelet/lipgloss"
 
 const (
     minWidthForSidebar = 90
-
-    panelBorderWidth  = 2
-    panelBorderHeight = 2
-    panelPaddingWidth  = 4
-    panelPaddingHeight = 2
-
-    panelWidthOffset  = panelBorderWidth + panelPaddingWidth
-    panelHeightOffset = panelBorderHeight + panelPaddingHeight
 )
 
 var mainViewStyle = PanelStyle
 
 func RenderMain(mainContent, sidebarContent string, width, height int) string {
+    contentWidth := maxInt(0, width-PanelWidthOffset)
+    contentHeight := maxInt(0, height-PanelHeightOffset)
+
     if width < minWidthForSidebar {
         return mainViewStyle.
-            Width(width - panelWidthOffset).
-            Height(height - panelHeightOffset).
+            Width(contentWidth).
+            Height(contentHeight).
             Render(mainContent)
     }
 
@@ -28,18 +23,21 @@ func RenderMain(mainContent, sidebarContent string, width, height int) string {
     sidebarWidth := width - mainWidth
 
     main := mainViewStyle.
-        Width(mainWidth - panelWidthOffset).
-        Height(height - panelHeightOffset).
+        Width(maxInt(0, mainWidth-PanelWidthOffset)).
+        Height(contentHeight).
         Render(mainContent)
 
     sidebar := sidebarStyle.
-        Width(sidebarWidth - panelWidthOffset).
-        Height(height - panelHeightOffset).
+        Width(maxInt(0, sidebarWidth-PanelWidthOffset)).
+        Height(contentHeight).
         Render(sidebarContent)
 
-    return lipgloss.JoinHorizontal(
-        lipgloss.Top,
-        main,
-        sidebar,
-    )
+    return lipgloss.JoinHorizontal(lipgloss.Top, main, sidebar)
+}
+
+func maxInt(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
 }

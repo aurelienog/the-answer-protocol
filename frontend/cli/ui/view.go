@@ -39,7 +39,7 @@ func (m Model) renderView() string {
 	case ViewWorld:
 		content = m.renderWorld()
 	case ViewRoom:
-		content = m.renderRoom()
+		content = renderRoom(m.currentRoom)
 	case ViewInventory:
 		content = m.renderInventory()
 	case ViewCharacter:
@@ -61,8 +61,8 @@ func (m Model) renderView() string {
 	)
 
 	sidebar := layout.RenderSidebar(
-		m.renderCharacter(),
 		m.renderQuests(),
+		m.renderGroup(),
 	)
 
 	eventLog := m.renderEventLog()
@@ -104,11 +104,7 @@ func (m Model) renderView() string {
 }
 
 func (m Model) renderWorld() string {
-	return "World View"
-}
-
-func (m Model) renderRoom() string {
-	return "Room View"
+    return renderRoom(m.currentRoom)
 }
 
 func (m Model) renderInventory() string {

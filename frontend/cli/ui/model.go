@@ -34,6 +34,7 @@ type Model struct {
     playerStatus PlayerStatus
 
     status   string
+    currentRoom LookResponse
 
     eventLog []string
 

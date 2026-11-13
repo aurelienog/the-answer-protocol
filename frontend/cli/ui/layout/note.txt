@@ -1,0 +1,7 @@
+
+section.go: títulos y separadores.
+badge.go: etiquetas de entidades.
+progress_bar.go: barras de vida y progreso.
+status_bar.go: información del personaje.
+entity_row.go: representación de entidades.
+table.go: inventario y grupos.

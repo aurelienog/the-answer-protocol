@@ -1,24 +1,19 @@
 package layout
 
 import (
-    "fmt"
-
     "github.com/charmbracelet/lipgloss"
 )
 
 func RenderHeader(playerName string, hp int, maxHP int) string {
-    title := TitleStyle.Render("THE ANSWER PROTOCOL")
+	title := TitleStyle.Render("THE ANSWER PROTOCOL")
+	player := "Player: " + playerName
 
-    player := fmt.Sprintf(
-        "Player: %s | HP: %d/%d",
-        playerName,
-        hp,
-        maxHP,
-    )
+	health := "HP  " + RenderProgressBar(hp, maxHP, 20)
 
-    return lipgloss.JoinVertical(
-        lipgloss.Left,
-        title,
-        player,
-    )
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		player,
+		health,
+	)
 }

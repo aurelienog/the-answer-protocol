@@ -20,6 +20,7 @@ func (m Model) handleAuthenticationResult(
 
     return m, tea.Batch(
         sendCommand(m.client, "STATUS"),
+        sendCommand(m.client, "LOOK"),
         waitForServerEvent(m.client),
     )
 }

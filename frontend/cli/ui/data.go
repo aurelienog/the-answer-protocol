@@ -1,5 +1,14 @@
 package ui
 
+import "the-answer-protocol/internal/world"
+
+type LookResponse struct {
+    Room    world.Room         `json:"room"`
+    Players []string           `json:"players"`
+    Items   []world.Item       `json:"items"`
+    NPCs    []world.NPCSummary `json:"npcs"`
+}
+
 type Quest struct {
     ID          string `json:"id"`
     Name        string `json:"name"`

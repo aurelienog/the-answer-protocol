@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-
+	"log"
 	"the-answer-protocol/internal/protocol"
 )
 
@@ -122,6 +122,7 @@ func NewClient(
 
 	// Reader and Writer report fatal errors directly to the Client.
 	onFatalError := func(err error) {
+		log.Printf("Client fatal network error: %v", err)
 		client.initiateClose(err)
 	}
 
