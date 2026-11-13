@@ -47,3 +47,40 @@
 
     background-repeat: no-repeat !important;
 }
+
+/* Portrait panels (.flush-portrait in LOOK, TALK Dialogue, STATUS):
+   No scroll needed, and ::after draws the gold frame ON TOP of the portrait image! */
+.inner-gold-box.flush-portrait {
+    border: none !important;
+    padding: 2px !important;
+    overflow: hidden !important;
+}
+
+.inner-gold-box.flush-portrait::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+
+    background-image:
+        url('/assets/ui/panel-corner-tl.png'),
+        url('/assets/ui/panel-corner-tr.png'),
+        url('/assets/ui/panel-corner-bl.png'),
+        url('/assets/ui/panel-corner-br.png'),
+        url('/assets/ui/slot-edge-h.png'),
+        url('/assets/ui/slot-edge-h.png'),
+        url('/assets/ui/slot-edge-v.png'),
+        url('/assets/ui/slot-edge-v.png');
+
+    background-position:
+        top left, top right, bottom left, bottom right,
+        top 1px center, bottom 1px center, left 1px center, right 1px center;
+
+    background-size:
+        28px 28px, 28px 28px, 28px 28px, 28px 28px,
+        calc(100% - 36px) 2px, calc(100% - 36px) 2px,
+        2px calc(100% - 36px), 2px calc(100% - 36px);
+
+    background-repeat: no-repeat;
+}

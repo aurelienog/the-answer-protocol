@@ -5,8 +5,8 @@
 .rpg-modal {
     color: var(--text-main);
     position: absolute;
-    top: 74px;
-    bottom: 224px;
+    top: 70px;
+    bottom: 210px;
     left: 0;
     right: 0;
     margin: auto;
@@ -14,12 +14,12 @@
     max-width: 95%;
     height: auto;
     min-height: 500px;
-    max-height: calc(100vh - 298px);
+    max-height: calc(100vh - 280px);
     z-index: 35 !important;
     display: flex;
     flex-direction: column;
     overflow: visible;
-    padding: 22px 34px 24px 34px;
+    padding: 20px 34px 24px 34px;
 }
 
 .rpg-modal.modal-sm {
@@ -35,14 +35,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 12px 10px 12px;
+    padding: 2px 12px 0px 12px;
 }
 
 .modal-title-group {
     padding: 6px 0 0 10px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
 }
 
 .modal-header-icon {
@@ -170,7 +170,7 @@
 }
 
 .inner-gold-box.flush-portrait {
-    padding: 0 !important;
+    padding: 1px !important;
     overflow: hidden !important;
 }
 
@@ -237,4 +237,30 @@
     letter-spacing: 0.5px;
     white-space: nowrap;
     text-align: center;
+}
+
+/* ==================== DIALOGUE MODAL LAYOUT FIX ==================== */
+#modal-dialogue .split-right-list {
+    justify-content: flex-start !important;
+    overflow-y: hidden !important;
+}
+
+#modal-dialogue .split-right-list > div:first-child {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+#modal-dialogue .npc-speech-box {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin-bottom: 4px;
+}
+
+#dlg-choices {
+    margin-top: auto !important;
+    overflow-y: visible !important;
+    padding-right: 0 !important;
 }
