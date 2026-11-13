@@ -23,7 +23,7 @@
                 <label class="form-field">
                     <span class="field-label">Character Name</span>
                     <span class="input-wrapper">
-                        <span class="input-icon" aria-hidden="true">👤</span>
+                        <img src="/assets/icons/ui/player.webp" alt="" aria-hidden="true" class="input-icon-img">
                         <input type="text" id="login-username" name="username"
                                placeholder="Enter your character name..."
                                value="Arthas" required minlength="1" maxlength="12"
@@ -89,8 +89,8 @@
 
             <section class="hud-right gold-frame" role="region" aria-label="Room Information and Actions">
                 <div class="hud-location-info">
-                    <p><span aria-hidden="true">👥</span> Room: <data id="hud-room-count" value="1"><b>1</b></data></p>
-                    <p><span aria-hidden="true">🌐</span> Server: <data id="hud-server-count" value="1"><b>1</b></data></p>
+                    <p><img src="/assets/icons/ui/room.webp" alt="" aria-hidden="true" class="hud-stat-icon"> Room: <data id="hud-room-count" value="1"><b>1</b></data></p>
+                    <p><img src="/assets/icons/ui/server.webp" alt="" aria-hidden="true" class="hud-stat-icon"> Server: <data id="hud-server-count" value="1"><b>1</b></data></p>
                 </div>
                 <div class="hud-top-icons" role="toolbar" aria-label="Quick System Actions">
                     <button type="button" class="icon-btn" data-cmd="WHO" title="Refresh WHO">
@@ -474,7 +474,9 @@
 
                         <section class="split-right-list inner-gold-box" style="gap:12px;">
                             <div class="group-form-block">
-                                <h4 class="group-sec-title">👑 Create or Join Group</h4>
+                                <h4 class="group-sec-title">
+                                    <img src="/assets/icons/ui/crown.webp" alt="" class="sec-title-icon"> Create or Join Group
+                                </h4>
                                 <input type="text" id="group-name-input" placeholder="Group name (e.g. Heroes)..." value="Arvendale_Watch">
                                 <div class="group-btn-grid-3">
                                     <button type="button" class="btn-gold-sm group-act-btn" data-group-act="CREATE">Create</button>
@@ -486,7 +488,9 @@
                             <hr class="sapphire-divider" style="margin:2px 0;">
 
                             <div class="group-form-block">
-                                <h4 class="group-sec-title">🤝 Invite Player to Group</h4>
+                                <h4 class="group-sec-title">
+                                    <img src="/assets/icons/ui/invite.png" alt="" class="sec-title-icon"> Invite Player to Group
+                                </h4>
                                 <input type="text" id="group-modal-input" placeholder="Enter player username...">
                                 <div class="group-btn-grid-2">
                                     <button type="button" class="btn-gold-sm group-act-btn" data-group-act="INVITE">Invite Player</button>

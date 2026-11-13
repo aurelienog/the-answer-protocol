@@ -202,9 +202,19 @@
 }
 
 .group-sec-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
     color: var(--gold-light);
     font-size: 14.5px;
     font-weight: normal;
+}
+
+.sec-title-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
 }
 
 .group-btn-grid-3 {

@@ -89,11 +89,17 @@
     position: relative;
     display: block;
 }
-.input-wrapper .input-icon {
+.input-wrapper .input-icon,
+.input-wrapper .input-icon-img {
     position: absolute;
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
 }
 .input-wrapper input {
     padding-left: 34px;

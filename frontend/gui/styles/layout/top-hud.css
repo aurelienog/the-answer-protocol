@@ -154,6 +154,19 @@
     white-space: nowrap;
 }
 
+.hud-location-info p {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hud-stat-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
+}
+
 .hud-top-icons {
     display: flex;
     gap: 6px;

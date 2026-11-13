@@ -55,19 +55,17 @@ const PlayersDockView = {
             tbody.appendChild(tr);
 
             if (lPlayers) {
-                const av = isMe
-                    ? (ASSETS.avatars[GameState.gender] || ASSETS.avatars.male)
-                    : ASSETS.avatars.male;
                 const li = document.createElement('li');
                 li.className = 'select-card static-card';
                 li.innerHTML = `
                     <div class="card-left">
-                        <div class="card-thumb"></div>
+                        <div class="card-thumb">
+                            <img src="/assets/icons/ui/player.webp" alt="Player" class="art-img contain" style="padding:5px;">
+                        </div>
                         <div><strong class="card-title">${name} ${isMe ? '(You)' : ''}</strong><span class="card-sub">Adventurer</span></div>
                     </div>
                     <span class="badge">Online</span>
                 `;
-                UI.setArt(li.querySelector('.card-thumb'), av.iconImg || av.img, av.icon, name);
                 lPlayers.appendChild(li);
             }
         });
@@ -91,16 +89,16 @@ const PlayersDockView = {
         gBody.innerHTML = '';
 
         grp.members.forEach((member, idx) => {
-          const isMe = member.toLowerCase() === GameState.playerName.toLowerCase();
-          const icon = idx === 0 ? '👑' : '🛡️';
-          const rank = idx === 0 ? 'Leader' : 'Member';
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-              <td>${icon} <strong>${member}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
-              <td class="col-wide-only">${rank}</td>
-              <td><span class="badge">${grp.name}</span></td>
-          `;
-          gBody.appendChild(tr);
-      });
+            const isMe = member.toLowerCase() === GameState.playerName.toLowerCase();
+            const iconSrc = idx === 0 ? '/assets/icons/ui/crown.webp' : '/assets/icons/ui/player.webp';
+            const rank = idx === 0 ? 'Leader' : 'Member';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><img src="${iconSrc}" alt="" class="tab-mini-icon"> <strong>${member}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
+                <td class="col-wide-only">${rank}</td>
+                <td><span class="badge">${grp.name}</span></td>
+            `;
+            gBody.appendChild(tr);
+        });
     }
 };
