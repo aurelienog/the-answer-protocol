@@ -128,7 +128,7 @@ const CombatModal = {
         if (this.isFallen) {
             this.isMyTurn = false;
             const owner = this.activeTurnOwner || 'ALLY';
-            turnEl.textContent = `💀 SPECTATING (${owner.toUpperCase()})`;
+            turnEl.innerHTML = `<img src="/assets/icons/ui/skull.webp" alt="" class="ui-ico">SPECTATING (${owner.toUpperCase()})`;
             return;
         }
 
@@ -373,8 +373,8 @@ const CombatModal = {
     playDefendEffect(reductionPct) {
         this.enqueueAnim(() => {
             const turnText = document.getElementById('combat-turn-text');
-            if (turnText) turnText.textContent = 'DEFENDING 🛡️';
-            this.showFloatingDmg('dmg-on-hero', `🛡️ +${reductionPct}% DEF`, '#63b3ed');
+            if (turnText) turnText.innerHTML = `DEFENDING <img src="/assets/icons/ui/shield.webp" alt="" class="ui-ico">`;
+            this.showFloatingDmg('dmg-on-hero', `+${reductionPct}% DEF`, '#63b3ed');
         }, 1250);
     },
 
@@ -540,7 +540,9 @@ const CombatModal = {
             this.isMyTurn = false;
             this.setButtonsDisabled(true);
             const banner = document.getElementById('combat-outcome-banner');
-            document.getElementById('combat-outcome-title').textContent = victory ? '🏆 VICTORY!' : '💀 DEFEATED';
+            document.getElementById('combat-outcome-title').innerHTML = victory
+                ? `<img src="/assets/icons/ui/trophy.webp" alt="" class="ui-ico-lg">VICTORY!`
+                : `<img src="/assets/icons/ui/skull.webp" alt="" class="ui-ico-lg">DEFEATED`;
             document.getElementById('combat-outcome-sub').textContent = subtitle;
             banner.classList.remove('hidden');
 

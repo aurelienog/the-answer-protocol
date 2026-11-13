@@ -50,7 +50,9 @@ const GroupModal = {
             li.className = 'select-card static-card selected';
             li.innerHTML = `
                 <div class="card-left">
-                    <div class="card-thumb"><img src="/assets/icons/command/group.png" alt="Group" class="art-img contain"></div>
+                    <div class="card-thumb">
+                        <img src="/assets/icons/ui/crown.webp" alt="Leader" class="art-img contain" style="padding:5px;">
+                    </div>
                     <div>
                         <strong class="card-title">Active Party: ${grp.name}</strong>
                         <span class="card-sub">Members (${grp.members.length}): ${grp.members.join(', ')}</span>
@@ -76,7 +78,9 @@ const GroupModal = {
                 li.className = 'select-card static-card';
                 li.innerHTML = `
                     <div class="card-left">
-                        <div class="card-thumb"><img src="/assets/icons/ui/invite.png" alt="Invite" class="art-img contain"></div>
+                        <div class="card-thumb">
+                            <img src="/assets/icons/ui/shield.webp" alt="Invite" class="art-img contain" style="padding:5px;">
+                        </div>
                         <div>
                             <strong class="card-title">Invite to: ${invName}</strong>
                             <span class="card-sub">Group ID: ${inv.ID || inv.id}</span>

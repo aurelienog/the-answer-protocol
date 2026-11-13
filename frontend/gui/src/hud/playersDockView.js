@@ -36,7 +36,7 @@ const PlayersDockView = {
 
             let partyCell = '-';
             if (!isMe && GameState.activeHelpCombatId && GameState.activeHelpPlayer === name) {
-                partyCell = `<button type="button" class="btn-gold-sm" data-cmd="COMBAT JOIN ${GameState.activeHelpCombatId}">⚔️ Aid</button>`;
+                partyCell = `<button type="button" class="btn-gold-sm" data-cmd="COMBAT JOIN ${GameState.activeHelpCombatId}"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`;
             } else if (isMe) {
                 partyCell = inGroup ? '<span class="badge">In Party</span>' : '-';
             } else if (alreadyInMyGroup) {
@@ -47,7 +47,7 @@ const PlayersDockView = {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>🟢 <strong>${name}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
+                <td><img src="/assets/icons/ui/dot.webp" alt="" class="tab-mini-icon"> <strong>${name}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
                 <td class="col-wide-only">Adventurer</td>
                 <td class="col-wide-only">In Room</td>
                 <td>${partyCell}</td>
@@ -90,7 +90,7 @@ const PlayersDockView = {
 
         grp.members.forEach((member, idx) => {
             const isMe = member.toLowerCase() === GameState.playerName.toLowerCase();
-            const iconSrc = idx === 0 ? '/assets/icons/ui/crown.webp' : '/assets/icons/ui/player.webp';
+            const iconSrc = idx === 0 ? '/assets/icons/ui/crown.webp' : '/assets/icons/ui/shield.webp';
             const rank = idx === 0 ? 'Leader' : 'Member';
             const tr = document.createElement('tr');
             tr.innerHTML = `

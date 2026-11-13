@@ -77,18 +77,19 @@ const QuestsModal = {
         const qTitle = q.name || qId || 'Quest';
         document.getElementById('quest-detail-title').textContent = qTitle;
         document.getElementById('quest-detail-desc').textContent = q.description || '';
-        document.getElementById('quest-detail-obj').textContent = q.progress
-            ? `🎯 Progress: ${q.progress} (${q.status})`
-            : `☑️ Status: ${(q.status || 'Active').toUpperCase()}`;
+        document.getElementById('quest-detail-obj').innerHTML = q.progress
+            ? `<img src="/assets/icons/ui/target.webp" alt="" class="ui-ico">Progress: ${q.progress} (${q.status})`
+            : `<img src="/assets/icons/ui/checkmark.png" alt="" class="ui-ico">Status: ${(q.status || 'Active').toUpperCase()}`;
 
         // Dynamically fetch rewards from world.json!
         let rewardText = q.reward || 'Armor Gear & Healing Consumables';
         if (GameState.worldQuests && GameState.worldQuests[qId]) {
             const rewIds = GameState.worldQuests[qId].reward_item_ids || [];
             if (rewIds.length > 0) {
-                rewardText = '✨ ' + rewIds.map(id => GameState.getItemMeta(id).name).join(' + ');
+                rewardText = rewIds.map(id => GameState.getItemMeta(id).name).join(' + ');
             }
         }
-        document.getElementById('quest-detail-rew').textContent = rewardText;
+        document.getElementById('quest-detail-rew').innerHTML =
+            `<img src="/assets/icons/ui/sparkles.webp" alt="" class="ui-ico">${rewardText}`;
     }
 };

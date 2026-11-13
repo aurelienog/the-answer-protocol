@@ -33,16 +33,16 @@ const SelectorModal = {
 
             const exits = GameState.room.exits || {};
             const dirs = Object.keys(exits);
-            heading.textContent = `🧭 Available exits (${dirs.length})`;
+            heading.innerHTML = `<img src="/assets/icons/ui/compass.webp" alt="" class="ui-ico">Available exits (${dirs.length})`;
 
             options = dirs.map(dir => {
                 const targetId = exits[dir];
                 const rMeta = ASSETS.rooms[targetId] || ASSETS.rooms.default;
                 return {
                     value: dir,
-                    icon: rMeta.icon || '🚪',
-                    img: rMeta.cardImg || rMeta.img || '',     // <-- On the left, we preview a compact image from /rooms/cards/!
-                    iconImg: rMeta.iconImg || rMeta.img || '', // <-- On the right, we display a small icon from /rooms/icons/!
+                    icon: rMeta.icon || '',
+                    img: rMeta.cardImg || rMeta.img || '',
+                    iconImg: rMeta.iconImg || rMeta.img || '',
                     title: dir.charAt(0).toUpperCase() + dir.slice(1),
                     subtitle: targetId.replace(/_/g, ' '),
                     desc: `Travel ${dir} towards ${targetId.replace(/_/g, ' ')}.`,
@@ -53,7 +53,7 @@ const SelectorModal = {
             title.textContent = 'TAKE — Items in this location';
             sub.textContent = 'Select an item to take it into your inventory.';
             confirmBtn.textContent = 'Take';
-            heading.textContent = `🧰 Available items (${GameState.itemsInRoom.length})`;
+            heading.innerHTML = `<img src="/assets/icons/ui/toolbox.webp" alt="" class="ui-ico">Available items (${GameState.itemsInRoom.length})`;
 
             options = GameState.itemsInRoom.map(itemId => {
                 const m = GameState.getItemMeta(itemId);
@@ -74,7 +74,7 @@ const SelectorModal = {
             title.textContent = 'TALK — Choose a character';
             sub.textContent = 'Select an NPC in this location to start a conversation.';
             confirmBtn.textContent = 'Talk';
-            heading.textContent = `👥 Available characters (${GameState.npcsInRoom.length})`;
+            heading.innerHTML = `<img src="/assets/icons/ui/room.webp" alt="" class="ui-ico">Available characters (${GameState.npcsInRoom.length})`;
 
             options = GameState.npcsInRoom.map(npcId => {
                 const m = GameState.getNpcMeta(npcId);
@@ -93,7 +93,7 @@ const SelectorModal = {
             title.textContent = 'ATTACK';
             sub.textContent = 'Select a target NPC to initiate combat.';
             confirmBtn.textContent = 'Attack';
-            heading.textContent = `🪖 Targets in this location (${GameState.npcsInRoom.length})`;
+            heading.innerHTML = `<img src="/assets/icons/ui/helmet.webp" alt="" class="ui-ico">Targets in this location (${GameState.npcsInRoom.length})`;
 
             options = GameState.npcsInRoom.map(npcId => {
                 const m = GameState.getNpcMeta(npcId);
@@ -103,23 +103,25 @@ const SelectorModal = {
                     img: m.img || '',
                     iconImg: m.iconImg || m.img || '',
                     title: m.name,
-                    subtitle: m.hostile ? '💀 Hostile Enemy' : m.role,
+                    subtitle: m.hostile
+                        ? `<img src="/assets/icons/ui/skull.webp" alt="" class="tab-mini-icon">Hostile Enemy`
+                        : m.role,
                     hostile: m.hostile,
                     desc: `Engage ${m.name} in turn-based combat.`,
                     stats: [
-                        ['❤️ Health', `${m.hp || 60} / ${m.maxHp || 60} HP`],
-                        ['🗡️ Attack', `${m.atk || 10}`],
-                        ['🛡️ Defense', `${m.def !== undefined ? m.def : 5}`],
-                        ['⚡ Speed', `${m.spd || 10}`],
-                        ['🪙 Loot', m.loot || 'None']
+                        [`<img src="/assets/icons/ui/heart.webp" alt="" class="ui-ico">Health`, `${m.hp || 60} / ${m.maxHp || 60} HP`],
+                        [`<img src="/assets/icons/ui/sword.webp" alt="" class="ui-ico">Attack`, `${m.atk || 10}`],
+                        [`<img src="/assets/icons/ui/shield.webp" alt="" class="ui-ico">Defense`, `${m.def !== undefined ? m.def : 5}`],
+                        [`<img src="/assets/icons/ui/speed.webp" alt="" class="ui-ico">Speed`, `${m.spd || 10}`],
+                        [`<img src="/assets/icons/ui/reward.webp" alt="" class="ui-ico">Loot`, m.loot || 'None']
                     ]
                 };
             });
         }
 
         if (options.length === 0) {
-            listEl.innerHTML = `<li class="select-card"><span class="card-sub">Nothing available for ${mode.toUpperCase()} in this room.</span></li>`;
-            UI.setArt(document.getElementById('sel-preview-art'), '', icon.textContent);
+            listEl.innerHTML = `<li class="select-card static-card"><span class="card-sub">Nothing available for ${mode.toUpperCase()} in this room.</span></li>`;
+            UI.setArt(document.getElementById('sel-preview-art'), '', '');
             document.getElementById('sel-preview-title').textContent = 'None Available';
             document.getElementById('sel-preview-desc').textContent = 'Explore other locations to find more interactions.';
             document.getElementById('sel-preview-stats').innerHTML = '';
@@ -137,7 +139,6 @@ const SelectorModal = {
                     </div>
                     <div class="check-circle">✔</div>
                 `;
-                // Let's place a small square icon on the right side of the list!
                 UI.setArt(li.querySelector('.card-thumb'), opt.iconImg, opt.icon);
 
                 li.addEventListener('click', () => this.selectCard(li, opt));
@@ -156,7 +157,6 @@ const SelectorModal = {
         cardEl.classList.add('selected');
         this.selectedValue = opt.value;
 
-        // Let's place a LARGE portrait on the left in the preview!
         const artEl = document.getElementById('sel-preview-art');
         artEl.classList.toggle('tall', this.mode === 'talk' || this.mode === 'attack');
         UI.setArt(artEl, opt.img, opt.icon, opt.title);
