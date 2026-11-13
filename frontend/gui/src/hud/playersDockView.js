@@ -55,15 +55,19 @@ const PlayersDockView = {
             tbody.appendChild(tr);
 
             if (lPlayers) {
+                const av = isMe
+                    ? (ASSETS.avatars[GameState.gender] || ASSETS.avatars.male)
+                    : ASSETS.avatars.male;
                 const li = document.createElement('li');
-                li.className = 'select-card';
+                li.className = 'select-card static-card';
                 li.innerHTML = `
                     <div class="card-left">
-                        <div class="card-thumb">🧙</div>
-                        <div><strong class="card-title">${name}</strong><span class="card-sub">Adventurer</span></div>
+                        <div class="card-thumb"></div>
+                        <div><strong class="card-title">${name} ${isMe ? '(You)' : ''}</strong><span class="card-sub">Adventurer</span></div>
                     </div>
                     <span class="badge">Online</span>
                 `;
+                UI.setArt(li.querySelector('.card-thumb'), av.iconImg || av.img, av.icon, name);
                 lPlayers.appendChild(li);
             }
         });

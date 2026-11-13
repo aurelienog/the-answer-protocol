@@ -38,6 +38,7 @@
     transition: transform 0.18s ease, filter 0.22s ease, box-shadow 0.22s ease;
 }
 
+/* Hover gold layer only for interactive cards that are NOT currently selected */
 .select-card::before {
     content: "";
     position: absolute;
@@ -47,24 +48,47 @@
     background-position: center center;
     background-size: 100% 100%;
     opacity: 0;
-    transition: opacity 0.22s ease;
+    transition: opacity 0.18s ease;
     z-index: -1;
     pointer-events: none;
 }
 
-.select-card.selected::before {
-    background-image: url('/assets/buttons/bg-blue.png');
-    opacity: 1;
-}
-
-.select-card:hover::before {
-    opacity: 1;
-}
-
-.select-card:hover,
+/* Selected card uses blue background directly — prevents yellow flash when deselecting! */
 .select-card.selected {
+    background-image: url('/assets/buttons/bg-blue.png') !important;
+    box-shadow: 0 0 14px rgba(30, 98, 208, 0.55);
+    filter: brightness(1.08);
+}
+
+.select-card.selected::before {
+    opacity: 0 !important;
+    transition: none !important;
+}
+
+.select-card:not(.static-card):not(.selected):hover::before {
+    opacity: 1;
+}
+
+.select-card:not(.static-card):hover {
     box-shadow: 0 0 14px rgba(212, 163, 70, 0.5);
     filter: brightness(1.08);
+}
+
+/* Static cards in LOOK (Items, NPCs, Players): card stays dark, only inner buttons highlight! */
+.select-card.static-card {
+    cursor: default;
+}
+.select-card.static-card::before {
+    display: none !important;
+}
+
+/* Larger "Take" button inside LOOK -> Items */
+.btn-take-look {
+    padding: 8px 22px !important;
+    font-size: 15px !important;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+    flex-shrink: 0;
 }
 
 .card-left {
@@ -112,13 +136,13 @@
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
 }
 
-.select-card:hover .card-title,
+.select-card:not(.static-card):hover .card-title,
 .select-card.selected .card-title {
     color: #ffffff !important;
     text-shadow: 0 2px 4px #000000, 0 0 6px rgba(0, 0, 0, 0.95) !important;
 }
 
-.select-card:hover .card-sub,
+.select-card:not(.static-card):hover .card-sub,
 .select-card.selected .card-sub {
     color: #f3e8d2 !important;
     text-shadow: 0 1px 3px #000000, 0 0 5px rgba(0, 0, 0, 0.95) !important;

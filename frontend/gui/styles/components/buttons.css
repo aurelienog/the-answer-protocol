@@ -133,11 +133,18 @@
     cursor: not-allowed;
 }
 
-.tab-btn,
-.chat-tab {
+.tab-btn {
     font-size: var(--btn-font-tab) !important;
     letter-spacing: 0.4px;
     padding: 8px 16px;
+}
+
+/* Smaller, neater tabs for Bottom Chat & Players Dock so they never overlap the frame or line! */
+.chat-tab {
+    font-size: 13px !important;
+    letter-spacing: 0.3px;
+    padding: 5px 12px !important;
+    margin-bottom: 3px;
 }
 
 .btn-primary-connect {
@@ -154,10 +161,10 @@
     font-size: var(--btn-font-sm) !important;
 }
 
-/* Theme assignment for ::before overlay */
+/* Active tabs set --btn-bg directly to blue and disable ::before hover flash on tab switch! */
 .window-tabs .tab-btn.active,
 .chat-tabs .chat-tab.active {
-    --btn-hover-bg: url('/assets/buttons/bg-blue.png');
+    --btn-bg: url('/assets/buttons/bg-blue.png') !important;
     --btn-edge-h: url('/assets/buttons/edge-h-blue.png') !important;
     --btn-edge-v: url('/assets/buttons/edge-v-blue.png') !important;
     --btn-c-tl: url('/assets/buttons/corner-blue-tl.png') !important;
@@ -166,6 +173,12 @@
     --btn-c-br: url('/assets/buttons/corner-blue-br.png') !important;
     color: #ffffff !important;
     box-shadow: 0 0 12px rgba(30, 98, 208, 0.55) !important;
+}
+
+.window-tabs .tab-btn.active::before,
+.chat-tabs .chat-tab.active::before {
+    opacity: 0 !important;
+    transition: none !important;
 }
 
 .btn-modal-danger,
@@ -180,24 +193,28 @@
     --btn-hover-bg: url('/assets/buttons/bg-sq-gold.png');
 }
 
+.right-action-bar .action-btn.active {
+    --btn-bg: url('/assets/buttons/bg-sq-gold.png') !important;
+}
+.right-action-bar .action-btn.active::before {
+    opacity: 0 !important;
+    transition: none !important;
+}
+
 .right-action-bar .action-btn[data-open-window="attack"],
 .right-action-bar .action-btn[data-open-window="quit"] {
     --btn-hover-bg: url('/assets/buttons/bg-sq-red.png');
 }
 
-/* Smoothly fade-in ::before on hover or active! */
+/* Smoothly fade-in ::before ONLY on hover of non-active tabs/buttons! */
 .btn-modal-primary:hover:not(:disabled)::before,
-.btn-modal-primary.active::before,
 .btn-modal-secondary:hover:not(:disabled)::before,
 .btn-modal-danger:hover:not(:disabled)::before,
 .btn-primary-connect:hover:not(:disabled)::before,
 .btn-gold-sm:hover:not(:disabled)::before,
-.tab-btn:hover::before,
-.tab-btn.active::before,
-.chat-tab:hover::before,
-.chat-tab.active::before,
-.action-btn:hover::before,
-.action-btn.active::before,
+.tab-btn:not(.active):hover::before,
+.chat-tab:not(.active):hover::before,
+.action-btn:not(.active):hover::before,
 .gender-option input[type="radio"]:checked + .gender-btn::before,
 .gender-btn:hover::before {
     opacity: 1;

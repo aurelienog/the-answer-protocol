@@ -74,9 +74,10 @@
 .chat-tabs {
     display: flex;
     align-items: center;
+    gap: 5px;
     border-bottom: 1px solid var(--gold-dark);
     background: rgba(5, 9, 18, 0.55);
-    padding: 0 6px;
+    padding: 4px 8px 3px 8px;
 }
 
 /* Window control buttons in the right corner of the tabs */
@@ -130,7 +131,7 @@
 .chat-input-row {
     display: flex;
     align-items: center;
-    padding: 6px 4px 0 4px;
+    padding: 6px 4px 3px 4px;
     border-top: 1px solid rgba(212, 163, 70, 0.25);
     gap: 8px;
 }
