@@ -29,6 +29,13 @@ var (
 	Accent    = lipgloss.Color("#9166A8") // Mystic Purple
 )
 
+const (
+    MinWidthForSidebar = 90
+    MinTerminalWidth   = 50
+    MinMainHeight      = 3
+    MinSidebarHeight   = 8
+)
+
 // Base component styles.
 var (
 	PanelStyle = lipgloss.NewStyle().

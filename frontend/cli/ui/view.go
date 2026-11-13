@@ -33,25 +33,10 @@ func (m Model) renderAuthentication() string {
 }
 
 func (m Model) renderView() string {
-	var content string
-
-	switch m.currentView {
-	case ViewWorld:
-		content = m.renderWorld()
-	case ViewRoom:
-		content = renderRoom(m.currentRoom)
-	case ViewInventory:
-		content = m.renderInventory()
-	case ViewCharacter:
-		content = m.renderCharacter()
-	case ViewQuests:
-		content = m.renderQuests()
-	case ViewGroup:
-		content = m.renderGroup()
-	case ViewCombat:
-		content = m.renderCombat()
-	default:
-		content = "Unknown view"
+	if m.terminalTooSmall {
+		return layout.WarningStyle.Render(
+			"Terminal too small. Please enlarge your terminal.",
+		)
 	}
 
 	header := layout.RenderHeader(
@@ -60,37 +45,30 @@ func (m Model) renderView() string {
 		m.playerStatus.MaxHP,
 	)
 
-	sidebar := layout.RenderSidebar(
-		m.renderQuests(),
-		m.renderGroup(),
-	)
-
 	eventLog := m.renderEventLog()
 	input := layout.InputStyle.Render("> " + m.input)
 	status := layout.StatusStyle.Render(m.status)
 
-	if m.width == 0 || m.height == 0 {
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			header,
-			content,
-			eventLog,
-			input,
-			status,
-		)
-	}
-
-	availableHeight := m.height -
+	bodyHeight := m.height -
 		lipgloss.Height(header) -
 		lipgloss.Height(eventLog) -
 		lipgloss.Height(input) -
 		lipgloss.Height(status)
 
+	if bodyHeight < 0 {
+		bodyHeight = 0
+	}
+
+	sidebarContent := ""
+	if m.showSidebar {
+		sidebarContent = m.sidebarViewport.View()
+	}
+
 	body := layout.RenderMain(
-		content,
-		sidebar,
+		m.mainViewport.View(),
+		sidebarContent,
 		m.width,
-		availableHeight,
+		bodyHeight,
 	)
 
 	return lipgloss.JoinVertical(
@@ -104,7 +82,11 @@ func (m Model) renderView() string {
 }
 
 func (m Model) renderWorld() string {
-    return renderRoom(m.currentRoom)
+	return renderRoom(
+		m.currentRoom,
+		m.mainViewport.Width,
+		m.mainViewport.Height,
+	)
 }
 
 func (m Model) renderInventory() string {
@@ -128,21 +110,23 @@ func (m Model) renderCombat() string {
 }
 
 func (m Model) renderEventLog() string {
-    title := layout.TitleStyle.Render("EVENT LOG")
-    content := title + "\n\n"
+	title := layout.TitleStyle.Render("EVENT LOG")
+	content := title + "\n"
 
-    visibleEvents := layout.EventLogHeight - 4
+	visibleEvents := m.eventLogHeight -
+		layout.PanelHeightOffset -
+		1
 
-    start := 0
-    if len(m.eventLog) > visibleEvents {
-        start = len(m.eventLog) - visibleEvents
-    }
+	start := 0
+	if len(m.eventLog) > visibleEvents {
+		start = len(m.eventLog) - visibleEvents
+	}
 
-    for _, event := range m.eventLog[start:] {
-        content += event + "\n"
-    }
+	for _, event := range m.eventLog[start:] {
+		content += event + "\n"
+	}
 
-    return layout.PanelStyle.
-        Height(layout.EventLogHeight - 4).
-        Render(content)
+	return layout.PanelStyle.
+		Height(m.eventLogHeight - layout.PanelHeightOffset).
+		Render(content)
 }

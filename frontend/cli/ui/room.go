@@ -8,41 +8,66 @@ import (
 
 	"the-answer-protocol/frontend/cli/ui/layout"
 	"the-answer-protocol/internal/world"
+	"github.com/charmbracelet/lipgloss"
 )
 
-func renderRoom(response LookResponse) string {
+
+func renderRoom(response LookResponse, availableWidth, availableHeight int) string {
+	contentWithoutArt := renderLocation(response, "")
+	contentWithoutArt += renderPlayers(response.Players)
+	contentWithoutArt += renderNPCs(response.NPCs)
+	contentWithoutArt += renderObjects(response.Items)
+	contentWithoutArt += renderExits(response.Room.Exits)
+
+	art := layout.GetRoomASCIIArt(response.Room.Name)
+	if art == "" {
+		return contentWithoutArt
+	}
+
+	renderedArt := layout.RenderASCIIArt(
+		art,
+		availableWidth,
+		availableHeight,
+	)
+
+	if renderedArt == "" {
+		return contentWithoutArt
+	}
+
+	contentWithArt := renderLocation(response, renderedArt)
+	contentWithArt += renderPlayers(response.Players)
+	contentWithArt += renderNPCs(response.NPCs)
+	contentWithArt += renderObjects(response.Items)
+	contentWithArt += renderExits(response.Room.Exits)
+
+	// Comprobar altura y ancho de todo el contenido.
+	if lipgloss.Height(contentWithArt) > availableHeight {
+		return contentWithoutArt
+	}
+
+	return contentWithArt
+}
+
+
+func renderLocation(response LookResponse, renderedArt string) string {
 	var content strings.Builder
 
-	content.WriteString(renderLocation(response))
-	content.WriteString(renderPlayers(response.Players))
-	content.WriteString(renderNPCs(response.NPCs))
-	content.WriteString(renderObjects(response.Items))
-	content.WriteString(renderExits(response.Room.Exits))
+	content.WriteString(layout.TitleStyle.Render(
+		layout.IconLocation + " LOCATION: " + response.Room.Name,
+	))
+	content.WriteString("\n\n")
+
+	if renderedArt != "" {
+		content.WriteString(renderedArt)
+		content.WriteString("\n\n")
+	}
+
+	content.WriteString(response.Room.Description)
+	content.WriteString("\n\n")
 
 	return content.String()
 }
 
-func renderLocation(response LookResponse) string {
-    var content strings.Builder
-
-    content.WriteString(
-        layout.TitleStyle.Render(
-            layout.IconLocation + " LOCATION: " + response.Room.Name,
-        ),
-    )
-    content.WriteString("\n\n")
-
-    art := layout.GetRoomASCIIArt(response.Room.Name)
-    if art != "" {
-        content.WriteString(layout.RenderASCIIArt(art, 42))
-        content.WriteString("\n\n")
-    }
-
-    content.WriteString(response.Room.Description)
-    content.WriteString("\n\n")
-
-    return content.String()
-}
 
 func renderPlayers(players []string) string {
 	var content strings.Builder

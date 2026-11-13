@@ -14,21 +14,22 @@ const (
     ASCIIArtHeight = 12
 )
 
-func RenderASCIIArt(art string, availableWidth int) string {
-    if availableWidth < ASCIIArtWidth {
-        return ""
-    }
 
-    lines := strings.Split(art, "\n")
+func RenderASCIIArt(art string, availableWidth, availableHeight int) string {
+	if availableWidth < ASCIIArtWidth {
+		return ""
+	}
 
-    if len(lines) > ASCIIArtHeight {
-        return ""
-    }
+	lines := strings.Split(strings.TrimRight(art, "\n"), "\n")
 
-    return lipgloss.NewStyle().
-        Width(ASCIIArtWidth).
-        Align(lipgloss.Center).
-        Render(art)
+	if len(lines) > ASCIIArtHeight || len(lines) > availableHeight {
+		return ""
+	}
+
+	return lipgloss.NewStyle().
+		Width(ASCIIArtWidth).
+		Align(lipgloss.Center).
+		Render(strings.Join(lines, "\n"))
 }
 
 func GetRoomASCIIArt(roomName string) string {
