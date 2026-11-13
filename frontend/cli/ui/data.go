@@ -29,3 +29,9 @@ type PlayerStatus struct {
     MaxHP  int    `json:"max_hp"`
     Status string `json:"status"`
 }
+
+type ChatMessage struct {
+    Scope      string
+    PlayerName string
+    Message    string
+}

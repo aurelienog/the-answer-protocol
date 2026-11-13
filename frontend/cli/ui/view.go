@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 	"the-answer-protocol/frontend/cli/ui/layout"
 )
@@ -45,13 +47,23 @@ func (m Model) renderView() string {
 		m.playerStatus.MaxHP,
 	)
 
-	eventLog := m.renderEventLog()
+	leftWidth := m.width / 2
+	rightWidth := m.width - leftWidth
+
+	eventLog := m.renderEventLog(leftWidth)
+	chat := m.renderChat(rightWidth)
+
+	bottomPanels := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		eventLog,
+		chat,
+	)
 	input := layout.InputStyle.Render("> " + m.input)
 	status := layout.StatusStyle.Render(m.status)
 
 	bodyHeight := m.height -
 		lipgloss.Height(header) -
-		lipgloss.Height(eventLog) -
+		lipgloss.Height(bottomPanels) -
 		lipgloss.Height(input) -
 		lipgloss.Height(status)
 
@@ -75,7 +87,7 @@ func (m Model) renderView() string {
 		lipgloss.Left,
 		header,
 		body,
-		eventLog,
+		bottomPanels,
 		input,
 		status,
 	)
@@ -109,24 +121,39 @@ func (m Model) renderCombat() string {
 	return "Combat View"
 }
 
-func (m Model) renderEventLog() string {
-	title := layout.TitleStyle.Render("EVENT LOG")
-	content := title + "\n"
 
-	visibleEvents := m.eventLogHeight -
-		layout.PanelHeightOffset -
-		1
+func (m Model) renderEventLog(width int) string {
+    title := layout.TitleStyle.Render("EVENT LOG")
 
-	start := 0
-	if len(m.eventLog) > visibleEvents {
-		start = len(m.eventLog) - visibleEvents
-	}
+    var content strings.Builder
+    content.WriteString(title)
+    content.WriteString("\n")
 
-	for _, event := range m.eventLog[start:] {
-		content += event + "\n"
-	}
+    visibleEvents := m.eventLogHeight -
+        layout.PanelHeightOffset -
+        1
 
-	return layout.PanelStyle.
-		Height(m.eventLogHeight - layout.PanelHeightOffset).
-		Render(content)
+    if visibleEvents < 0 {
+        visibleEvents = 0
+    }
+
+    start := 0
+    if len(m.eventLog) > visibleEvents {
+        start = len(m.eventLog) - visibleEvents
+    }
+
+    for _, event := range m.eventLog[start:] {
+        content.WriteString(event)
+        content.WriteString("\n")
+    }
+
+    contentWidth := width - layout.PanelWidthOffset
+    if contentWidth < 0 {
+        contentWidth = 0
+    }
+
+    return layout.PanelStyle.
+        Width(contentWidth).
+        Height(m.eventLogHeight - layout.PanelHeightOffset).
+        Render(content.String())
 }

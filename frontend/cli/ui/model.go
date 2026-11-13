@@ -43,6 +43,7 @@ type Model struct {
 	currentRoom LookResponse
 
 	eventLog []string
+	chatLog  []ChatMessage
 
 	group  Group
 	quests []Quest
