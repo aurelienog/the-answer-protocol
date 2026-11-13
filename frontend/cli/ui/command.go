@@ -46,3 +46,12 @@ func waitForServerEvent(client *network.Client) tea.Cmd {
         }
     }
 }
+
+func sendChatMessage(
+    client *network.Client,
+    scope string,
+    message string,
+) tea.Cmd {
+    command := "CHAT " + scope + " " + message
+    return sendCommand(client, command)
+}
