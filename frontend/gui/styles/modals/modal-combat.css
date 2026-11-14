@@ -246,6 +246,9 @@
 }
 
 .turn-sub-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 15px;
     color: var(--sapphire-light);
     letter-spacing: 1.2px;

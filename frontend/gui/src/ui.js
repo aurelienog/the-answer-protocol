@@ -8,6 +8,14 @@ const UI = {
     initEventListeners() {
         FrameView.mountFrames();
         CombatModal.initListeners();
+        AudioManager.init();
+        document.querySelectorAll('.js-sound-toggle').forEach(btn => {
+            btn.addEventListener('click', () => AudioManager.toggleMute());
+        });
+        const btnNextTrack = document.getElementById('btn-next-track');
+        if (btnNextTrack) {
+            btnNextTrack.addEventListener('click', () => AudioManager.nextTrack());
+        }
 
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();

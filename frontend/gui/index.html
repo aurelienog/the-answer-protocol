@@ -16,6 +16,9 @@
             </header>
 
             <form id="login-form" class="gold-panel login-box">
+                <button type="button" class="dock-ctrl-btn login-sound-btn js-sound-toggle" title="Mute / Unmute Audio">
+                    <img src="/assets/icons/ui/sound_on.webp" alt="Sound" class="sound-btn-ico">
+                </button>
                 <h2>Connect to the World</h2>
                 <p class="login-hint">Enter your name and begin your adventure.</p>
                 <hr class="sapphire-divider" style="margin-bottom:16px;">
@@ -548,10 +551,10 @@
                             <!-- Center: Turn Indicator + Round & Timer -->
                             <div class="combat-turn-banner" id="combat-turn-banner">
                                 <div class="turn-main-row">
-                                    <img src="/assets/icons/ui/hourglass.webp" alt="" class="ui-ico">
                                     <strong id="combat-turn-text">YOUR TURN</strong>
                                 </div>
                                 <div class="turn-sub-row">
+                                    <img src="/assets/icons/ui/hourglass.webp" alt="" class="ui-ico">
                                     <span id="combat-round-label">Round 1</span>
                                     <span class="turn-sep"> - </span>
                                     <span id="combat-timer-label">30s</span>
@@ -730,8 +733,14 @@
                         Party (<span id="dock-group-count">0</span>)
                     </button>
 
-                    <!-- Player panel collapse/expand button -->
+                    <!-- Sound Toggle + Next Track + Player panel collapse/expand button -->
                     <div class="dock-window-controls">
+                        <button type="button" class="dock-ctrl-btn js-sound-toggle" title="Mute / Unmute Audio">
+                            <img src="/assets/icons/ui/sound_on.webp" alt="Sound" class="sound-btn-ico">
+                        </button>
+                        <button type="button" class="dock-ctrl-btn" id="btn-next-track" title="Next Music Track">
+                            <img src="/assets/icons/ui/next.png" alt="Next Track" class="sound-btn-ico">
+                        </button>
                         <button type="button" class="dock-ctrl-btn" id="btn-players-collapse" title="Minimize / Restore Players Panel">▾</button>
                     </div>
                 </nav>
@@ -771,6 +780,7 @@
     <!-- 1. Core -->
     <script src="/src/core/assets.js"></script>
     <script src="/src/core/state.js"></script>
+    <script src="/src/core/audio.js"></script>
     <script src="/src/core/network.js"></script>
 
     <!-- 2. PNG Frame Builder -->

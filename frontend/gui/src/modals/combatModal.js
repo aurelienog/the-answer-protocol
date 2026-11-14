@@ -352,6 +352,7 @@ const CombatModal = {
         this.updateBars();
         FrameView.mountButtons();
         FrameView.mountHpBarFrames();
+        if (typeof AudioManager !== 'undefined') AudioManager.enterCombatMusic();
         document.getElementById('modal-combat').classList.remove('hidden');
     },
 
@@ -398,20 +399,23 @@ const CombatModal = {
 
             if (mode === 'enemy_hit' || mode === true) {
                 if (remainingHp !== undefined) this.enemyHp = remainingHp;
-                if (turnText) turnText.textContent = customBannerText || 'STRIKE ⚔️';
+                if (turnText) {
+                    const label = (customBannerText || 'STRIKE').replace('⚔️', '').trim();
+                    turnText.innerHTML = `${label} <img src="/assets/icons/ui/sword.webp" alt="" class="ui-ico">`;
+                }
                 this.triggerAnim(heroBox, 'lunge-right');
                 this.triggerAnim(enemyBox, 'hit-shake');
                 this.showFloatingDmg('dmg-on-enemy', `-${damageAmount}`, '#ff4d4d');
             } else if (mode === 'me_hit' || mode === false) {
                 if (remainingHp !== undefined) GameState.hp = remainingHp;
-                if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()} ATTACKS YOU!`;
+                if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()}!`;
                 this.triggerAnim(enemyBox, 'lunge-left');
                 this.triggerAnim(heroBox, 'hit-shake');
                 this.showFloatingDmg('dmg-on-hero', `-${damageAmount}`, '#ff4d4d');
             } else if (mode === 'ally_hit') {
                 if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()} HITS ${allyTargetName.toUpperCase()}!`;
                 this.triggerAnim(enemyBox, 'lunge-left');
-                this.showFloatingDmg('dmg-on-hero', `🛡️ ${allyTargetName}: -${damageAmount} HP`, '#63b3ed');
+                this.showFloatingDmg('dmg-on-hero', `${allyTargetName}: -${damageAmount} HP`, '#63b3ed');
             }
 
             this.updateBars();
@@ -584,5 +588,6 @@ const CombatModal = {
         document.getElementById('modal-flee').classList.add('hidden');
         document.getElementById('modal-combat').classList.add('hidden');
         if (UI.activeModalId === 'combat') UI.activeModalId = null;
+        if (typeof AudioManager !== 'undefined') AudioManager.exitCombatMusic();
     }
 };

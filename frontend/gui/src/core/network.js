@@ -614,8 +614,8 @@ const App = {
 
                 if (targetIsNpc) {
                     const banner = (attackerName.toLowerCase() === GameState.playerName.toLowerCase())
-                        ? 'YOUR STRIKE ⚔️'
-                        : `${attackerName.toUpperCase()} STRIKES ⚔️`;
+                        ? 'YOUR STRIKE'
+                        : `${attackerName.toUpperCase()} STRIKES`;
                     CombatModal.playHitEffect('enemy_hit', dmg, remHp, banner, '', attackerName);
                     UI.addChatLine('ROOM', '🗡️ Strike', `${attackerName} hits ${targetName} for ${dmg} damage! (Enemy HP: ${remHp})`, 'chat-sys');
                 } else if (targetIsMe) {

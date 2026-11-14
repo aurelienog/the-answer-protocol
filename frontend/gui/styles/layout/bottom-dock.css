@@ -148,3 +148,25 @@
 .rpg-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rpg-table th { text-align: left; color: var(--gold-main); border-bottom: 1px solid rgba(200, 155, 60, 0.3); padding-bottom: 5px; }
 .rpg-table td { padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+
+.sound-btn-ico {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+}
+
+.dock-ctrl-btn.sound-muted .sound-btn-ico {
+    opacity: 0.55;
+    filter: grayscale(0.6);
+}
+
+.login-sound-btn {
+    position: absolute;
+    top: 30px;
+    right: 35px;
+    width: 30px;
+    height: 28px;
+    z-index: 10;
+}
