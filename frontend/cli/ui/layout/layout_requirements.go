@@ -1,14 +1,19 @@
 package layout
 
 const (
-    MinWidthForSidebar = 90
-    MinTerminalWidth   = 50
-    MinMainHeight      = 10
-    MinSidebarHeight   = 8
-    MinSidebarWidth    = 20
-    MaxMainWidth       = 90
-    MaxSidebarWidth    = 32
+	MinWidthForSidebar = 90
+	MinTerminalWidth   = 50
+
+	MinMainWidth       = 44
+	MinSidebarWidth    = 30
+
+	MinMainHeight      = 10
+	MinSidebarHeight   = 8
+
+	MaxMainWidth       = 120
+	MaxSidebarWidth    = 50
 )
+
 const (
 	InputHeight             = 1
 	StatusHeight            = 1
@@ -38,24 +43,22 @@ func DefaultRequirements() LayoutInput {
 		},
 		MainView: ComponentRequirements{
 			Constraints: Constraints{
-				MinWidth:        MinTerminalWidth,
-				PreferredWidth:  MaxMainWidth,
-				MaxWidth:        MaxMainWidth,
-				MinHeight:       MinMainHeight + PanelHeightOffset,
+				MinWidth:       MinMainWidth + PanelWidthOffset,
+				PreferredWidth: MaxMainWidth + PanelWidthOffset,
+				MaxWidth:       MaxMainWidth + PanelWidthOffset,
+				MinHeight:      MinMainHeight + PanelHeightOffset,
 				PreferredHeight: MinMainHeight + PanelHeightOffset,
-				MaxHeight:       0,
 			},
 			Priority: PriorityCritical,
 			Required: true,
 		},
 		Sidebar: ComponentRequirements{
 			Constraints: Constraints{
-				MinWidth:        MinSidebarWidth + PanelWidthOffset,
-				PreferredWidth:  MaxSidebarWidth,
-				MaxWidth:        MaxSidebarWidth,
-				MinHeight:       MinSidebarHeight + PanelHeightOffset,
+				MinWidth:       MinSidebarWidth + PanelWidthOffset,
+				PreferredWidth: MaxMainWidth + PanelWidthOffset,
+				MaxWidth:       MaxMainWidth + PanelWidthOffset,
+				MinHeight:      MinSidebarHeight + PanelHeightOffset,
 				PreferredHeight: MinSidebarHeight + PanelHeightOffset,
-				MaxHeight:       0,
 			},
 			Priority: PriorityNormal,
 			Required: false,
@@ -112,7 +115,7 @@ func DefaultRequirements() LayoutInput {
 				MaxWidth:        0,
 				MinHeight:       StatusHeight,
 				PreferredHeight: StatusHeight,
-				MaxHeight:       StatusHeight,
+				MaxHeight:       0,
 			},
 			Priority: PriorityCritical,
 			Required: true,

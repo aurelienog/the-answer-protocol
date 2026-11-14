@@ -3,8 +3,21 @@ package layout
 
 type LayoutManager struct{}
 
+type HorizontalLayout struct {
+    MainView          ComponentLayout
+    Sidebar           ComponentLayout
+    EventLog          ComponentLayout
+    Chat              ComponentLayout
+    AvailableCommands ComponentLayout
+	Status 			  ComponentLayout
+}
+
 // Calculate distributes terminal space among the UI components.
-func (lm LayoutManager) Calculate(input LayoutInput) LayoutResult {
+func (lm LayoutManager) Calculate(
+    input LayoutInput,
+    horizontal HorizontalLayout,
+) LayoutResult {
+
 	width := input.Terminal.Width
 	height := input.Terminal.Height
 
@@ -69,10 +82,7 @@ func (lm LayoutManager) Calculate(input LayoutInput) LayoutResult {
 
 	bottomHeight := 0
 
-	bottomPanelsEnabled :=
-		!eventLog.Required &&
-			!chat.Required &&
-			bottomPreferredHeight > 0
+	bottomPanelsEnabled := bottomPreferredHeight > 0
 
 	if bottomPanelsEnabled &&
 		remainingHeight-minMainHeight >= bottomMinHeight {
@@ -88,21 +98,13 @@ func (lm LayoutManager) Calculate(input LayoutInput) LayoutResult {
 	// AvailableCommands has lower priority than the bottom panels.
 	commandsHeight := 0
 	commandsRequirements := input.AvailableCommands
+	commandsPreferred := resolveHeight(commandsRequirements)
 
-	if !commandsRequirements.Required {
-		commandsPreferred := resolveHeight(commandsRequirements)
-		commandsMin := commandsRequirements.Constraints.MinHeight
+	if commandsPreferred > 0 &&
+		remainingHeight-minMainHeight >= commandsPreferred {
 
-		if commandsPreferred > 0 &&
-			remainingHeight-minMainHeight >= commandsMin {
-
-			commandsHeight = minInt(
-				commandsPreferred,
-				remainingHeight-minMainHeight,
-			)
-
-			remainingHeight -= commandsHeight
-		}
+		commandsHeight = commandsPreferred
+		remainingHeight -= commandsHeight
 	}
 
 	// Main View receives the remaining vertical space.
@@ -123,105 +125,45 @@ func (lm LayoutManager) Calculate(input LayoutInput) LayoutResult {
 		}
 	}
 
-	// Calculate the Main View width, respecting its maximum.
-	mainWidth := width
-
-	if mainConstraints.MaxWidth > 0 {
-		mainWidth = minInt(mainWidth, mainConstraints.MaxWidth)
-	}
-
-	// Determine whether the Sidebar can be displayed.
-	sidebarConstraints := input.Sidebar.Constraints
-
-	sidebarMinWidth := sidebarConstraints.MinWidth
-	sidebarMaxWidth := sidebarConstraints.MaxWidth
-	sidebarMinHeight := sidebarConstraints.MinHeight
-
-	sidebarVisible :=
-		width >= MinWidthForSidebar &&
-		mainHeight >= sidebarMinHeight &&
-		width >= minMainWidth+sidebarMinWidth
-
-	sidebarWidth := 0
-
-	if sidebarVisible {
-		availableSidebarWidth := width - mainWidth
-
-		// Preserve the minimum Sidebar width by reducing Main View if needed.
-		if availableSidebarWidth < sidebarMinWidth {
-			mainWidth = maxInt(
-				minMainWidth,
-				width-sidebarMinWidth,
-			)
-			availableSidebarWidth = width - mainWidth
-		}
-
-		sidebarWidth = minInt(
-			availableSidebarWidth,
-			sidebarMaxWidth,
-		)
-
-		if sidebarWidth < sidebarMinWidth {
-			sidebarVisible = false
-			sidebarWidth = 0
-		}
-	}
-
 	result.MainView = ComponentLayout{
-		Visible: true,
-		Width:   mainWidth,
+		Visible: horizontal.MainView.Visible,
+		Width:   horizontal.MainView.Width,
 		Height:  mainHeight,
 	}
 
-	if sidebarVisible {
+	sidebarMinHeight := input.Sidebar.Constraints.MinHeight
+
+	if horizontal.Sidebar.Visible && mainHeight >= sidebarMinHeight {
 		result.Sidebar = ComponentLayout{
 			Visible: true,
-			Width:   sidebarWidth,
+			Width:   horizontal.Sidebar.Width,
 			Height:  mainHeight,
 		}
 	}
 
-	// Assign widths to the bottom panels.
+	// Assign the previously calculated widths to the bottom panels.
 	if bottomHeight > 0 {
-		showEventLog := eventLogPreferred > 0
-		showChat := chatPreferred > 0
-
-		switch {
-		case showEventLog && showChat:
-			eventLogWidth := width / 2
-			chatWidth := width - eventLogWidth
-
+		if horizontal.EventLog.Visible {
 			result.EventLog = ComponentLayout{
 				Visible: true,
-				Width:   eventLogWidth,
+				Width:   horizontal.EventLog.Width,
 				Height:  bottomHeight,
 			}
+		}
+
+		if horizontal.Chat.Visible {
 			result.Chat = ComponentLayout{
 				Visible: true,
-				Width:   chatWidth,
-				Height:  bottomHeight,
-			}
-
-		case showEventLog:
-			result.EventLog = ComponentLayout{
-				Visible: true,
-				Width:   width,
-				Height:  bottomHeight,
-			}
-
-		case showChat:
-			result.Chat = ComponentLayout{
-				Visible: true,
-				Width:   width,
+				Width:   horizontal.Chat.Width,
 				Height:  bottomHeight,
 			}
 		}
 	}
 
-	if commandsHeight > 0 {
+	if commandsHeight > 0 && horizontal.AvailableCommands.Visible {
 		result.AvailableCommands = ComponentLayout{
 			Visible: true,
-			Width:   width,
+			Width:   horizontal.AvailableCommands.Width,
 			Height:  commandsHeight,
 		}
 	}
@@ -249,6 +191,133 @@ func resolveHeight(requirements ComponentRequirements) int {
 	}
 
 	return height
+}
+
+// CalculateHorizontal distributes available width among UI components.
+func (lm LayoutManager) CalculateHorizontal(input LayoutInput) HorizontalLayout {
+    width := input.Terminal.Width
+
+    result := HorizontalLayout{}
+
+    if width <= 0 {
+        return result
+    }
+
+	result.Status = ComponentLayout{
+		Visible: true,
+		Width:   width,
+	}
+    mainConstraints := input.MainView.Constraints
+    sidebarConstraints := input.Sidebar.Constraints
+
+    minMainWidth := mainConstraints.MinWidth
+    mainWidth := width
+
+    if mainConstraints.MaxWidth > 0 {
+        mainWidth = minInt(mainWidth, mainConstraints.MaxWidth)
+    }
+
+    sidebarMinWidth := sidebarConstraints.MinWidth
+    sidebarMaxWidth := sidebarConstraints.MaxWidth
+
+    sidebarVisible :=
+        width >= MinWidthForSidebar &&
+            width >= minMainWidth+sidebarMinWidth
+
+    sidebarWidth := 0
+
+    if sidebarVisible {
+        availableSidebarWidth := width - mainWidth
+
+        if availableSidebarWidth < sidebarMinWidth {
+            mainWidth = maxInt(
+                minMainWidth,
+                width-sidebarMinWidth,
+            )
+
+            availableSidebarWidth = width - mainWidth
+        }
+
+        sidebarWidth = minInt(
+            availableSidebarWidth,
+            sidebarMaxWidth,
+        )
+
+        if sidebarWidth < sidebarMinWidth {
+            sidebarVisible = false
+            sidebarWidth = 0
+        }
+    }
+
+    result.MainView = ComponentLayout{
+        Visible: true,
+        Width:   mainWidth,
+    }
+
+    if sidebarVisible {
+        result.Sidebar = ComponentLayout{
+            Visible: true,
+            Width:   sidebarWidth,
+        }
+    }
+
+    // EventLog and Chat share the available terminal width.
+	showEventLog := resolveHeight(input.EventLog) > 0
+	showChat := resolveHeight(input.Chat) > 0
+	contentWidth := result.MainView.Width + result.Sidebar.Width
+	switch {
+	case showEventLog && showChat:
+		eventLogWidth := contentWidth / 2
+
+		result.EventLog = ComponentLayout{
+			Visible: true,
+			Width:   eventLogWidth,
+		}
+
+		result.Chat = ComponentLayout{
+			Visible: true,
+			Width:   contentWidth - eventLogWidth,
+		}
+
+	case showEventLog:
+		result.EventLog = ComponentLayout{
+			Visible: true,
+			Width:   contentWidth,
+		}
+
+	case showChat:
+		result.Chat = ComponentLayout{
+			Visible: true,
+			Width:   contentWidth,
+		}
+	}
+
+    result.AvailableCommands = ComponentLayout{
+		Visible: true,
+		Width:   contentWidth,
+	}
+
+    return result
+}
+
+func resolveWidth(requirements ComponentRequirements) int {
+    width := requirements.IntrinsicSize.Width
+
+    if width <= 0 {
+        width = requirements.Constraints.PreferredWidth
+    }
+
+    constraints := requirements.Constraints
+
+    if constraints.MinWidth > 0 {
+        width = maxInt(width, constraints.MinWidth)
+    }
+
+    if constraints.MaxWidth > 0 {
+        width = minInt(width, constraints.MaxWidth)
+    }
+
+    return width
 }
 
 func minInt(a, b int) int {

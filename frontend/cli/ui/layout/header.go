@@ -4,10 +4,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func RenderHeader(playerName string, hp, maxHP, width int) string {
-    return PanelStyle.
-        Width(maxInt(0, width-PanelWidthOffset)).
-        Render(HeaderContent(playerName, hp, maxHP))
+func RenderHeader(
+	username string,
+	hp, maxHP, width int,
+    ) string {
+	content := HeaderContent(username, hp, maxHP)
+
+	contentWidth := maxInt(0, width-PanelWidthOffset)
+
+	return PanelStyle.
+		Width(contentWidth).
+		Render(content)
 }
 
 func HeaderContent(playerName string, hp, maxHP int) string {

@@ -9,8 +9,6 @@ import (
     "the-answer-protocol/frontend/cli/ui/layout"
 )
 
-const bottomPanelHeight = layout.PanelHeightOffset + 4
-
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     switch msg := msg.(type) {
     case tea.KeyMsg:
@@ -122,33 +120,54 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // calculateLayout measures the components and returns their layout.
 func (m Model) calculateLayout() layout.LayoutResult {
-    input := layout.DefaultRequirements()
+	manager := layout.LayoutManager{}
+	input := layout.DefaultRequirements()
 
-    input.Terminal = layout.Size{
-        Width:  m.ui.Width,
-        Height: m.ui.Height,
-    }
+	input.Terminal = layout.Size{
+		Width:  m.ui.Width,
+		Height: m.ui.Height,
+	}
 
+	// First, distribute horizontal space.
+	horizontal := manager.CalculateHorizontal(input)
+
+	contentWidth := horizontal.MainView.Width + horizontal.Sidebar.Width
+
+    // Measure components using their available widths.
     input.Header.IntrinsicSize = layout.MeasureHeader(
         m.player.Username,
         m.player.Status.HP,
         m.player.Status.MaxHP,
-        m.ui.Width,
+        contentWidth,
     )
 
-    commandsContent := m.availableCommandsContent()
-    input.AvailableCommands.IntrinsicSize = layout.MeasureAvailableCommands(
-        commandsContent,
-        m.ui.Width,
-    )
+	input.AvailableCommands.IntrinsicSize = layout.MeasureAvailableCommands(
+		m.availableCommandsContent(),
+		horizontal.AvailableCommands.Width,
+	)
 
-    input.Status.IntrinsicSize = layout.MeasureContent(
-        m.communication.StatusMessage,
-        m.ui.Width,
-    )
+	input.Status.IntrinsicSize = layout.MeasureContent(
+		m.communication.StatusMessage,
+		horizontal.Status.Width,
+	)
 
-    return (layout.LayoutManager{}).Calculate(input)
+	if horizontal.EventLog.Visible {
+        input.EventLog.IntrinsicSize = layout.MeasurePanelContent(
+            m.eventLogContent(),
+            horizontal.EventLog.Width,
+        )
+    }
+
+    if horizontal.Chat.Visible {
+        input.Chat.IntrinsicSize = layout.MeasurePanelContent(
+            m.chatContent(),
+            horizontal.Chat.Width,
+        )
+    }
+
+	return manager.Calculate(input, horizontal)
 }
+
 
 // updateViewportSizes applies the calculated dimensions to the viewports.
 func (m *Model) updateViewportSizes() {
@@ -255,4 +274,27 @@ func isScrollKey(key string) bool {
     default:
         return false
     }
+}
+
+func (m Model) chatContent() string {
+	var content strings.Builder
+
+	content.WriteString(layout.TitleStyle.Render("CHAT"))
+	content.WriteString("  ")
+	content.WriteString(m.renderChatFilter())
+	content.WriteString("\n\n")
+
+	for _, message := range m.communication.ChatLog {
+		if !m.matchesChatFilter(message) {
+			continue
+		}
+
+		content.WriteString(
+			"[" + message.Scope + "] " +
+				message.PlayerName + ": " +
+				message.Message + "\n",
+		)
+	}
+
+	return content.String()
 }

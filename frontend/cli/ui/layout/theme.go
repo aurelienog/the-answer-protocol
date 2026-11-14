@@ -51,7 +51,7 @@ var (
 const (
     PanelBorderWidth   = 2
     PanelBorderHeight  = 2
-    PanelPaddingWidth  = 4
+    PanelPaddingWidth  = 2
     PanelPaddingHeight = 2
 
 

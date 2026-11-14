@@ -37,101 +37,97 @@ func (m Model) renderAuthentication() string {
 }
 
 func (m Model) renderView() string {
-    result := m.calculateLayout()
+	result := m.calculateLayout()
 
-    header := layout.RenderHeader(
-        m.player.Username,
-        m.player.Status.HP,
-        m.player.Status.MaxHP,
-        m.ui.Width,
-    )
+	if !result.MainView.Visible {
+		return layout.WarningStyle.Render("Terminal too small")
+	}
 
-    input := layout.InputStyle.Render("> " + m.ui.Input)
-    status := layout.StatusStyle.Render(m.communication.StatusMessage)
+	// All content panels share the same outer width.
+	contentWidth := result.MainView.Width + result.Sidebar.Width
 
-    // Keep the fixed components visible when the terminal is too small.
-    if !result.MainView.Visible {
-        warning := layout.WarningStyle.Render("Terminal too small")
+	header := layout.RenderHeader(
+		m.player.Username,
+		m.player.Status.HP,
+		m.player.Status.MaxHP,
+		contentWidth,
+	)
 
-        return lipgloss.JoinVertical(
-            lipgloss.Left,
-            header,
-            warning,
-            input,
-            status,
-        )
-    }
+	sidebarContent := ""
+	if result.Sidebar.Visible {
+		sidebarContent = m.ui.SidebarViewport.View()
+	}
 
-    bodyWidth := result.MainView.Width
-    if result.Sidebar.Visible {
-        bodyWidth += result.Sidebar.Width
-    }
+	body := layout.RenderMain(
+		m.ui.MainViewport.View(),
+		sidebarContent,
+		result.MainView.Width,
+		result.Sidebar.Width,
+		result.MainView.Height,
+		result.Sidebar.Visible,
+	)
 
-    sidebarContent := ""
-    if result.Sidebar.Visible {
-        sidebarContent = m.ui.SidebarViewport.View()
-    }
+	sections := []string{
+		header,
+		body,
+	}
 
-    body := layout.RenderMain(
-        m.ui.MainViewport.View(),
-        sidebarContent,
-        result.MainView.Width,
-        result.Sidebar.Width,
-        result.MainView.Height,
-    )
+	// Event Log and Chat share the same available width as Main View and Sidebar.
+	if result.EventLog.Visible || result.Chat.Visible {
+		var bottomPanels []string
 
-    sections := []string{
-        header,
-        body,
-    }
+		if result.EventLog.Visible {
+			bottomPanels = append(
+				bottomPanels,
+				m.renderEventLog(
+					result.EventLog.Width,
+					result.EventLog.Height,
+				),
+			)
+		}
 
-    // EventLog and Chat share a horizontal row.
-    if result.EventLog.Visible || result.Chat.Visible {
-        var bottomPanels []string
+		if result.Chat.Visible {
+			bottomPanels = append(
+				bottomPanels,
+				m.renderChat(
+					result.Chat.Width,
+					result.Chat.Height,
+				),
+			)
+		}
 
-        if result.EventLog.Visible {
-            bottomPanels = append(
-                bottomPanels,
-                m.renderEventLog(
-                    result.EventLog.Width,
-                    result.EventLog.Height,
-                ),
-            )
-        }
+		sections = append(
+			sections,
+			lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				bottomPanels...,
+			),
+		)
+	}
 
-        if result.Chat.Visible {
-            bottomPanels = append(
-                bottomPanels,
-                m.renderChat(
-                    result.Chat.Width,
-                    result.Chat.Height,
-                ),
-            )
-        }
+	// Available Commands uses the same outer width.
+	if result.AvailableCommands.Visible {
+		sections = append(
+			sections,
+			m.renderAvailableCommands(contentWidth),
+		)
+	}
 
-        sections = append(
-            sections,
-            lipgloss.JoinHorizontal(
-                lipgloss.Top,
-                bottomPanels...,
-            ),
-        )
-    }
+	// Input and Status remain outside the content panels.
+	input := layout.InputStyle.
+		Width(contentWidth).
+		Render("> " + m.ui.Input)
 
-    // AvailableCommands is displayed only when space permits.
-    if result.AvailableCommands.Visible {
-        sections = append(
-            sections,
-            m.renderAvailableCommands(result.AvailableCommands.Width),
-        )
-    }
+	status := layout.StatusStyle.
+		Width(contentWidth).
+		Render(m.communication.StatusMessage)
 
-    sections = append(sections, input, status)
+	sections = append(sections, input, status)
 
-    return lipgloss.JoinVertical(
-        lipgloss.Left,
-        sections...,
-    )
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		sections...,
+	)
 }
 
 func (m Model) renderWorld() string {
@@ -162,43 +158,46 @@ func (m Model) renderCombat() string {
     return "Combat View"
 }
 
+func (m Model) eventLogContent() string {
+	var content strings.Builder
+
+	content.WriteString(layout.TitleStyle.Render("EVENT LOG"))
+	content.WriteString("\n")
+
+	for _, event := range m.communication.EventLog {
+		content.WriteString(event)
+		content.WriteString("\n")
+	}
+
+	return content.String()
+}
+
 func (m Model) renderEventLog(width, height int) string {
-    title := layout.TitleStyle.Render("EVENT LOG")
+	visibleEvents := maxInt(
+		0,
+		height-layout.PanelHeightOffset-1,
+	)
 
-    var content strings.Builder
-    content.WriteString(title)
-    content.WriteString("\n")
+	events := m.communication.EventLog
+	start := maxInt(0, len(events)-visibleEvents)
 
-    visibleEvents := height - layout.PanelHeightOffset - 1
+	var content strings.Builder
 
-    if visibleEvents < 0 {
-        visibleEvents = 0
-    }
+	content.WriteString(layout.TitleStyle.Render("EVENT LOG"))
+	content.WriteString("\n")
 
-    start := 0
-    if len(m.communication.EventLog) > visibleEvents {
-        start = len(m.communication.EventLog) - visibleEvents
-    }
+	for _, event := range events[start:] {
+		content.WriteString(event)
+		content.WriteString("\n")
+	}
 
-    for _, event := range m.communication.EventLog[start:] {
-        content.WriteString(event)
-        content.WriteString("\n")
-    }
+	contentWidth := maxInt(0, width-layout.PanelWidthOffset)
+	panelHeight := maxInt(0, height-layout.PanelHeightOffset)
 
-    contentWidth := width - layout.PanelWidthOffset
-    if contentWidth < 0 {
-        contentWidth = 0
-    }
-
-    panelHeight := height - layout.PanelHeightOffset
-    if panelHeight < 0 {
-        panelHeight = 0
-    }
-
-    return layout.PanelStyle.
-        Width(contentWidth).
-        Height(panelHeight).
-        Render(content.String())
+	return layout.PanelStyle.
+		Width(contentWidth).
+		Height(panelHeight).
+		Render(content.String())
 }
 
 func (m Model) renderAvailableCommands(width int) string {
