@@ -10,6 +10,7 @@ import (
 
 type View uint8
 type AppState uint8
+type ChatFilter uint8
 
 const (
 	StateAuthentication AppState = iota
@@ -24,6 +25,13 @@ const (
 	ViewQuests
 	ViewGroup
 	ViewCombat
+)
+
+const (
+    ChatFilterAll ChatFilter = iota
+    ChatFilterGlobal
+    ChatFilterRoom
+    ChatFilterGroup
 )
 
 type Model struct {
@@ -44,6 +52,7 @@ type Model struct {
 
 	eventLog []string
 	chatLog  []ChatMessage
+	chatFilter ChatFilter
 
 	group  Group
 	quests []Quest
@@ -65,6 +74,7 @@ func NewModel(client *network.Client) Model {
 		status:          "Enter your username",
 		mainViewport:    viewport.New(0, 0),
 		sidebarViewport: viewport.New(0, 0),
+		chatFilter: ChatFilterAll,
 	}
 }
 

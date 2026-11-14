@@ -80,6 +80,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
         }
         return m, nil
 
+	case "tab":
+		m.chatFilter = (m.chatFilter + 1) % 4
+		return m, nil
+
     case "f1":
         m.currentView = ViewWorld
     case "f2":
