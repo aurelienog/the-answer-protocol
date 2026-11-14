@@ -59,7 +59,7 @@
 
 .bar-text {
     position: absolute;
-    top: 0;
+    top: -1px;
     left: 10px;
     right: 10px;
     font-size: 12px;

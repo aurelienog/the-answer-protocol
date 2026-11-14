@@ -125,14 +125,14 @@
 }
 
 .comp-sq-icon {
-    width: 24px;
-    height: 24px;
+    width: 35px;
+    height: 35px;
     object-fit: contain;
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.9));
 }
 
 .comp-sq-label {
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--gold-bright);
     letter-spacing: 0.4px;
     line-height: 1;

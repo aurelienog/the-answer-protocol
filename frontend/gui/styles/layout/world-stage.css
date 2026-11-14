@@ -153,8 +153,8 @@
 }
 
 .stage-banner-icon-img {
-    width: 34px;
-    height: 34px;
+    width: 45px;
+    height: 45px;
     object-fit: contain;
     vertical-align: middle;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));

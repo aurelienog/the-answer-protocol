@@ -401,7 +401,7 @@ const App = {
                         ? data.room.items
                         : counts;
                     GameState.itemsInRoom = uniqueIds;
-                    GameState.npcsInRoom = data.npcs || [];
+                    GameState.npcsInRoom = (data.npcs || []).map(n => GameState.normalizeNpc(n));
 
                     if (GameState.inCombat) {
                         const hasHostileHere = GameState.npcsInRoom.some(n => GameState.getNpcMeta(n).hostile);

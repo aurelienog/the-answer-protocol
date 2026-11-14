@@ -119,13 +119,13 @@
 .hud-center {
     position: absolute;
     left: 50%;
-    top: -6px;
+    top: -2px;
     transform: translateX(-50%);
     text-align: center;
 }
 
 .hud-crest-img {
-    height: 100px;
+    height: 110px;
     width: auto;
     object-fit: contain;
 }

@@ -141,7 +141,31 @@ const GameState = {
         };
     },
 
+    normalizeNpc(entry) {
+        if (typeof entry === 'object' && entry !== null && entry.id) {
+            const existing = ASSETS.npcs[entry.id] || ASSETS.npcs.default;
+            const cs = entry.combat_stats || {};
+            ASSETS.npcs[entry.id] = {
+                ...existing,
+                id:      entry.id,
+                name:    entry.name || existing.name || entry.id,
+                role:    entry.role ? (entry.role.charAt(0).toUpperCase() + entry.role.slice(1).replace(/_/g, ' ')) : existing.role,
+                hostile: entry.hostile !== undefined ? !!entry.hostile : !!existing.hostile,
+                hp:      cs.hp !== undefined ? cs.hp : (existing.hp || 60),
+                maxHp:   cs.max_hp || cs.hp || existing.maxHp || 60,
+                atk:     cs.attack || existing.atk || 10,
+                def:     cs.defense !== undefined ? cs.defense : (existing.def || 5),
+                spd:     cs.speed || existing.spd || 10
+            };
+            return entry.id;
+        }
+        return String(entry);
+    },
+
     getNpcMeta(keyOrName) {
+        if (typeof keyOrName === 'object' && keyOrName !== null) {
+            keyOrName = this.normalizeNpc(keyOrName);
+        }
         if (ASSETS.npcs[keyOrName] && ASSETS.npcs[keyOrName].name) {
             return ASSETS.npcs[keyOrName];
         }
