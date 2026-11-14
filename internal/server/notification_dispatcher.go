@@ -2,6 +2,7 @@ package server
 
 import (
 	"log"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"sync"
@@ -425,14 +426,39 @@ func (dispatcher *NotificationDispatcher) handlePlayerCountChanged(
 func (dispatcher *NotificationDispatcher) handleCombatEnded(
     event world.CombatEnded,
 ) {
-    notification := protocol.EVT(
-        "COMBAT",
-        "ENDED combat="+event.CombatID,
-    )
+    for _, recipient := range event.Recipients {
+        var playerRewards []world.CombatReward
 
-    dispatcher.notifyPlayers(
-        event.Recipients,
-        "",
-        notification,
-    )
+        for _, reward := range event.Rewards {
+            if reward.PlayerID == recipient {
+                playerRewards = append(playerRewards, reward)
+            }
+        }
+
+        if playerRewards == nil {
+            playerRewards = make([]world.CombatReward, 0)
+        }
+
+        rewardsJSON, err := json.Marshal(playerRewards)
+        if err != nil {
+            log.Printf(
+                "Failed to serialize combat rewards for player %q: %v",
+                recipient,
+                err,
+            )
+            continue
+        }
+
+        notification := protocol.EVT(
+            "COMBAT",
+            "ENDED combat="+event.CombatID+
+                " rewards="+string(rewardsJSON),
+        )
+
+        dispatcher.notifyPlayers(
+            []string{recipient},
+            "",
+            notification,
+        )
+    }
 }
