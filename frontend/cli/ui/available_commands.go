@@ -1,5 +1,10 @@
-
 package ui
+
+import (
+	"strings"
+
+    "the-answer-protocol/frontend/cli/ui/layout"
+)
 
 type AvailableCommand struct {
     Name        string
@@ -157,31 +162,98 @@ var combatCommands = []AvailableCommand{
 }
 
 func (m Model) hasHostileNPC() bool {
-    for _, npc := range m.currentRoom.NPCs {
-        if npc.Hostile {
-            return true
-        }
-    }
-    return false
+	for _, npc := range m.world.Room.NPCs {
+		if npc.Hostile {
+			return true
+		}
+	}
+	return false
 }
 
 func (m Model) hasFriendlyNPC() bool {
-    for _, npc := range m.currentRoom.NPCs {
-        if !npc.Hostile {
-            return true
-        }
-    }
-    return false
+	for _, npc := range m.world.Room.NPCs {
+		if !npc.Hostile {
+			return true
+		}
+	}
+	return false
 }
 
 func (m Model) hasAvailableExits() bool {
-    return len(m.currentRoom.Room.Exits) > 0
+	return len(m.world.Room.Room.Exits) > 0
 }
 
 func (m Model) hasRoomItems() bool {
-    return len(m.currentRoom.Items) > 0
+	return len(m.world.Room.Items) > 0
 }
 
 func (m Model) hasGroup() bool {
-    return m.group.ID != ""
+	return m.world.Group.ID != ""
+}
+
+func (m Model) availableCommandsContent() string {
+	commands := make([]AvailableCommand, 0)
+
+	addCommand := func(catalog []AvailableCommand, name string) {
+		for _, command := range catalog {
+			if command.Name == name {
+				commands = append(commands, command)
+				return
+			}
+		}
+	}
+
+	add := func(name string) {
+		addCommand(availableCommands, name)
+	}
+
+	add("LOOK")
+
+	if m.hasAvailableExits() {
+		add("MOVE")
+	}
+
+	if m.hasRoomItems() {
+		add("TAKE")
+	}
+
+	add("INVENTORY")
+
+	if m.hasFriendlyNPC() {
+		add("TALK")
+	}
+
+	add("QUESTS")
+	add("WHO")
+
+	if m.hasGroup() {
+		addCommand(groupCommands, "INVITATIONS")
+		addCommand(groupCommands, "INFO")
+		addCommand(groupCommands, "LEAVE")
+	} else {
+		addCommand(groupCommands, "CREATE")
+		addCommand(groupCommands, "JOIN")
+	}
+
+	add("CHAT")
+	add("STATUS")
+
+	if !m.world.InCombat && m.hasHostileNPC() {
+		add("ATTACK")
+	}
+
+	if m.world.InCombat {
+		for _, command := range combatCommands {
+			commands = append(commands, command)
+		}
+	}
+
+	usages := make([]string, 0, len(commands))
+	for _, command := range commands {
+		usages = append(usages, command.Usage)
+	}
+
+	return layout.TitleStyle.Render("AVAILABLE COMMANDS") +
+		"\n" +
+		strings.Join(usages, "  |  ")
 }

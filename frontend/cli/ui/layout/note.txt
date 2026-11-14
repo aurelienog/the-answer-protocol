@@ -1,3 +1,11 @@
+Parte	Responsabilidad
+Model	Mantener el estado de la aplicación.
+Update	Procesar mensajes y actualizar el estado.
+View	Orquestar el renderizado.
+components	Renderizar cada componente.
+LayoutManager	Calcular visibilidad y dimensiones.
+theme.go	Colores, estilos, bordes y marcadores.
+
 
 section.go: títulos y separadores.
 badge.go: etiquetas de entidades.

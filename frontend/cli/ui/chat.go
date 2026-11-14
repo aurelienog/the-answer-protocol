@@ -7,26 +7,25 @@ import (
     "the-answer-protocol/frontend/cli/ui/layout"
 )
 
-func (m Model) renderChat(width int) string {
+func (m Model) renderChat(width, height int) string {
     title := layout.TitleStyle.Render("CHAT")
+    filters := m.renderChatFilter()
 
     var content strings.Builder
     content.WriteString(title)
-    content.WriteString("\n")
-    content.WriteString(m.renderChatFilter())
+    content.WriteString("  ")
+    content.WriteString(filters)
     content.WriteString("\n\n")
 
     var messages []ChatMessage
 
-    for _, message := range m.chatLog {
+    for _, message := range m.communication.ChatLog {
         if m.matchesChatFilter(message) {
             messages = append(messages, message)
         }
     }
 
-    visibleEntries := m.eventLogHeight -
-        layout.PanelHeightOffset -
-        3
+    visibleEntries := height - layout.PanelHeightOffset - 2
 
     if visibleEntries < 0 {
         visibleEntries = 0
@@ -50,9 +49,14 @@ func (m Model) renderChat(width int) string {
         contentWidth = 0
     }
 
+    panelHeight := height - layout.PanelHeightOffset
+    if panelHeight < 0 {
+        panelHeight = 0
+    }
+
     return layout.PanelStyle.
         Width(contentWidth).
-        Height(m.eventLogHeight - layout.PanelHeightOffset).
+        Height(panelHeight).
         Render(content.String())
 }
 
@@ -72,7 +76,7 @@ func (m Model) renderChatFilter() string {
     for _, filter := range filters {
         label := filter.label
 
-        if m.chatFilter == filter.filter {
+        if m.communication.ChatFilter == filter.filter {
             label = layout.TitleStyle.Render("[" + label + "]")
         } else {
             label = "[" + label + "]"
@@ -85,7 +89,7 @@ func (m Model) renderChatFilter() string {
 }
 
 func (m Model) matchesChatFilter(message ChatMessage) bool {
-    switch m.chatFilter {
+    switch m.communication.ChatFilter {
     case ChatFilterAll:
         return true
     case ChatFilterGlobal:

@@ -34,53 +34,78 @@ const (
     ChatFilterGroup
 )
 
+
+type ApplicationState struct {
+    Current       AppState
+    AuthInProgress bool
+}
+
+type NavigationState struct {
+    CurrentView View
+}
+
+type PlayerState struct {
+    Username string
+    Status   PlayerStatus
+}
+
+type WorldState struct {
+    Room     LookResponse
+    Quests   []Quest
+    Group    Group
+    InCombat bool
+    CombatID string
+}
+
+type CommunicationState struct {
+    StatusMessage string
+    EventLog      []string
+    ChatLog       []ChatMessage
+    ChatFilter    ChatFilter
+}
+
+type InterfaceState struct {
+    Input  string
+    Width  int
+    Height int
+
+    MainViewport    viewport.Model
+    SidebarViewport viewport.Model
+}
+
 type Model struct {
-	client *network.Client
+    client *network.Client
 
-	appState    AppState
-	currentView View
-	terminalTooSmall bool
-	eventLogHeight int
-	showSidebar      bool
-	showAvailableCommands bool
-	showBottomPanels bool
-
-	input        string
-	username     string
-	playerStatus PlayerStatus
-
-	status      string
-	currentRoom LookResponse
-
-	eventLog []string
-	chatLog  []ChatMessage
-	chatFilter ChatFilter
-
-	group  Group
-	inCombat bool
-	combatID string
-
-	quests []Quest
-
-	authInProgress bool
-
-	width  int
-	height int
-
-	mainViewport    viewport.Model
-	sidebarViewport viewport.Model
+    application    ApplicationState
+    navigation    NavigationState
+    player         PlayerState
+    world          WorldState
+    communication CommunicationState
+    ui             InterfaceState
 }
 
 func NewModel(client *network.Client) Model {
-	return Model{
-		client:          client,
-		appState:        StateAuthentication,
-		currentView:     ViewWorld,
-		status:          "Enter your username",
-		mainViewport:    viewport.New(0, 0),
-		sidebarViewport: viewport.New(0, 0),
-		chatFilter: ChatFilterAll,
-	}
+    return Model{
+        client: client,
+
+        application: ApplicationState{
+            Current: StateAuthentication,
+        },
+
+        navigation: NavigationState{
+            CurrentView: ViewWorld,
+        },
+
+        communication: CommunicationState{
+            StatusMessage: "Enter your username",
+            ChatFilter:    ChatFilterAll,
+        },
+
+        ui: InterfaceState{
+            MainViewport:    viewport.New(0, 0),
+            SidebarViewport: viewport.New(0, 0),
+        },
+    }
 }
 
 func (m Model) Init() tea.Cmd {

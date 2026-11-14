@@ -7,16 +7,16 @@ import (
 func (m Model) handleAuthenticationResult(
     msg authenticationResultMsg,
 ) (tea.Model, tea.Cmd) {
-    m.authInProgress = false
+    m.application.AuthInProgress = false
 
     if msg.err != nil {
-        m.status = msg.err.Error()
+        m.communication.StatusMessage = msg.err.Error()
         return m, nil
     }
 
-    m.username = msg.username
-    m.appState = StateGame
-    m.status = "Successfully connected"
+    m.player.Username = msg.username
+    m.application.Current = StateGame
+    m.communication.StatusMessage = "Successfully connected"
 
     return m, tea.Batch(
         sendCommand(m.client, "STATUS"),

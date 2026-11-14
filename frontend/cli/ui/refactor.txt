@@ -1,0 +1,221 @@
+Orden de implementación
+
+1. Completar las funciones de medición.
+2. Conectar las mediciones desde ui.
+3. Implementar distribución horizontal.
+4. Medir los componentes que dependen de la anchura resultante.
+5. Implementar distribución vertical.
+6. Corregir RenderMain() para que respete la visibilidad asignada al Sidebar.
+
+Qué está hecho y qué falta
+Responsabilidad	Estado
+Definición de LayoutInput	Hecho
+Definición de LayoutResult	Hecho
+Cálculo centralizado de dimensiones	Parcialmente hecho
+Prioridades y visibilidad de componentes	Implementado, pendiente de validar
+Asignación de tamaños a viewports	Implementado
+Renderizadores respetando dimensiones asignadas	Pendiente de revisar
+Eliminar cálculos duplicados de dimensiones	Pendiente
+Comportamiento consistente al redimensionar terminal	Pendiente de validar
+Scroll independiente del layout	Pendiente de validar
+
+Hay cuatro puntos importantes:
+1. Una sola fuente de dimensiones: renderView(), RenderMain(), renderChat() y renderEventLog() no deben decidir cuánto espacio corresponde a cada componente.
+2. Dimensiones exteriores e interiores: debemos distinguir el tamaño total del panel del espacio disponible para su contenido.
+3. Asignación de dimensiones: el gestor debe decidir el tamaño de cada panel y los viewports deben recibir el espacio interior correspondiente.
+4. Actualización: el scroll no debe provocar un nuevo cálculo del layout. Solo los cambios de tamaño, visibilidad o contenido que afecten a las restricciones deben actualizarlo.
+
+
+
+Orden de trabajo recomendado
+1. Completar Constraints y definir cómo se declaran las necesidades de cada componente.
+2. Simplificar LayoutInput para que contenga toda la información necesaria.
+3. Corregir LayoutManager.Calculate() para que gestione todas las dimensiones y prioridades.
+4. Eliminar los cálculos duplicados de calculateLayout().
+5. Hacer que updateViewportSizes() aplique las dimensiones asignadas, sin decidirlas.
+6. Adaptar los renderizadores para respetar el tamaño exterior e interior.
+7. Validar redimensionamiento, terminal pequeño y scroll.
+
+el plan era:&#x20;
+
+## **1. Clasificación de los componentes**
+
+|   |
+| - |
+
+Componente
+
+|   |
+| - |
+
+Cómo se obtiene su altura
+
+|   |
+| - |
+
+Header
+
+|   |
+| - |
+
+Altura intrínseca según su anchura
+
+|   |
+| - |
+
+MainView
+
+|   |
+| - |
+
+Altura asignada por el gestor
+
+|   |
+| - |
+
+Sidebar
+
+|   |
+| - |
+
+La misma altura asignada a MainView
+
+|   |
+| - |
+
+EventLog
+
+|   |
+| - |
+
+Altura preferida, limitada por el espacio disponible
+
+|   |
+| - |
+
+Chat
+
+|   |
+| - |
+
+Altura preferida, limitada por el espacio disponible
+
+|   |
+| - |
+
+AvailableCommands
+
+|   |
+| - |
+
+Altura intrínseca según su anchura
+
+|   |
+| - |
+
+Input
+
+|   |
+| - |
+
+Altura intrínseca según su anchura
+
+|   |
+| - |
+
+Status
+
+|   |
+| - |
+
+Altura intrínseca según su anchura
+
+Esto también aclara el papel de `IntrinsicSize`: no debe convertirse automáticamente en la altura que recibe cada componente. Es una medida de cuánto espacio necesita naturalmente antes de que el gestor decida cuánto puede asignarle.
+
+## **2. Qué implica para cada renderizador**
+
+**Header**
+
+Tiene tres líneas de contenido y el panel añade cuatro filas exteriores. Sin wrapping, su altura es 7. Si el ancho obliga a envolver alguna línea, la altura aumenta.
+
+**MainView y Sidebar**
+
+`RenderMain()` ya recibe dimensiones exteriores y resta los offsets para configurar el contenido interior. Eso es correcto.
+
+Además, ambos paneles reciben la misma altura, así que el gestor debe mantener esa igualdad. Hay un pequeño detalle que conviene corregir más adelante: actualmente `RenderMain()` no dibuja el Sidebar si `sidebarContent == ""`, aunque el gestor le haya asignado espacio. La visibilidad debería depender de `sidebarWidth`, no de que el contenido tenga texto.
+
+**EventLog y Chat**
+
+Los dos tienen altura asignada. Su contenido debe adaptarse a ella, no determinarla. En Chat, por ejemplo, el encabezado ocupa dos líneas interiores y los mensajes usan el espacio restante.
+
+**AvailableCommands**
+
+Es el caso más importante después del Header: su altura depende de cuántas líneas ocupen los comandos una vez aplicado el ancho disponible. No podemos mantener `CommandsPreferredHeight = 3` como si fuese su altura real.
+
+## **3. El orden correcto del cálculo**
+
+Hay una dependencia entre anchura y altura: el wrapping cambia la altura intrínseca. Por eso, el cálculo debe realizarse en dos fases:
+
+**Fase 1 — Distribución horizontal**
+
+- Determinar si cabe el Sidebar.
+- Asignar anchuras a MainView y Sidebar.
+- Establecer la anchura de los paneles inferiores.
+
+**Fase 2 — Medición y distribución vertical**
+
+- Medir Header, Input, Status y AvailableCommands con sus anchuras.
+- Aplicar las alturas preferidas de EventLog y Chat.
+- Reservar el mínimo de MainView.
+- Repartir el espacio restante.
+
+El `LayoutManager` no debe conocer Lip Gloss ni renderizar contenido del juego. La UI mide los componentes y entrega esas medidas al gestor.
+
+## **4. Qué cambiaría ahora**
+
+No modificaría todavía `Calculate()`. Primero completaría el contrato de datos:
+
+- `IntrinsicSize`: tamaño natural medido por la UI.
+- `Constraints`: límites permitidos y tamaño preferido.
+- `Priority`: importancia al competir por espacio.
+- `Required`: indica si el componente puede ocultarse.
+
+Y eliminaría progresivamente las alturas estimadas (`HeaderHeight`, `CommandsPreferredHeight`, etc.) cuando sus reemplazos estén conectados.
+
+**El siguiente paso es implementar la medición intrínseca fuera de&#x20;**`LayoutManager`, empezando por Header y AvailableCommands, que son los dos componentes cuya altura depende claramente del wrapping. Después podremos conectar esas medidas al cálculo en dos fases sin mezclar responsabilidades. //&#x20;
+
+Componente
+
+Cómo obtenemos su altura
+
+Header
+
+Medición del contenido
+
+Input
+
+Altura fija
+
+Status
+
+Medición del mensaje
+
+Event Log
+
+Altura preferida
+
+Chat
+
+Altura preferida
+
+Available Commands
+
+Medición de los comandos
+
+Main View
+
+Espacio restante
+
+Sidebar
+
+Misma altura que Main View

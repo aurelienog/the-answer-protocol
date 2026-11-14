@@ -19,18 +19,19 @@ func (m Model) handleServerEvent(
     if event.Kind == protocol.KindEVT && isChatEvent(event.Data) {
         chatMessage, ok := parseChatMessage(event.EventType, event.Data)
         if ok {
-            m.chatLog = append(m.chatLog, chatMessage)
+            m.communication.ChatLog = append(
+                m.communication.ChatLog,
+                chatMessage,
+            )
 
-            if len(m.chatLog) > maxEventLogEntries {
-                m.chatLog = m.chatLog[len(m.chatLog)-maxEventLogEntries:]
+            if len(m.communication.ChatLog) > maxEventLogEntries {
+                m.communication.ChatLog = m.communication.ChatLog[
+                    len(m.communication.ChatLog)-maxEventLogEntries:
+                ]
             }
         }
     } else {
-        m.eventLog = append(m.eventLog, msg.event.Raw)
-
-        if len(m.eventLog) > maxEventLogEntries {
-            m.eventLog = m.eventLog[len(m.eventLog)-maxEventLogEntries:]
-        }
+        m.appendEventLog(msg.event.Raw)
 
         if event.Kind == protocol.KindEVT && event.EventType == "COMBAT" {
             m.handleCombatEvent(event.Data)
@@ -64,9 +65,9 @@ func parseChatMessage(scope, data string) (ChatMessage, bool) {
     }
 
     return ChatMessage{
-        Scope:     scope,
+        Scope:      scope,
         PlayerName: parts[0],
-        Message:   parts[1],
+        Message:    parts[1],
     }, true
 }
 
@@ -101,10 +102,9 @@ func (m *Model) handleCombatEvent(data string) {
         }
 
         for _, participant := range participants {
-            if participant == m.username {
-                m.inCombat = true
-                m.combatID = combatID
-                return
+            if participant == m.player.Username {
+                m.world.InCombat = true
+                m.world.CombatID = combatID
             }
         }
 
@@ -129,12 +129,12 @@ func (m *Model) handleCombatEvent(data string) {
         }
 
         // Ignoramos eventos de otros combates.
-        if combatID == "" || combatID != m.combatID {
+        if combatID == "" || combatID != m.world.CombatID {
             return
         }
 
-        m.inCombat = false
-        m.combatID = ""
+        m.world.InCombat = false
+        m.world.CombatID = ""
 
         if !hasRewards {
             return
@@ -148,18 +148,29 @@ func (m *Model) handleCombatEvent(data string) {
         }
 
         if err := json.Unmarshal([]byte(rewardsJSON), &rewards); err != nil {
-            m.eventLog = append(m.eventLog, "No se pudieron leer las recompensas del combate.")
+            m.appendEventLog(
+                "No se pudieron leer las recompensas del combate.",
+            )
             return
         }
 
         for _, reward := range rewards {
             for _, item := range reward.Items {
-                m.eventLog = append(m.eventLog, "Recompensa recibida: "+item.Name)
+                m.appendEventLog("Recompensa recibida: " + item.Name)
             }
         }
+    }
+}
 
-        if len(m.eventLog) > maxEventLogEntries {
-            m.eventLog = m.eventLog[len(m.eventLog)-maxEventLogEntries:]
-        }
+func (m *Model) appendEventLog(message string) {
+    m.communication.EventLog = append(
+        m.communication.EventLog,
+        message,
+    )
+
+    if len(m.communication.EventLog) > maxEventLogEntries {
+        m.communication.EventLog = m.communication.EventLog[
+            len(m.communication.EventLog)-maxEventLogEntries:
+        ]
     }
 }

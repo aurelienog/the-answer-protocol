@@ -21,7 +21,7 @@ var commandHandlers = map[string]commandHandler{
 
 var commandErrorHandlers = map[string]errorHandler{
     "NOT_IN_GROUP": func(m *Model) {
-        m.group = Group{}
+        m.world.Group = Group{}
     },
 }
 
@@ -29,7 +29,7 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
     // Handle server error responses first.
     if msg.response.Kind == protocol.KindERR {
         errorCode := strings.ToUpper(strings.TrimSpace(msg.response.Name))
-        m.status = errorCode
+        m.communication.StatusMessage = errorCode
 
         if handler, exists := commandErrorHandlers[errorCode]; exists {
             handler(&m)
@@ -40,34 +40,34 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 
     // Handle transport and client errors.
     if msg.err != nil {
-        m.status = "Error: " + msg.err.Error()
+        m.communication.StatusMessage = "Error: " + msg.err.Error()
         return m, nil
     }
 
     command := getCommandName(msg.command)
 
     if msg.response.Kind != protocol.KindOK {
-        m.status = "Unexpected server response"
+        m.communication.StatusMessage = "Unexpected server response"
         return m, nil
     }
 
     handler, exists := commandHandlers[command]
     if !exists {
-        m.status = "Command executed"
+        m.communication.StatusMessage = "Command executed"
         return m, nil
     }
 
     if err := handler(&m, msg.response.Payload); err != nil {
-        m.status = "Error parsing " + command + ": " + err.Error()
+        m.communication.StatusMessage = "Error parsing " + command + ": " + err.Error()
         return m, nil
     }
 
     if command == "MOVE" {
-        m.status = "Movement successful. Updating room..."
+        m.communication.StatusMessage = "Movement successful. Updating room..."
         return m, sendCommand(m.client, "LOOK")
     }
 
-    m.status = command + " updated"
+    m.communication.StatusMessage = command + " updated"
     return m, nil
 }
 
@@ -96,7 +96,7 @@ func handleStatusResponse(m *Model, payload string) error {
         return err
     }
 
-    m.playerStatus = status
+    m.player.Status = status
     return nil
 }
 
@@ -107,7 +107,7 @@ func handleQuestsResponse(m *Model, payload string) error {
         return err
     }
 
-    m.quests = quests
+    m.world.Quests = quests
     return nil
 }
 
@@ -118,7 +118,7 @@ func handleGroupInfoResponse(m *Model, payload string) error {
         return err
     }
 
-    m.group = group
+    m.world.Group = group
     return nil
 }
 
@@ -129,7 +129,7 @@ func handleLookResponse(m *Model, payload string) error {
         return err
     }
 
-    m.currentRoom = response
+    m.world.Room = response
     return nil
 }
 

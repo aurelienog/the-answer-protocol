@@ -1,304 +1,240 @@
+
 package ui
 
 import (
     "strings"
 
     tea "github.com/charmbracelet/bubbletea"
-    "github.com/charmbracelet/lipgloss"
 
     "the-answer-protocol/frontend/cli/ui/layout"
 )
 
+const bottomPanelHeight = layout.PanelHeightOffset + 4
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return refreshResult(m.handleKey(msg))
+    switch msg := msg.(type) {
+    case tea.KeyMsg:
+        if isScrollKey(msg.String()) {
+            return m.handleKey(msg)
+        }
 
-	case commandResultMsg:
-		return refreshResult(m.handleCommandResult(msg))
+        return refreshResult(m.handleKey(msg))
 
-	case authenticationResultMsg:
-		return refreshResult(m.handleAuthenticationResult(msg))
+    case commandResultMsg:
+        return refreshResult(m.handleCommandResult(msg))
 
-	case serverEventMsg:
-		return refreshResult(m.handleServerEvent(msg))
+    case authenticationResultMsg:
+        return refreshResult(m.handleAuthenticationResult(msg))
 
-	case clientDoneMsg:
-		m.status = "Connection to server closed"
-		return refreshResult(m, nil)
+    case serverEventMsg:
+        return refreshResult(m.handleServerEvent(msg))
 
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-	}
+    case clientDoneMsg:
+        m.communication.StatusMessage = "Connection to server closed"
+        return refreshResult(m, nil)
 
-	return refreshResult(m, nil)
+    case tea.WindowSizeMsg:
+        m.ui.Width = msg.Width
+        m.ui.Height = msg.Height
+    }
+
+    return refreshResult(m, nil)
 }
 
-// Durante la autenticación, Enter envía el nombre de usuario.
-// Después de autenticarse, Enter envía comandos del juego.
-// No necesitamos dos sistemas diferentes de entrada.
+// Enter submits the username during authentication or a game command afterward.
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
     switch msg.String() {
     case "ctrl+c":
         return m, tea.Quit
 
     case "enter":
-        if strings.TrimSpace(m.input) == "" {
+        if strings.TrimSpace(m.ui.Input) == "" {
             return m, nil
         }
 
-        if m.appState == StateAuthentication {
-            if m.authInProgress {
+        if m.application.Current == StateAuthentication {
+            if m.application.AuthInProgress {
                 return m, nil
             }
 
-            username := strings.TrimSpace(m.input)
+            username := strings.TrimSpace(m.ui.Input)
 
-            m.input = ""
-            m.authInProgress = true
-            m.status = "Authenticating..."
+            m.ui.Input = ""
+            m.application.AuthInProgress = true
+            m.communication.StatusMessage = "Authenticating..."
 
             return m, authenticateUser(m.client, username)
         }
 
         if m.client == nil {
-            m.status = "Client not connected"
-            m.input = ""
+            m.communication.StatusMessage = "Client not connected"
+            m.ui.Input = ""
             return m, nil
         }
 
-        command := m.input
-        m.input = ""
+        command := m.ui.Input
+        m.ui.Input = ""
 
         return m, sendCommand(m.client, command)
 
     case "backspace":
-        if len(m.input) > 0 {
-            m.input = m.input[:len(m.input)-1]
+        if len(m.ui.Input) > 0 {
+            m.ui.Input = m.ui.Input[:len(m.ui.Input)-1]
         }
         return m, nil
 
-	case "tab":
-		m.chatFilter = (m.chatFilter + 1) % 4
-		return m, nil
+    case "tab":
+        m.communication.ChatFilter =
+            (m.communication.ChatFilter + 1) % 4
+        return m, nil
 
     case "f1":
-        m.currentView = ViewWorld
+        m.navigation.CurrentView = ViewWorld
     case "f2":
-        m.currentView = ViewRoom
+        m.navigation.CurrentView = ViewRoom
     case "f3":
-        m.currentView = ViewInventory
+        m.navigation.CurrentView = ViewInventory
     case "f4":
-        m.currentView = ViewCharacter
+        m.navigation.CurrentView = ViewCharacter
     case "f5":
-        m.currentView = ViewQuests
+        m.navigation.CurrentView = ViewQuests
     case "f6":
-        m.currentView = ViewGroup
+        m.navigation.CurrentView = ViewGroup
     case "f7":
-        m.currentView = ViewCombat
+        m.navigation.CurrentView = ViewCombat
+
     case "up", "down", "pgup", "pgdown", "home", "end":
         var cmd tea.Cmd
-        m.mainViewport, cmd = m.mainViewport.Update(msg)
+
+        m.ui.MainViewport, cmd = m.ui.MainViewport.Update(msg)
+
+        // Scrolling only updates the Main View viewport.
         return m, cmd
+
     default:
         if len(msg.Runes) > 0 {
-            m.input += string(msg.Runes)
+            m.ui.Input += string(msg.Runes)
         }
     }
 
     return m, nil
 }
 
-func (m *Model) updateViewportSizes() {
-	header := layout.RenderHeader(
-		m.username,
-		m.playerStatus.HP,
-		m.playerStatus.MaxHP,
-		m.width,
-	)
+// calculateLayout measures the components and returns their layout.
+func (m Model) calculateLayout() layout.LayoutResult {
+    input := layout.DefaultRequirements()
 
-	inputHeight := lipgloss.Height(
-		layout.InputStyle.Render("> " + m.input),
-	)
+    input.Terminal = layout.Size{
+        Width:  m.ui.Width,
+        Height: m.ui.Height,
+    }
 
-	statusHeight := lipgloss.Height(
-		layout.StatusStyle.Render(m.status),
-	)
+    input.Header.IntrinsicSize = layout.MeasureHeader(
+        m.player.Username,
+        m.player.Status.HP,
+        m.player.Status.MaxHP,
+        m.ui.Width,
+    )
 
-	fixedHeight := lipgloss.Height(header) +
-		inputHeight +
-		statusHeight
+    commandsContent := m.availableCommandsContent()
+    input.AvailableCommands.IntrinsicSize = layout.MeasureAvailableCommands(
+        commandsContent,
+        m.ui.Width,
+    )
 
-	availableHeight := m.height - fixedHeight
+    input.Status.IntrinsicSize = layout.MeasureContent(
+        m.communication.StatusMessage,
+        m.ui.Width,
+    )
 
-	minMainHeight := layout.PanelHeightOffset +
-		layout.MinMainHeight
-
-	minEventLogHeight := layout.PanelHeightOffset +
-		1 +
-		layout.EventLogMinEntries
-
-	m.terminalTooSmall = m.width < layout.MinTerminalWidth ||
-		availableHeight < minMainHeight
-
-	if m.terminalTooSmall {
-		m.showBottomPanels = false
-		m.showAvailableCommands = false
-		m.showSidebar = false
-		m.eventLogHeight = 0
-
-		m.mainViewport.Width = 0
-		m.mainViewport.Height = 0
-		m.sidebarViewport.Width = 0
-		m.sidebarViewport.Height = 0
-
-		return
-	}
-
-	// Espacio disponible después de reservar el mínimo del Main View.
-	remainingHeight := availableHeight - minMainHeight
-
-	// Los bottom panels tienen prioridad sobre los comandos.
-	m.showBottomPanels = remainingHeight >= minEventLogHeight
-	m.eventLogHeight = 0
-
-	if m.showBottomPanels {
-		m.eventLogHeight = minInt(
-			layout.EventLogMaxHeight,
-			remainingHeight,
-		)
-	}
-
-	remainingHeight -= m.eventLogHeight
-
-	// Calcula el ancho inicial suponiendo que la sidebar está visible.
-	mainWidth := m.width
-	sidebarCandidate := m.width >= layout.MinWidthForSidebar
-
-	if sidebarCandidate {
-		mainWidth = m.width * 75 / 100
-	}
-
-	// Los comandos solo aparecen si caben después de los bottom panels.
-	commandHeight := lipgloss.Height(
-		m.renderAvailableCommands(mainWidth),
-	)
-
-	m.showAvailableCommands = m.showBottomPanels &&
-		remainingHeight >= commandHeight
-
-	if m.showAvailableCommands {
-		remainingHeight -= commandHeight
-	}
-
-	// Altura interior del Main View.
-	viewportHeight := availableHeight -
-		m.eventLogHeight -
-		layout.PanelHeightOffset
-
-	if m.showAvailableCommands {
-		viewportHeight -= commandHeight
-	}
-
-	// La sidebar solo aparece si también dispone de altura suficiente.
-	m.showSidebar = sidebarCandidate &&
-		viewportHeight >= layout.MinSidebarHeight
-
-	// Si no hay sidebar, el Main View y los comandos usan todo el ancho.
-	if !m.showSidebar {
-		mainWidth = m.width
-
-		// Al cambiar el ancho, puede cambiar la altura de los comandos.
-		commandHeight = lipgloss.Height(
-			m.renderAvailableCommands(mainWidth),
-		)
-
-		m.showAvailableCommands = m.showBottomPanels &&
-			remainingHeight+m.eventLogHeight >= commandHeight
-
-		// Recalcula la altura con la decisión definitiva sobre los comandos.
-		viewportHeight = availableHeight -
-			m.eventLogHeight -
-			layout.PanelHeightOffset
-
-		if m.showAvailableCommands {
-			viewportHeight -= commandHeight
-		}
-	}
-
-	// La asignación anterior reserva el mínimo del Main View.
-	if viewportHeight < layout.MinMainHeight {
-		viewportHeight = layout.MinMainHeight
-	}
-
-	m.mainViewport.Width = maxInt(
-		0,
-		mainWidth-layout.PanelWidthOffset,
-	)
-	m.mainViewport.Height = viewportHeight
-
-	if m.showSidebar {
-		sidebarWidth := m.width - mainWidth
-
-		m.sidebarViewport.Width = maxInt(
-			0,
-			sidebarWidth-layout.PanelWidthOffset,
-		)
-	} else {
-		m.sidebarViewport.Width = 0
-	}
-
-	// Ambos viewports tienen siempre la misma altura interior.
-	m.sidebarViewport.Height = m.mainViewport.Height
+    return (layout.LayoutManager{}).Calculate(input)
 }
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+
+// updateViewportSizes applies the calculated dimensions to the viewports.
+func (m *Model) updateViewportSizes() {
+    result := m.calculateLayout()
+
+    if !result.MainView.Visible {
+        m.ui.MainViewport.Width = 0
+        m.ui.MainViewport.Height = 0
+        m.ui.SidebarViewport.Width = 0
+        m.ui.SidebarViewport.Height = 0
+        return
+    }
+
+    viewportHeight := maxInt(
+        0,
+        result.MainView.Height-layout.PanelHeightOffset,
+    )
+
+    m.ui.MainViewport.Width = maxInt(
+        0,
+        result.MainView.Width-layout.PanelWidthOffset,
+    )
+    m.ui.MainViewport.Height = viewportHeight
+
+    if !result.Sidebar.Visible {
+        m.ui.SidebarViewport.Width = 0
+        m.ui.SidebarViewport.Height = 0
+        return
+    }
+
+    m.ui.SidebarViewport.Width = maxInt(
+        0,
+        result.Sidebar.Width-layout.PanelWidthOffset,
+    )
+    m.ui.SidebarViewport.Height = viewportHeight
 }
 
 func maxInt(a, b int) int {
     if a > b {
         return a
     }
+
     return b
 }
 
 func (m *Model) refreshViewports() {
-	var content string
+    var content string
 
-	switch m.currentView {
-	case ViewWorld:
+    switch m.navigation.CurrentView {
+    case ViewWorld:
         content = m.renderWorld()
+
     case ViewRoom:
         content = renderRoom(
-            m.currentRoom,
-            m.mainViewport.Width,
-            m.mainViewport.Height,
+            m.world.Room,
+            m.ui.MainViewport.Width,
+            m.ui.MainViewport.Height,
         )
-	case ViewInventory:
-		content = m.renderInventory()
-	case ViewCharacter:
-		content = m.renderCharacter()
-	case ViewQuests:
-		content = m.renderQuests()
-	case ViewGroup:
-		content = m.renderGroup()
-	case ViewCombat:
-		content = m.renderCombat()
-	default:
-		content = "Unknown view"
-	}
 
-	m.mainViewport.SetContent(content)
+    case ViewInventory:
+        content = m.renderInventory()
 
-	sidebar := layout.RenderSidebar(
-		m.renderQuests(),
-		m.renderGroup(),
-	)
-	m.sidebarViewport.SetContent(sidebar)
+    case ViewCharacter:
+        content = m.renderCharacter()
+
+    case ViewQuests:
+        content = m.renderQuests()
+
+    case ViewGroup:
+        content = m.renderGroup()
+
+    case ViewCombat:
+        content = m.renderCombat()
+
+    default:
+        content = "Unknown view"
+    }
+
+    m.ui.MainViewport.SetContent(content)
+
+    sidebar := layout.RenderSidebar(
+        m.renderQuests(),
+        m.renderGroup(),
+    )
+
+    m.ui.SidebarViewport.SetContent(sidebar)
 }
 
 func refreshResult(model tea.Model, cmd tea.Cmd) (tea.Model, tea.Cmd) {
@@ -310,4 +246,13 @@ func refreshResult(model tea.Model, cmd tea.Cmd) (tea.Model, tea.Cmd) {
     }
 
     return model, cmd
+}
+
+func isScrollKey(key string) bool {
+    switch key {
+    case "up", "down", "pgup", "pgdown", "home", "end":
+        return true
+    default:
+        return false
+    }
 }
