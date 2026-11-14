@@ -5,8 +5,8 @@
 .rpg-modal {
     color: var(--text-main);
     position: absolute;
-    top: 70px;
-    bottom: 210px;
+    top: 65px;
+    bottom: 205px;
     left: 0;
     right: 0;
     margin: auto;
@@ -14,7 +14,7 @@
     max-width: 95%;
     height: auto;
     min-height: 500px;
-    max-height: calc(100vh - 280px);
+    max-height: calc(100vh - 270px);
     z-index: 35 !important;
     display: flex;
     flex-direction: column;

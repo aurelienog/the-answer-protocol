@@ -145,14 +145,14 @@
       "id": "item.iron_sword",
       "name": "Iron Sword",
       "description": "A sturdy iron blade forged by Master Borin. Passively increases Attack by +6 in combat.",
-      "type": "equipment",
+      "type": "unique",
       "attack": 6
     },
     "item.oak_shield": {
       "id": "item.oak_shield",
       "name": "Oak Shield",
       "description": "A heavy oak shield reinforced with iron bands. Passively increases Defense by +4 in combat.",
-      "type": "equipment",
+      "type": "unique",
       "defense": 4
     },
     "item.leather_boots": {
