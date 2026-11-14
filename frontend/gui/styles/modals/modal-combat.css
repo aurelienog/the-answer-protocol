@@ -278,8 +278,8 @@
     align-items: center;
     justify-content: flex-end;
     height: 100%;
-    max-height: 500px;
-    width: 500px;
+    max-height: clamp(460px, 58vh, 720px);
+    width: clamp(460px, 38vw, 720px);
     animation: fighter-idle 2.8s ease-in-out infinite;
 }
 

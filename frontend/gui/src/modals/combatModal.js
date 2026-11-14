@@ -353,6 +353,7 @@ const CombatModal = {
         FrameView.mountButtons();
         FrameView.mountHpBarFrames();
         if (typeof AudioManager !== 'undefined') AudioManager.enterCombatMusic();
+        if (typeof CombatAnimator !== 'undefined') CombatAnimator.startCombat(GameState.gender, this.enemyId);
         document.getElementById('modal-combat').classList.remove('hidden');
     },
 
@@ -372,19 +373,33 @@ const CombatModal = {
     },
 
     playDefendEffect(reductionPct) {
+        const timing = (typeof CombatAnimator !== 'undefined')
+            ? CombatAnimator.getStepTiming('hero', 'defend')
+            : { totalMs: 1250 };
+
         this.enqueueAnim(() => {
+            if (typeof CombatAnimator !== 'undefined') {
+                CombatAnimator.triggerAction('hero', 'defend');
+            }
             const turnText = document.getElementById('combat-turn-text');
             if (turnText) turnText.innerHTML = `DEFENDING <img src="/assets/icons/ui/shield.webp" alt="" class="ui-ico">`;
             this.showFloatingDmg('dmg-on-hero', `+${reductionPct}% DEF`, '#63b3ed');
-        }, 1250);
+        }, timing.totalMs);
     },
 
     playHealEffect(healAmount) {
+        const timing = (typeof CombatAnimator !== 'undefined')
+            ? CombatAnimator.getStepTiming('hero', 'heal')
+            : { totalMs: 1250 };
+
         this.enqueueAnim(() => {
+            if (typeof CombatAnimator !== 'undefined') {
+                CombatAnimator.triggerAction('hero', 'heal');
+            }
             GameState.hp = Math.min(GameState.maxHp, GameState.hp + healAmount);
             this.showFloatingDmg('dmg-on-hero', `+${healAmount} HP`, '#48bb78');
             this.updateBars();
-        }, 1250);
+        }, timing.totalMs);
     },
 
     playHitEffect(mode, damageAmount, remainingHp, customBannerText = '', allyTargetName = '', attackerName = '') {
@@ -392,34 +407,70 @@ const CombatModal = {
             this.advanceWithinCurrentRound(attackerName);
         }
 
+        const isHeroAttacking = (mode === 'enemy_hit' || mode === true);
+        const attackerSlot = isHeroAttacking ? 'hero' : 'enemy';
+        const defenderSlot = isHeroAttacking ? 'enemy' : 'hero';
+
+        const timing = (typeof CombatAnimator !== 'undefined')
+            ? CombatAnimator.getStepTiming(attackerSlot, 'attack')
+            : { totalMs: 1350, impactDelayMs: 0, hasFrames: false };
+
         this.enqueueAnim(() => {
             const heroBox = document.getElementById('fighter-hero-box');
             const enemyBox = document.getElementById('fighter-enemy-box');
             const turnText = document.getElementById('combat-turn-text');
 
-            if (mode === 'enemy_hit' || mode === true) {
-                if (remainingHp !== undefined) this.enemyHp = remainingHp;
+            // 1. Start the attacker's sprite animation immediately!
+            if (typeof CombatAnimator !== 'undefined') {
+                CombatAnimator.triggerAction(attackerSlot, 'attack');
+            }
+
+            if (isHeroAttacking) {
                 if (turnText) {
                     const label = (customBannerText || 'STRIKE').replace('⚔️', '').trim();
                     turnText.innerHTML = `${label} <img src="/assets/icons/ui/sword.webp" alt="" class="ui-ico">`;
                 }
-                this.triggerAnim(heroBox, 'lunge-right');
-                this.triggerAnim(enemyBox, 'hit-shake');
-                this.showFloatingDmg('dmg-on-enemy', `-${damageAmount}`, '#ff4d4d');
+                if (!timing.hasFrames) {
+                    this.triggerAnim(heroBox, 'lunge-right');
+                }
+
+                // 2. Apply impact (shake + floating damage + HP bar update) at impactDelayMs!
+                setTimeout(() => {
+                    if (remainingHp !== undefined) this.enemyHp = remainingHp;
+                    if (typeof CombatAnimator !== 'undefined') {
+                        CombatAnimator.triggerAction(defenderSlot, remainingHp === 0 ? 'death' : 'hit');
+                    }
+                    this.triggerAnim(enemyBox, 'hit-shake');
+                    this.showFloatingDmg('dmg-on-enemy', `-${damageAmount}`, '#ff4d4d');
+                    this.updateBars();
+                }, timing.impactDelayMs || 0);
+
             } else if (mode === 'me_hit' || mode === false) {
-                if (remainingHp !== undefined) GameState.hp = remainingHp;
-                if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()}!`;
-                this.triggerAnim(enemyBox, 'lunge-left');
-                this.triggerAnim(heroBox, 'hit-shake');
-                this.showFloatingDmg('dmg-on-hero', `-${damageAmount}`, '#ff4d4d');
+                if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()} ATTACKS YOU!`;
+                if (!timing.hasFrames) {
+                    this.triggerAnim(enemyBox, 'lunge-left');
+                }
+
+                setTimeout(() => {
+                    if (remainingHp !== undefined) GameState.hp = remainingHp;
+                    if (typeof CombatAnimator !== 'undefined') {
+                        CombatAnimator.triggerAction(defenderSlot, remainingHp === 0 ? 'death' : 'hit');
+                    }
+                    this.triggerAnim(heroBox, 'hit-shake');
+                    this.showFloatingDmg('dmg-on-hero', `-${damageAmount}`, '#ff4d4d');
+                    this.updateBars();
+                }, timing.impactDelayMs || 0);
+
             } else if (mode === 'ally_hit') {
                 if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()} HITS ${allyTargetName.toUpperCase()}!`;
                 this.triggerAnim(enemyBox, 'lunge-left');
-                this.showFloatingDmg('dmg-on-hero', `${allyTargetName}: -${damageAmount} HP`, '#63b3ed');
-            }
 
-            this.updateBars();
-        }, 1350);
+                setTimeout(() => {
+                    this.showFloatingDmg('dmg-on-hero', `${allyTargetName}: -${damageAmount} HP`, '#63b3ed');
+                    this.updateBars();
+                }, timing.impactDelayMs || 0);
+            }
+        }, timing.totalMs);
     },
 
     queueTurnBanner(participantName, roundNum) {
@@ -587,6 +638,7 @@ const CombatModal = {
         this.activeTurnOwner = "";
         document.getElementById('modal-flee').classList.add('hidden');
         document.getElementById('modal-combat').classList.add('hidden');
+        if (typeof CombatAnimator !== 'undefined') CombatAnimator.stopAll();
         if (UI.activeModalId === 'combat') UI.activeModalId = null;
         if (typeof AudioManager !== 'undefined') AudioManager.exitCombatMusic();
     }
