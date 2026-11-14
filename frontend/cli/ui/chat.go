@@ -4,6 +4,7 @@ package ui
 import (
     "strings"
 
+    "github.com/charmbracelet/lipgloss"
     "the-answer-protocol/frontend/cli/ui/layout"
 )
 
@@ -37,11 +38,8 @@ func (m Model) renderChat(width, height int) string {
     }
 
     for _, message := range messages[start:] {
-        content.WriteString(
-            "[" + message.Scope + "] " +
-                message.PlayerName + ": " +
-                message.Message + "\n",
-        )
+        content.WriteString(renderChatMessage(message))
+        content.WriteString("\n")
     }
 
     contentWidth := width - layout.PanelWidthOffset
@@ -101,4 +99,24 @@ func (m Model) matchesChatFilter(message ChatMessage) bool {
     default:
         return true
     }
+}
+
+func renderChatMessage(message ChatMessage) string {
+    var scopeStyle lipgloss.Style
+
+    switch strings.ToUpper(message.Scope) {
+    case "ROOM":
+        scopeStyle = layout.RoomChatStyle
+    case "GLOBAL":
+        scopeStyle = layout.GlobalChatStyle
+    case "GROUP":
+        scopeStyle = layout.GroupChatStyle
+    default:
+        scopeStyle = layout.MutedStyle
+    }
+
+    tag := scopeStyle.Render("[" + strings.ToUpper(message.Scope) + "]")
+    text := layout.MutedStyle.Render(message.Message)
+
+    return tag + " " + message.PlayerName + ": " + text
 }

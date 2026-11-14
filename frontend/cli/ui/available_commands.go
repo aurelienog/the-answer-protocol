@@ -207,8 +207,6 @@ func (m Model) availableCommandsContent() string {
 		addCommand(availableCommands, name)
 	}
 
-	add("LOOK")
-
 	if m.hasAvailableExits() {
 		add("MOVE")
 	}
@@ -216,8 +214,6 @@ func (m Model) availableCommandsContent() string {
 	if m.hasRoomItems() {
 		add("TAKE")
 	}
-
-	add("INVENTORY")
 
 	if m.hasFriendlyNPC() {
 		add("TALK")
@@ -236,7 +232,6 @@ func (m Model) availableCommandsContent() string {
 	}
 
 	add("CHAT")
-	add("STATUS")
 
 	if !m.world.InCombat && m.hasHostileNPC() {
 		add("ATTACK")
@@ -249,11 +244,20 @@ func (m Model) availableCommandsContent() string {
 	}
 
 	usages := make([]string, 0, len(commands))
+
 	for _, command := range commands {
-		usages = append(usages, command.Usage)
+		parts := strings.SplitN(command.Usage, " ", 2)
+
+		usage := layout.CommandUsageStyle.Render(parts[0])
+
+		if len(parts) == 2 {
+			usage += " " + layout.CommandArgumentStyle.Render(parts[1])
+		}
+
+		usages = append(usages, usage)
 	}
 
 	return layout.TitleStyle.Render("AVAILABLE COMMANDS") +
 		"\n" +
-		strings.Join(usages, "  |  ")
+		strings.Join(usages, layout.MutedStyle.Render("  |  "))
 }

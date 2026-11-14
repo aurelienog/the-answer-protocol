@@ -29,6 +29,29 @@ var (
 	Accent    = lipgloss.Color("#9166A8") // Mystic Purple
 )
 
+var (
+	CommandUsageStyle = lipgloss.NewStyle().
+		Foreground(Accent).
+		Bold(true)
+
+	CommandArgumentStyle = lipgloss.NewStyle().
+		Foreground(Muted)
+)
+
+var (
+    RoomChatStyle = lipgloss.NewStyle().
+        Foreground(Secondary).
+        Bold(true)
+
+    GlobalChatStyle = lipgloss.NewStyle().
+        Foreground(Success).
+        Bold(true)
+
+    GroupChatStyle = lipgloss.NewStyle().
+        Foreground(Accent).
+        Bold(true)
+)
+
 // Base component styles.
 var (
 	PanelStyle = lipgloss.NewStyle().
@@ -103,6 +126,7 @@ const (
     IconPlayer   = "🗡"
 
 )
+
 
 // 1. Los colores tienen significado semántico. Por ejemplo, DangerStyle se utilizará para enemigos hostiles, alertas y errores; SuccessStyle, para acciones completadas o resultados positivos.
 
