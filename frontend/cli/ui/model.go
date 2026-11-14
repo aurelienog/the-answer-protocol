@@ -42,6 +42,8 @@ type Model struct {
 	terminalTooSmall bool
 	eventLogHeight int
 	showSidebar      bool
+	showAvailableCommands bool
+	showBottomPanels bool
 
 	input        string
 	username     string
@@ -55,6 +57,9 @@ type Model struct {
 	chatFilter ChatFilter
 
 	group  Group
+	inCombat bool
+	combatID string
+
 	quests []Quest
 
 	authInProgress bool

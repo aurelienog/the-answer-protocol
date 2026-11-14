@@ -32,7 +32,7 @@ var (
 const (
     MinWidthForSidebar = 90
     MinTerminalWidth   = 50
-    MinMainHeight      = 3
+    MinMainHeight      = 10
     MinSidebarHeight   = 8
 )
 

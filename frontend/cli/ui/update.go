@@ -30,7 +30,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.updateViewportSizes()
 	}
 
 	return refreshResult(m, nil)
@@ -116,11 +115,13 @@ func (m *Model) updateViewportSizes() {
 		m.username,
 		m.playerStatus.HP,
 		m.playerStatus.MaxHP,
+		m.width,
 	)
 
 	inputHeight := lipgloss.Height(
 		layout.InputStyle.Render("> " + m.input),
 	)
+
 	statusHeight := lipgloss.Height(
 		layout.StatusStyle.Render(m.status),
 	)
@@ -129,6 +130,8 @@ func (m *Model) updateViewportSizes() {
 		inputHeight +
 		statusHeight
 
+	availableHeight := m.height - fixedHeight
+
 	minMainHeight := layout.PanelHeightOffset +
 		layout.MinMainHeight
 
@@ -136,38 +139,106 @@ func (m *Model) updateViewportSizes() {
 		1 +
 		layout.EventLogMinEntries
 
-	availableHeight := m.height - fixedHeight
-
-	// Comprobar si cabe el contenido obligatorio.
 	m.terminalTooSmall = m.width < layout.MinTerminalWidth ||
-		availableHeight < minMainHeight+minEventLogHeight
+		availableHeight < minMainHeight
 
 	if m.terminalTooSmall {
+		m.showBottomPanels = false
+		m.showAvailableCommands = false
+		m.showSidebar = false
+		m.eventLogHeight = 0
+
 		m.mainViewport.Width = 0
 		m.mainViewport.Height = 0
 		m.sidebarViewport.Width = 0
 		m.sidebarViewport.Height = 0
-		m.showSidebar = false
+
 		return
 	}
 
-	// El event log crece con el espacio sobrante.
-	m.eventLogHeight = minInt(
-		layout.EventLogMaxHeight,
-		availableHeight-minMainHeight,
+	// Espacio disponible después de reservar el mínimo del Main View.
+	remainingHeight := availableHeight - minMainHeight
+
+	// Los bottom panels tienen prioridad sobre los comandos.
+	m.showBottomPanels = remainingHeight >= minEventLogHeight
+	m.eventLogHeight = 0
+
+	if m.showBottomPanels {
+		m.eventLogHeight = minInt(
+			layout.EventLogMaxHeight,
+			remainingHeight,
+		)
+	}
+
+	remainingHeight -= m.eventLogHeight
+
+	// Calcula el ancho inicial suponiendo que la sidebar está visible.
+	mainWidth := m.width
+	sidebarCandidate := m.width >= layout.MinWidthForSidebar
+
+	if sidebarCandidate {
+		mainWidth = m.width * 75 / 100
+	}
+
+	// Los comandos solo aparecen si caben después de los bottom panels.
+	commandHeight := lipgloss.Height(
+		m.renderAvailableCommands(mainWidth),
 	)
 
+	m.showAvailableCommands = m.showBottomPanels &&
+		remainingHeight >= commandHeight
+
+	if m.showAvailableCommands {
+		remainingHeight -= commandHeight
+	}
+
+	// Altura interior del Main View.
 	viewportHeight := availableHeight -
 		m.eventLogHeight -
 		layout.PanelHeightOffset
 
-	m.showSidebar = m.width >= layout.MinWidthForSidebar &&
+	if m.showAvailableCommands {
+		viewportHeight -= commandHeight
+	}
+
+	// La sidebar solo aparece si también dispone de altura suficiente.
+	m.showSidebar = sidebarCandidate &&
 		viewportHeight >= layout.MinSidebarHeight
 
-	mainWidth := m.width
+	// Si no hay sidebar, el Main View y los comandos usan todo el ancho.
+	if !m.showSidebar {
+		mainWidth = m.width
+
+		// Al cambiar el ancho, puede cambiar la altura de los comandos.
+		commandHeight = lipgloss.Height(
+			m.renderAvailableCommands(mainWidth),
+		)
+
+		m.showAvailableCommands = m.showBottomPanels &&
+			remainingHeight+m.eventLogHeight >= commandHeight
+
+		// Recalcula la altura con la decisión definitiva sobre los comandos.
+		viewportHeight = availableHeight -
+			m.eventLogHeight -
+			layout.PanelHeightOffset
+
+		if m.showAvailableCommands {
+			viewportHeight -= commandHeight
+		}
+	}
+
+	// La asignación anterior reserva el mínimo del Main View.
+	if viewportHeight < layout.MinMainHeight {
+		viewportHeight = layout.MinMainHeight
+	}
+
+	m.mainViewport.Width = maxInt(
+		0,
+		mainWidth-layout.PanelWidthOffset,
+	)
+	m.mainViewport.Height = viewportHeight
 
 	if m.showSidebar {
-		mainWidth = m.width * 75 / 100
 		sidebarWidth := m.width - mainWidth
 
 		m.sidebarViewport.Width = maxInt(
@@ -178,14 +249,9 @@ func (m *Model) updateViewportSizes() {
 		m.sidebarViewport.Width = 0
 	}
 
-	m.mainViewport.Width = maxInt(
-		0,
-		mainWidth-layout.PanelWidthOffset,
-	)
-	m.mainViewport.Height = viewportHeight
-	m.sidebarViewport.Height = viewportHeight
+	// Ambos viewports tienen siempre la misma altura interior.
+	m.sidebarViewport.Height = m.mainViewport.Height
 }
-
 func minInt(a, b int) int {
 	if a < b {
 		return a
@@ -236,10 +302,12 @@ func (m *Model) refreshViewports() {
 }
 
 func refreshResult(model tea.Model, cmd tea.Cmd) (tea.Model, tea.Cmd) {
-	if m, ok := model.(Model); ok {
-		m.refreshViewports()
-		return m, cmd
-	}
+    if m, ok := model.(Model); ok {
+        m.updateViewportSizes()
+        m.refreshViewports()
 
-	return model, cmd
+        return m, cmd
+    }
+
+    return model, cmd
 }

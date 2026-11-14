@@ -10,9 +10,13 @@ const (
 var mainViewStyle = PanelStyle
 
 func RenderMain(mainContent, sidebarContent string, width, height int) string {
-	contentHeight := maxInt(0, height-PanelHeightOffset)
+	contentHeight := maxInt(
+		0,
+		height-PanelHeightOffset,
+	)
 
-	if width < MinWidthForSidebar {
+	// Si la sidebar no está disponible, Main View ocupa todo el ancho.
+	if width < MinWidthForSidebar || sidebarContent == "" {
 		return mainViewStyle.
 			Width(maxInt(0, width-PanelWidthOffset)).
 			Height(contentHeight).
@@ -32,7 +36,11 @@ func RenderMain(mainContent, sidebarContent string, width, height int) string {
 		Height(contentHeight).
 		Render(sidebarContent)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top, main, sidebar)
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		main,
+		sidebar,
+	)
 }
 
 func maxInt(a, b int) int {
