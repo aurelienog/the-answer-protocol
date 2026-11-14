@@ -95,8 +95,11 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 
 	case world.PlayerCountChanged:
     	dispatcher.handlePlayerCountChanged(event)
-	}
+	
+	case world.CombatEnded:
+    	dispatcher.handleCombatEnded(event)
 
+	}
 }
 
 func (dispatcher *NotificationDispatcher) handlePlayerMoved(event world.PlayerMoved) {
@@ -417,4 +420,19 @@ func (dispatcher *NotificationDispatcher) handlePlayerCountChanged(
 			"players="+strconv.Itoa(event.Count),
 		),
 	)
+}
+
+func (dispatcher *NotificationDispatcher) handleCombatEnded(
+    event world.CombatEnded,
+) {
+    notification := protocol.EVT(
+        "COMBAT",
+        "ENDED combat="+event.CombatID,
+    )
+
+    dispatcher.notifyPlayers(
+        event.Recipients,
+        "",
+        notification,
+    )
 }

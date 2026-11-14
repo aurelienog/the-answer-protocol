@@ -217,14 +217,16 @@ func (c *CombatCommand) processNPCTurns(
 }
 
 func endCombat(ctx *Context, combatID string) (*world.Combat, error) {
-	combat, err := ctx.World.EndCombat(combatID)
-	if err != nil {
-		return nil, err
-	}
-	if ctx.Events != nil {
-		ctx.Events.Publish(world.CombatEnded{CombatID: combatID})
-	}
-	return combat, nil
+    combat, event, err := ctx.World.EndCombat(combatID)
+    if err != nil {
+        return nil, err
+    }
+
+    if event != nil && ctx.Events != nil {
+        ctx.Events.Publish(*event)
+    }
+
+    return combat, nil
 }
 
 func combatHasLivingPlayers(combat *world.Combat) bool {

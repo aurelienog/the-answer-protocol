@@ -113,9 +113,14 @@ type CombatDamage struct {
 
 // CombatEnded represents the end of a combat.
 type CombatEnded struct {
-	CombatID   string
-	Outcome    string
-	Recipients []string
+    CombatID  string
+    Rewards   []CombatReward
+    Recipients []string
+}
+
+type CombatReward struct {
+    PlayerID string
+    Items    []Item
 }
 
 type ParticipantDied struct {

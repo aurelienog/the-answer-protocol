@@ -8,9 +8,11 @@ import (
 
 // EndCombat finishes a combat, synchronizes final HP
 // and distributes rewards if the players win.
-func (w *World) EndCombat(combatID string) (*Combat, error) {
+func (w *World) EndCombat(
+		combatID string,
+	) (*Combat, *CombatEnded, error) {
 	if w == nil {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: world is nil",
 			ErrInvalidWorldState,
 		)
@@ -18,7 +20,7 @@ func (w *World) EndCombat(combatID string) (*Combat, error) {
 
 	combatID = strings.TrimSpace(combatID)
 	if combatID == "" {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat ID cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -29,19 +31,19 @@ func (w *World) EndCombat(combatID string) (*Combat, error) {
 
 	combat, err := w.getActiveCombatLocked(combatID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	defeatedNPCs, hasLivingNPC, err :=
 		w.collectCombatNPCResultsLocked(combat)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	playersActive := combatHasActivePlayersLocked(combat)
 
 	if hasLivingNPC && playersActive {
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"%w: combat is still ongoing",
 			ErrInvalidWorldState,
 		)
@@ -54,28 +56,40 @@ func (w *World) EndCombat(combatID string) (*Combat, error) {
 		victory,
 		defeatedNPCs,
 	); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	w.synchronizeCombatNPCsLocked(combat)
 	w.synchronizeCombatPlayersLocked(combat, victory)
 
+	var rewards []CombatReward
+
 	if victory {
 		// Distribute rewards only to connected participants who did not escape.
-		if err := w.distributeCombatRewardsLocked(
+		rewards, err = w.distributeCombatRewardsLocked(
 			combat,
 			defeatedNPCs,
-		); err != nil {
-			return nil, err
+		)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
+
+	// Capture recipients before removing disconnected players.
+	recipients := w.getCombatRecipientsLocked(combat)
 
 	// Remove disconnected players after rewards have been distributed.
 	w.cleanupDisconnectedCombatPlayersLocked(combat)
 
 	combat.Active = false
 
-	return cloneCombat(combat), nil
+	event := &CombatEnded{
+		CombatID:   combat.ID,
+		Rewards:    rewards,
+		Recipients: recipients,
+	}
+
+	return cloneCombat(combat), event, nil
 }
 
 // collectCombatNPCResultsLocked collects defeated NPCs

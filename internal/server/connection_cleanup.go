@@ -56,17 +56,19 @@ func cleanupPlayer(
 
 			// End combats that no longer have active players.
 			for _, combatID := range combatsToEnd {
-				if _, err := gameWorld.EndCombat(combatID); err != nil {
+				_, event, err := gameWorld.EndCombat(combatID)
+				if err != nil {
 					log.Printf(
 						"Failed to end combat %q after player %q disconnected: %v",
 						combatID,
 						session.PlayerName,
 						err,
 					)
-				} else if eventPublisher != nil {
-					eventPublisher.Publish(world.CombatEnded{
-						CombatID: combatID,
-					})
+					continue
+				}
+
+				if event != nil && eventPublisher != nil {
+					eventPublisher.Publish(*event)
 				}
 			}
 		}
