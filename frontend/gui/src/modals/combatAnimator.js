@@ -46,12 +46,12 @@ const CombatAnimator = {
                 }
             },
             "smuggler": {
-                enabled: false,
+                enabled: true,
                 basePath: "/assets/combat/anims/smuggler",
-                scale: 1.0,
+                scale: 1.2,
                 offsetY: 0,
                 states: {
-                    idle:   { frames: [], fps: 8,  loop: true },
+                    idle:   { frames: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], fps: 10,  loop: true },
                     attack: { frames: [], fps: 10, loop: false, impactDelayMs: 400, extraHoldMs: 200 },
                     hit:    { frames: [], fps: 10, loop: false },
                     death:  { frames: [], fps: 8,  loop: false }
@@ -73,26 +73,26 @@ const CombatAnimator = {
 
         heroes: {
             "male": {
-                enabled: false,
+                enabled: true,
                 basePath: "/assets/combat/anims/hero_male",
-                scale: 1.0,
+                scale: 1.2,
                 offsetY: 0,
                 states: {
-                    idle:   { frames: [], fps: 8,  loop: true },
+                    idle:   { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 10,  loop: true },
                     attack: { frames: [], fps: 10, loop: false, impactDelayMs: 400, extraHoldMs: 200 },
                     defend: { frames: [], fps: 10, loop: false, extraHoldMs: 200 },
                     heal:   { frames: [], fps: 10, loop: false, extraHoldMs: 200 },
-                    hit:    { frames: [], fps: 10, loop: false },
+                    hit:    { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], fps: 10, loop: false },
                     death:  { frames: [], fps: 8,  loop: false }
                 }
             },
             "female": {
-                enabled: false,
+                enabled: true,
                 basePath: "/assets/combat/anims/hero_female",
-                scale: 1.0,
+                scale: 1.2,
                 offsetY: 0,
                 states: {
-                    idle:   { frames: [], fps: 8,  loop: true },
+                    idle:   { frames: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 10,  loop: true },
                     attack: { frames: [], fps: 10, loop: false, impactDelayMs: 400, extraHoldMs: 200 },
                     defend: { frames: [], fps: 10, loop: false, extraHoldMs: 200 },
                     heal:   { frames: [], fps: 10, loop: false, extraHoldMs: 200 },
