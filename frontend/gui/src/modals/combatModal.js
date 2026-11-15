@@ -158,6 +158,8 @@ const CombatModal = {
                 if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
                 this.isMyTurn = false;
                 this.setButtonsDisabled(true);
+                this.advanceWithinCurrentRound(GameState.playerName);
+                this.playDefendEffect(50);
                 App.sendCommand('COMBAT DEFEND');
             });
         }
@@ -620,6 +622,8 @@ const CombatModal = {
     },
 
     close() {
+        GameState.activeHelpCombatId = null;
+        GameState.activeHelpPlayer = null;
         sessionStorage.removeItem('tap_active_combat_enemy');
         sessionStorage.removeItem('tap_active_combat_enemy_hp');
         sessionStorage.removeItem('tap_combat_deadline');

@@ -244,6 +244,11 @@ const App = {
         if (packet.type === 'ERR') {
             UI.addChatLine('LOG', 'Server ←', raw, 'chat-err');
             const failedVerb = GameState.commandQueue.shift();
+            if (raw.includes('COMBAT_NOT_FOUND') || (failedVerb === 'COMBAT' && raw.includes('INTERNAL_ERROR'))) {
+                GameState.activeHelpCombatId = null;
+                GameState.activeHelpPlayer = null;
+                UI.renderRoom();
+            }
 
             if (raw.includes('NOT_IN_GROUP')) {
                 GroupModal.renderCurrentGroup(null);
@@ -349,8 +354,6 @@ const App = {
         if (payload.startsWith('defended=')) {
             const redMatch = payload.match(/(?:reduction|defense_bonus)=(\d+)/);
             const pct = parseInt(redMatch ? redMatch[1] : '50', 10);
-            CombatModal.advanceWithinCurrentRound(GameState.playerName);
-            CombatModal.playDefendEffect(pct);
             UI.addChatLine('ROOM', '🛡️ Defend', `Defensive stance active (+${pct}% defense on next hit).`, 'chat-sys');
             return;
         }
@@ -358,6 +361,8 @@ const App = {
             const hpMatch = payload.match(/hp=(\d+)/);
             const dmgMatch = payload.match(/damage=(\d+)/);
             if (hpMatch) GameState.hp = parseInt(hpMatch[1], 10);
+            GameState.activeHelpCombatId = null;
+            GameState.activeHelpPlayer = null;
             UI.updateHUDStats();
             CombatModal.close();
             UI.addChatLine('ROOM', '🏃 Retreated', `You fled from combat (took ${dmgMatch ? dmgMatch[1] : 0} escape penalty damage).`, 'chat-err');
@@ -572,9 +577,11 @@ const App = {
 
             const cidMatch = msg.match(/\[COMBAT_ID:(combat:\d+)\]/);
             if (cidMatch) {
-                GameState.activeHelpCombatId = cidMatch[1];
-                GameState.activeHelpPlayer = author;
-                UI.renderRoom();
+                if (author.toLowerCase() !== GameState.playerName.toLowerCase()) {
+                    GameState.activeHelpCombatId = cidMatch[1];
+                    GameState.activeHelpPlayer = author;
+                    UI.renderRoom();
+                }
                 UI.addChatLine('GROUP', '⚔️ Party Combat', `${author} started a battle (${cidMatch[1]})! Travel to their room and click Attack or ⚔️ Aid to join!`, 'chat-sys');
                 return;
             }
