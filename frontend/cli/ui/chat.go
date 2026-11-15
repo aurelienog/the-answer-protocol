@@ -9,40 +9,16 @@ import (
 )
 
 func (m Model) renderChat(width, height int) string {
-    title := layout.TitleStyle.Render("CHAT")
-    filters := m.renderChatFilter()
-
-    var content strings.Builder
-    content.WriteString(title)
-    content.WriteString("  ")
-    content.WriteString(filters)
-    content.WriteString("\n\n")
-
-    var messages []ChatMessage
+    entries := make([]string, 0, len(m.communication.ChatLog))
 
     for _, message := range m.communication.ChatLog {
         if m.matchesChatFilter(message) {
-            messages = append(messages, message)
+            entries = append(entries, renderChatMessage(message))
         }
     }
 
-    visibleEntries := height - layout.PanelHeightOffset - 2
-
-    if visibleEntries < 0 {
-        visibleEntries = 0
-    }
-
-    start := 0
-    if len(messages) > visibleEntries {
-        start = len(messages) - visibleEntries
-    }
-
-    for _, message := range messages[start:] {
-        content.WriteString(renderChatMessage(message))
-        content.WriteString("\n")
-    }
-
-    return layout.RenderPanel(content.String(), width, height)
+    title := layout.TitleStyle.Render("CHAT") + "  " + m.renderChatFilter()
+    return renderRecentPanel(title, entries, width, height, 1)
 }
 
 func (m Model) renderChatFilter() string {

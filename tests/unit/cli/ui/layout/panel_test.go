@@ -28,6 +28,27 @@ func TestRenderPanelUsesAllocatedHeightForDifferentContent(t *testing.T) {
 	}
 }
 
+func TestRenderPanelClipsContentToAllocatedHeight(t *testing.T) {
+	const (
+		panelWidth  = 30
+		panelHeight = 8
+	)
+
+	panel := layout.RenderPanel(
+		strings.Repeat("a long message that wraps across the panel ", 20),
+		panelWidth,
+		panelHeight,
+	)
+
+	if got := lipgloss.Height(panel); got != panelHeight {
+		t.Errorf("panel height = %d, want %d", got, panelHeight)
+	}
+
+	if got := lipgloss.Width(panel); got != panelWidth {
+		t.Errorf("panel width = %d, want %d", got, panelWidth)
+	}
+}
+
 func TestRenderedSectionsUseSameWidth(t *testing.T) {
 	const totalWidth = 100
 

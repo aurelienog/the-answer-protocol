@@ -1,21 +1,22 @@
-
 package layout
+
+import "github.com/charmbracelet/lipgloss"
 
 type LayoutManager struct{}
 
 type HorizontalLayout struct {
-    MainView          ComponentLayout
-    Sidebar           ComponentLayout
-    EventLog          ComponentLayout
-    Chat              ComponentLayout
-    AvailableCommands ComponentLayout
-	Status 			  ComponentLayout
+	MainView          ComponentLayout
+	Sidebar           ComponentLayout
+	EventLog          ComponentLayout
+	Chat              ComponentLayout
+	AvailableCommands ComponentLayout
+	Status            ComponentLayout
 }
 
 // Calculate distributes terminal space among the UI components.
 func (lm LayoutManager) Calculate(
-    input LayoutInput,
-    horizontal HorizontalLayout,
+	input LayoutInput,
+	horizontal HorizontalLayout,
 ) LayoutResult {
 
 	width := input.Terminal.Width
@@ -195,73 +196,73 @@ func resolveHeight(requirements ComponentRequirements) int {
 
 // CalculateHorizontal distributes available width among UI components.
 func (lm LayoutManager) CalculateHorizontal(input LayoutInput) HorizontalLayout {
-    width := input.Terminal.Width
+	width := input.Terminal.Width
 
-    result := HorizontalLayout{}
+	result := HorizontalLayout{}
 
-    if width <= 0 {
-        return result
-    }
+	if width <= 0 {
+		return result
+	}
 
 	result.Status = ComponentLayout{
 		Visible: true,
 		Width:   width,
 	}
-    mainConstraints := input.MainView.Constraints
-    sidebarConstraints := input.Sidebar.Constraints
+	mainConstraints := input.MainView.Constraints
+	sidebarConstraints := input.Sidebar.Constraints
 
-    minMainWidth := mainConstraints.MinWidth
-    mainWidth := width
+	minMainWidth := mainConstraints.MinWidth
+	mainWidth := width
 
-    if mainConstraints.MaxWidth > 0 {
-        mainWidth = minInt(mainWidth, mainConstraints.MaxWidth)
-    }
+	if mainConstraints.MaxWidth > 0 {
+		mainWidth = minInt(mainWidth, mainConstraints.MaxWidth)
+	}
 
-    sidebarMinWidth := sidebarConstraints.MinWidth
-    sidebarMaxWidth := sidebarConstraints.MaxWidth
+	sidebarMinWidth := sidebarConstraints.MinWidth
+	sidebarMaxWidth := sidebarConstraints.MaxWidth
 
-    sidebarVisible :=
-        width >= MinWidthForSidebar &&
-            width >= minMainWidth+sidebarMinWidth
+	sidebarVisible :=
+		width >= MinWidthForSidebar &&
+			width >= minMainWidth+sidebarMinWidth
 
-    sidebarWidth := 0
+	sidebarWidth := 0
 
-    if sidebarVisible {
-        availableSidebarWidth := width - mainWidth
+	if sidebarVisible {
+		availableSidebarWidth := width - mainWidth
 
-        if availableSidebarWidth < sidebarMinWidth {
-            mainWidth = maxInt(
-                minMainWidth,
-                width-sidebarMinWidth,
-            )
+		if availableSidebarWidth < sidebarMinWidth {
+			mainWidth = maxInt(
+				minMainWidth,
+				width-sidebarMinWidth,
+			)
 
-            availableSidebarWidth = width - mainWidth
-        }
+			availableSidebarWidth = width - mainWidth
+		}
 
-        sidebarWidth = minInt(
-            availableSidebarWidth,
-            sidebarMaxWidth,
-        )
+		sidebarWidth = minInt(
+			availableSidebarWidth,
+			sidebarMaxWidth,
+		)
 
-        if sidebarWidth < sidebarMinWidth {
-            sidebarVisible = false
-            sidebarWidth = 0
-        }
-    }
+		if sidebarWidth < sidebarMinWidth {
+			sidebarVisible = false
+			sidebarWidth = 0
+		}
+	}
 
-    result.MainView = ComponentLayout{
-        Visible: true,
-        Width:   mainWidth,
-    }
+	result.MainView = ComponentLayout{
+		Visible: true,
+		Width:   mainWidth,
+	}
 
-    if sidebarVisible {
-        result.Sidebar = ComponentLayout{
-            Visible: true,
-            Width:   sidebarWidth,
-        }
-    }
+	if sidebarVisible {
+		result.Sidebar = ComponentLayout{
+			Visible: true,
+			Width:   sidebarWidth,
+		}
+	}
 
-    // EventLog and Chat share the available terminal width.
+	// EventLog and Chat share the available terminal width.
 	showEventLog := resolveHeight(input.EventLog) > 0
 	showChat := resolveHeight(input.Chat) > 0
 	contentWidth := result.MainView.Width + result.Sidebar.Width
@@ -292,32 +293,32 @@ func (lm LayoutManager) CalculateHorizontal(input LayoutInput) HorizontalLayout 
 		}
 	}
 
-    result.AvailableCommands = ComponentLayout{
+	result.AvailableCommands = ComponentLayout{
 		Visible: true,
 		Width:   contentWidth,
 	}
 
-    return result
+	return result
 }
 
 func resolveWidth(requirements ComponentRequirements) int {
-    width := requirements.IntrinsicSize.Width
+	width := requirements.IntrinsicSize.Width
 
-    if width <= 0 {
-        width = requirements.Constraints.PreferredWidth
-    }
+	if width <= 0 {
+		width = requirements.Constraints.PreferredWidth
+	}
 
-    constraints := requirements.Constraints
+	constraints := requirements.Constraints
 
-    if constraints.MinWidth > 0 {
-        width = maxInt(width, constraints.MinWidth)
-    }
+	if constraints.MinWidth > 0 {
+		width = maxInt(width, constraints.MinWidth)
+	}
 
-    if constraints.MaxWidth > 0 {
-        width = minInt(width, constraints.MaxWidth)
-    }
+	if constraints.MaxWidth > 0 {
+		width = minInt(width, constraints.MaxWidth)
+	}
 
-    return width
+	return width
 }
 
 func minInt(a, b int) int {
@@ -330,7 +331,7 @@ func minInt(a, b int) int {
 
 func maxInt(a, b int) int {
 	if a > b {
-		 return a
+		return a
 	}
 
 	return b
@@ -338,6 +339,11 @@ func maxInt(a, b int) int {
 
 // RenderPanel renders content using the allocated outer dimensions.
 func RenderPanel(content string, width, height int) string {
+	content = lipgloss.NewStyle().
+		Width(maxInt(0, width-PanelWidthOffset)).
+		MaxHeight(maxInt(0, height-PanelHeightOffset)).
+		Render(content)
+
 	return PanelStyle.
 		Width(maxInt(0, width-PanelBorderWidth)).
 		Height(maxInt(0, height-PanelBorderHeight)).

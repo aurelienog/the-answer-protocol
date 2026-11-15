@@ -1,39 +1,38 @@
-
 package ui
 
 import (
-    "strings"
+	"strings"
 
-    "github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss"
 
-    "the-answer-protocol/frontend/cli/ui/layout"
+	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
 func (m Model) View() string {
-    if m.application.Current == StateAuthentication {
-        return m.renderAuthentication()
-    }
+	if m.application.Current == StateAuthentication {
+		return m.renderAuthentication()
+	}
 
-    return m.renderView()
+	return m.renderView()
 }
 
 func (m Model) renderAuthentication() string {
-    title := layout.TitleStyle.Render("THE ANSWER PROTOCOL")
+	title := layout.TitleStyle.Render("THE ANSWER PROTOCOL")
 
-    content := lipgloss.JoinVertical(
-        lipgloss.Left,
-        title,
-        "",
-        "Welcome, adventurer!",
-        "",
-        "Enter your username:",
-        "",
-        layout.InputStyle.Render("> "+m.ui.Input),
-        "",
-        layout.StatusStyle.Render(m.communication.StatusMessage),
-    )
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		"",
+		"Welcome, adventurer!",
+		"",
+		"Enter your username:",
+		"",
+		layout.InputStyle.Render("> "+m.ui.Input),
+		"",
+		layout.StatusStyle.Render(m.communication.StatusMessage),
+	)
 
-    return layout.PanelStyle.Render(content)
+	return layout.PanelStyle.Render(content)
 }
 
 func (m Model) renderView() string {
@@ -131,64 +130,82 @@ func (m Model) renderView() string {
 }
 
 func (m Model) renderWorld() string {
-    return renderRoom(
-        m.world.Room,
-        m.ui.MainViewport.Width,
-        m.ui.MainViewport.Height,
-    )
+	return renderRoom(
+		m.world.Room,
+		m.ui.MainViewport.Width,
+		m.ui.MainViewport.Height,
+	)
 }
 
 func (m Model) renderInventory() string {
-    return "Inventory View"
+	return "Inventory View"
 }
 
 func (m Model) renderCharacter() string {
-    return "Character View"
+	return "Character View"
 }
 
 func (m Model) renderQuests() string {
-    return "Quests View"
+	return "Quests View"
 }
 
 func (m Model) renderGroup() string {
-    return "Group View"
+	return "Group View"
 }
 
 func (m Model) renderCombat() string {
-    return "Combat View"
-}
-
-func (m Model) eventLogContent() string {
-	var content strings.Builder
-
-	content.WriteString(layout.TitleStyle.Render("EVENT LOG"))
-	content.WriteString("\n")
-
-	for _, event := range m.communication.EventLog {
-		content.WriteString(event)
-		content.WriteString("\n")
-	}
-
-	return content.String()
+	return "Combat View"
 }
 
 func (m Model) renderEventLog(width, height int) string {
-	visibleEvents := maxInt(
+	return renderRecentPanel(
+		layout.TitleStyle.Render("EVENT LOG"),
+		m.communication.EventLog,
+		width,
+		height,
 		0,
-		height-layout.PanelHeightOffset-1,
 	)
+}
 
-	events := m.communication.EventLog
-	start := maxInt(0, len(events)-visibleEvents)
+func renderRecentPanel(
+	title string,
+	entries []string,
+	width, height, gap int,
+) string {
+	contentWidth := maxInt(0, width-layout.PanelWidthOffset)
+	contentLines := maxInt(0, height-layout.PanelHeightOffset)
+
+	renderedTitle := lipgloss.NewStyle().
+		Width(contentWidth).
+		Render(title)
+	titleLines := strings.Split(renderedTitle, "\n")
+	remainingLines := maxInt(0, contentLines-len(titleLines)-gap)
+
+	var recentEntries [][]string
+
+	for i := len(entries) - 1; i >= 0 && remainingLines > 0; i-- {
+		renderedEntry := lipgloss.NewStyle().
+			Width(contentWidth).
+			Render(entries[i])
+		entryLines := strings.Split(renderedEntry, "\n")
+
+		if len(entryLines) > remainingLines {
+			entryLines = entryLines[len(entryLines)-remainingLines:]
+		}
+
+		recentEntries = append(recentEntries, entryLines)
+		remainingLines -= len(entryLines)
+	}
 
 	var content strings.Builder
+	content.WriteString(renderedTitle)
+	content.WriteString(strings.Repeat("\n", gap+1))
 
-	content.WriteString(layout.TitleStyle.Render("EVENT LOG"))
-	content.WriteString("\n")
-
-	for _, event := range events[start:] {
-		content.WriteString(event)
-		content.WriteString("\n")
+	for i := len(recentEntries) - 1; i >= 0; i-- {
+		if i != len(recentEntries)-1 {
+			content.WriteString("\n")
+		}
+		content.WriteString(strings.Join(recentEntries[i], "\n"))
 	}
 
 	return layout.RenderPanel(content.String(), width, height)
