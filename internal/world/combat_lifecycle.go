@@ -400,6 +400,11 @@ func (w *World) StartCombatRound(
 		)
 	}
 
+	firstID := combat.Participants[combat.TurnIndex].ID
+	if _, err := w.updateCombatEffectsLocked(combat, firstID); err != nil {
+		return nil, nil, err
+	}
+
 	event := w.buildCombatTurnChangedLocked(combat)
 
 	return cloneCombat(combat), event, nil

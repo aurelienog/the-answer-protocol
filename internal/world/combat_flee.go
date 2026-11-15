@@ -66,8 +66,10 @@ func (w *World) FleeCombat(
 	// Consume all remaining action points.
 	participant.SpeedPoints = 0
 
-	// Advance the turn.
-	combat.TurnIndex = (combat.TurnIndex + 1) % len(combat.Participants)
+	// Advance the turn to the next eligible participant (or -1 if round ended).
+	if _, err := w.advanceCombatTurnLocked(combat); err != nil {
+		return nil, nil, err
+	}
 
 	event := &PlayerFled{
 		CombatID:    combat.ID,

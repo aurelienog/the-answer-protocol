@@ -385,6 +385,10 @@ func (w *World) advanceCombatTurnLocked(
 			continue
 		}
 
+		if AvailableActions(*participant) <= 0 {
+			continue
+		}
+
 		participantID := participant.ID
 		combat.TurnIndex = index
 
@@ -392,13 +396,6 @@ func (w *World) advanceCombatTurnLocked(
 		if _, err := w.updateCombatEffectsLocked(combat, participantID); err != nil {
 			rollback()
 			return false, err
-		}
-
-		// Refresh the pointer after updating effects.
-		participant = &combat.Participants[index]
-
-		if AvailableActions(*participant) <= 0 {
-			continue
 		}
 
 		return true, nil

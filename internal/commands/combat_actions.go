@@ -191,6 +191,18 @@ func (c *CombatCommand) handleFlee(
 			return mapCombatError(err), nil
 		}
 	} else if result.Active {
+		if result.TurnIndex >= 0 &&
+			result.TurnIndex < len(result.Participants) &&
+			result.Participants[result.TurnIndex].IsPlayer {
+			turnEvent, err := ctx.World.GetCurrentCombatTurn(result.ID)
+			if err != nil {
+				return mapCombatError(err), nil
+			}
+			if turnEvent != nil && ctx.Events != nil {
+				ctx.Events.Publish(*turnEvent)
+			}
+		}
+
 		// Process NPC turns automatically.
 		if err := c.processNPCTurns(ctx, result.ID); err != nil {
 			return mapCombatError(err), nil
