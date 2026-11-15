@@ -10,10 +10,10 @@ func RenderHeader(
     ) string {
 	content := HeaderContent(username, hp, maxHP)
 
-	contentWidth := maxInt(0, width-PanelWidthOffset)
+	panelWidth := maxInt(0, width-PanelBorderWidth)
 
 	return PanelStyle.
-		Width(contentWidth).
+		Width(panelWidth).
 		Render(content)
 }
 

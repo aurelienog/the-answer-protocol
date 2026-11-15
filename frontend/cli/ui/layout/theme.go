@@ -78,7 +78,7 @@ const (
     PanelPaddingHeight = 2
 
 
-    PanelWidthOffset  = PanelBorderWidth + PanelPaddingWidth
+    PanelWidthOffset  = PanelBorderWidth + 2*PanelPaddingWidth
     PanelHeightOffset = PanelBorderHeight + PanelPaddingHeight
 )
 
@@ -137,3 +137,80 @@ const (
 // 4. Los indicadores no implican que el servidor ya proporcione esa información. Por ejemplo, [X] solo se mostrará cuando tengamos información que permita saber que una salida está bloqueada.
 
 // Una vez tengamos este fichero, el siguiente paso será actualizar sidebar.go para que utilice el tema, sin duplicar colores ni estilos.
+
+
+// Obsidian
+
+// Fondo principal
+
+// #141715
+
+
+// Deep Stone
+
+// Superficie base
+
+// #1D211E
+
+
+// Dark Slate
+
+// Superficie elevada
+
+// #292F2A
+
+
+// Iron
+
+// Separadores
+
+// #41483F
+
+
+// Parchment
+
+// Texto principal
+
+// #E7DEC8
+
+
+// Ash
+
+// Texto secundario
+
+// #A7A18F
+
+
+// Old Gold
+
+// Acento principal
+
+// #C5A45D
+
+
+// Bronze
+
+// Acento secundario
+
+// #826B43
+
+
+// Blood
+
+// Peligro y combate
+
+// #A65348
+
+
+// Forest
+
+// Éxito y naturaleza
+
+// #718B65
+
+
+// Arcane
+
+// Magia e información
+
+// #7199B6

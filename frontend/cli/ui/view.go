@@ -191,19 +191,13 @@ func (m Model) renderEventLog(width, height int) string {
 		content.WriteString("\n")
 	}
 
-	contentWidth := maxInt(0, width-layout.PanelWidthOffset)
-	panelHeight := maxInt(0, height-layout.PanelHeightOffset)
-
-	return layout.PanelStyle.
-		Width(contentWidth).
-		Height(panelHeight).
-		Render(content.String())
+	return layout.RenderPanel(content.String(), width, height)
 }
 
 func (m Model) renderAvailableCommands(width int) string {
-	contentWidth := maxInt(0, width-layout.PanelWidthOffset)
+	panelWidth := maxInt(0, width-layout.PanelBorderWidth)
 
 	return layout.PanelStyle.
-		Width(contentWidth).
+		Width(panelWidth).
 		Render(m.availableCommandsContent())
 }

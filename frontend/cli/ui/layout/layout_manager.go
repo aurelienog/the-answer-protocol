@@ -335,3 +335,11 @@ func maxInt(a, b int) int {
 
 	return b
 }
+
+// RenderPanel renders content using the allocated outer dimensions.
+func RenderPanel(content string, width, height int) string {
+	return PanelStyle.
+		Width(maxInt(0, width-PanelBorderWidth)).
+		Height(maxInt(0, height-PanelBorderHeight)).
+		Render(content)
+}

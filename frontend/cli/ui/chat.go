@@ -42,20 +42,7 @@ func (m Model) renderChat(width, height int) string {
         content.WriteString("\n")
     }
 
-    contentWidth := width - layout.PanelWidthOffset
-    if contentWidth < 0 {
-        contentWidth = 0
-    }
-
-    panelHeight := height - layout.PanelHeightOffset
-    if panelHeight < 0 {
-        panelHeight = 0
-    }
-
-    return layout.PanelStyle.
-        Width(contentWidth).
-        Height(panelHeight).
-        Render(content.String())
+    return layout.RenderPanel(content.String(), width, height)
 }
 
 func (m Model) renderChatFilter() string {

@@ -18,7 +18,7 @@ func RenderMain(
 	contentHeight := maxInt(0, height-PanelHeightOffset)
 
 	main := mainViewStyle.
-		Width(maxInt(0, mainWidth-PanelWidthOffset)).
+		Width(maxInt(0, mainWidth-PanelBorderWidth)).
 		Height(contentHeight).
 		Render(mainContent)
 
@@ -27,7 +27,7 @@ func RenderMain(
 	}
 
 	sidebar := sidebarStyle.
-		Width(maxInt(0, sidebarWidth-PanelWidthOffset)).
+		Width(maxInt(0, sidebarWidth-PanelBorderWidth)).
 		Height(contentHeight).
 		Render(sidebarContent)
 
