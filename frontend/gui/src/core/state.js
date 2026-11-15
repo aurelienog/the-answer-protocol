@@ -100,24 +100,25 @@ const GameState = {
     normalizeItem(entry) {
         if (typeof entry === 'object' && entry !== null && entry.id) {
             const existing = ASSETS.items[entry.id] || ASSETS.items.default;
-            ASSETS.items[entry.id] = {
+            const merged = {
                 ...existing,
                 name:    entry.name || existing.name || entry.id,
                 type:    entry.type || existing.type || "common",
                 desc:    entry.description || existing.desc || "",
-                attack:  entry.attack || 0,
-                defense: entry.defense || 0,
-                speed:   entry.speed || 0,
-                hp:      entry.hp || 0,
-                stats:   this.formatItemStats(entry)
+                attack:  entry.attack  !== undefined ? entry.attack  : (existing.attack  || 0),
+                defense: entry.defense !== undefined ? entry.defense : (existing.defense || 0),
+                speed:   entry.speed   !== undefined ? entry.speed   : (existing.speed   || 0),
+                hp:      entry.hp      !== undefined ? entry.hp      : (existing.hp      || 0)
             };
+            merged.stats = this.formatItemStats(merged);
+            ASSETS.items[entry.id] = merged;
 
-            if (typeof StatusModal !== 'undefined' && (entry.type === 'equipment' || entry.type === 'unique')) {
-                if (entry.attack || entry.defense || entry.speed) {
+            if (typeof StatusModal !== 'undefined' && (merged.type === 'equipment' || merged.type === 'unique')) {
+                if (merged.attack || merged.defense || merged.speed) {
                     StatusModal.gearBonuses[entry.id] = {
-                        atk: entry.attack || 0,
-                        def: entry.defense || 0,
-                        spd: entry.speed || 0
+                        atk: merged.attack || 0,
+                        def: merged.defense || 0,
+                        spd: merged.speed || 0
                     };
                 }
             }

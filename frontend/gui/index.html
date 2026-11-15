@@ -716,6 +716,7 @@
                     <button type="button" class="stage-pin comp-pin pin-west hidden" id="comp-btn-west"></button>
                     <div class="compass-rose-emblem">
                         <img src="/assets/ui/compass-cross.webp" alt="Compass" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+                        <span class="compass-plus-fallback" style="display:none;">✦</span>
                     </div>
                     <button type="button" class="stage-pin comp-pin pin-east hidden" id="comp-btn-east"></button>
                     <button type="button" class="stage-pin comp-pin pin-south hidden" id="comp-btn-south"></button>
@@ -782,9 +783,6 @@
     <script src="/src/core/state.js"></script>
     <script src="/src/core/audio.js"></script>
     <script src="/src/core/network.js"></script>
-
-    <!-- 2. PNG Frame Builder -->
-    <script src="/src/frames/frameBuilder.js"></script>
 
     <!-- 3. Persistent HUD & Dock Views -->
     <script src="/src/hud/topHudView.js"></script>

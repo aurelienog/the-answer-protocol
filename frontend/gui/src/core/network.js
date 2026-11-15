@@ -18,6 +18,17 @@ const App = {
     },
 
     async restoreSessionIfActive() {
+        try {
+            const cfgRes = await fetch('/api/config');
+            if (cfgRes.ok) {
+                const cfg = await cfgRes.json();
+                const hostEl = document.getElementById('login-host');
+                const portEl = document.getElementById('login-port');
+                if (hostEl && cfg.host) hostEl.value = cfg.host;
+                if (portEl && cfg.port) portEl.value = cfg.port;
+            }
+        } catch (_) {}
+
         await this.loadWorldMeta();
         await this.initStream();
         try {
@@ -36,7 +47,9 @@ const App = {
 
                 await this.sendCommand('LOOK');
                 await this.sendCommand('STATUS');
+                await this.sendCommand('WHO');
                 await this.sendCommand('INVENTORY');
+                await this.sendCommand('QUESTS');
                 await this.sendCommand('GROUP INFO');
             }
         } catch (_) {}
@@ -159,16 +172,19 @@ const App = {
 
         UI.addChatLine('LOG', 'Client →', cmd, '');
 
-        if (upper === 'COMBAT DEFEND') {
-            CombatModal.playDefendEffect(50);
-        }
         try {
-            await fetch('/api/command', {
+            const res = await fetch('/api/command', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ command: cmd })
             });
+            const data = await res.json();
+            if (data.status !== 'OK') {
+                GameState.commandQueue.shift();
+                UI.addChatLine('LOG', 'Error', data.error || 'Failed to send command', 'chat-err');
+            }
         } catch (err) {
+            GameState.commandQueue.shift();
             UI.addChatLine('LOG', 'Error', 'Failed to send command', 'chat-err');
         }
     },
@@ -332,7 +348,9 @@ const App = {
         }
         if (payload.startsWith('defended=')) {
             const redMatch = payload.match(/(?:reduction|defense_bonus)=(\d+)/);
-            const pct = redMatch ? redMatch[1] : 50;
+            const pct = parseInt(redMatch ? redMatch[1] : '50', 10);
+            CombatModal.advanceWithinCurrentRound(GameState.playerName);
+            CombatModal.playDefendEffect(pct);
             UI.addChatLine('ROOM', '🛡️ Defend', `Defensive stance active (+${pct}% defense on next hit).`, 'chat-sys');
             return;
         }
@@ -417,9 +435,17 @@ const App = {
                     return;
                 }
 
-                if (data.npc && Array.isArray(data.dialogue)) {
-                    DialogueModal.renderConversation(data);
-                    UI.addChatLine('ROOM', `💬 ${data.npc.name}`, data.dialogue.join(' '));
+                if (data.npc && data.dialogue !== undefined) {
+                    const lines = Array.isArray(data.dialogue) ? data.dialogue : [String(data.dialogue)];
+                    const npcObj = typeof data.npc === 'object' ? data.npc : { id: String(data.npc), name: String(data.npc) };
+                    DialogueModal.renderConversation({ ...data, npc: npcObj, dialogue: lines });
+                    UI.addChatLine('ROOM', `💬 ${npcObj.name || npcObj.id}`, lines.join(' '));
+                    return;
+                }
+
+                if (lastVerb === 'WHO' && data.server !== undefined) {
+                    GameState.serverPlayerCount = parseInt(data.server, 10) || 1;
+                    UI.updateHUDStats();
                     return;
                 }
 
@@ -500,6 +526,16 @@ const App = {
             } catch (e) {
                 console.warn("Non-standard JSON payload:", payload);
             }
+        }
+
+        if (lastVerb === 'TALK' && payload) {
+            const npcId = DialogueModal.activeNpcId || 'NPC';
+            const meta = GameState.getNpcMeta(npcId);
+            DialogueModal.renderConversation({
+                npc: { id: meta.id, name: meta.name },
+                dialogue: [payload]
+            });
+            UI.addChatLine('ROOM', `💬 ${meta.name}`, payload);
         }
     },
 
@@ -666,8 +702,6 @@ const App = {
                     CombatModal.showOutcome(true, `${CombatModal.enemyName} defeated! Rewards claimed!`);
                 }
                 this.sendCommand('INVENTORY');
-                this.sendCommand('STATUS');
-                this.sendCommand('LOOK');
                 GameState.activeHelpCombatId = null;
                 return;
             }

@@ -31,7 +31,19 @@ const ChatView = {
         list.forEach(m => {
             const p = document.createElement('p');
             p.className = `chat-line ${m.styleClass}`;
-            p.innerHTML = `<time class="chat-time">[${m.time}]</time> <strong class="chat-author">${m.author}:</strong> <span>${m.text}</span>`;
+
+            const timeEl = document.createElement('time');
+            timeEl.className = 'chat-time';
+            timeEl.textContent = `[${m.time}]`;
+
+            const authorEl = document.createElement('strong');
+            authorEl.className = 'chat-author';
+            authorEl.textContent = `${m.author}:`;
+
+            const textEl = document.createElement('span');
+            textEl.textContent = m.text;
+
+            p.append(timeEl, ' ', authorEl, ' ', textEl);
             box.appendChild(p);
         });
         box.scrollTop = box.scrollHeight;

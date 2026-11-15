@@ -156,8 +156,6 @@ const SelectorModal = {
             });
         }
 
-        FrameView.mountButtons();
-        FrameView.mountSlotFrames();
         modal.classList.remove('hidden');
     },
 
@@ -179,7 +177,6 @@ const SelectorModal = {
             .join('');
 
         document.getElementById('btn-sel-confirm').disabled = false;
-        FrameView.mountSlotFrames();
     },
 
     confirmAction() {

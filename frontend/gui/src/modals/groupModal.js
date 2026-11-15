@@ -91,8 +91,5 @@ const GroupModal = {
                 box.appendChild(li);
             });
         }
-
-        FrameView.mountButtons();
-        FrameView.mountSlotFrames();
     }
 };

@@ -81,7 +81,5 @@ const LookModal = {
             UI.setArt(li.querySelector('.card-thumb'), m.iconImg, m.icon);
             lNpcs.appendChild(li);
         });
-
-        FrameView.mountSlotFrames();
     }
 };

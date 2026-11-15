@@ -6,7 +6,6 @@ const UI = {
     activeModalId: null,
 
     initEventListeners() {
-        FrameView.mountFrames();
         CombatModal.initListeners();
         AudioManager.init();
         document.querySelectorAll('.js-sound-toggle').forEach(btn => {

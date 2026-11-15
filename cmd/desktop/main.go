@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -29,6 +30,17 @@ func main() {
 	mux.HandleFunc("/api/world", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		http.ServeFile(w, r, cfg.WorldPath)
+	})
+	mux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		host := cfg.ServerHost
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"host": host,
+			"port": cfg.ServerPort,
+		})
 	})
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/gui")))
 
