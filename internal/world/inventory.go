@@ -4,6 +4,8 @@ import "fmt"
 
 type InventoryItem struct {
 	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
 	Quantity int    `json:"quantity"`
 }
 
@@ -323,17 +325,28 @@ func (w *World) GetInventoryWithQuantities(
 	}
 
 	quantities := make(map[string]int)
+	itemDefinitions := make(map[string]Item)
+	itemOrder := make([]string, 0)
 
 	for _, item := range items {
+		if _, exists := quantities[item.ID]; !exists {
+			itemOrder = append(itemOrder, item.ID)
+			itemDefinitions[item.ID] = item
+		}
+
 		quantities[item.ID]++
 	}
 
-	result := make([]InventoryItem, 0, len(quantities))
+	result := make([]InventoryItem, 0, len(itemOrder))
 
-	for id, quantity := range quantities {
+	for _, id := range itemOrder {
+		item := itemDefinitions[id]
+
 		result = append(result, InventoryItem{
-			ID:       id,
-			Quantity: quantity,
+			ID:       item.ID,
+			Name:     item.Name,
+			Type:     string(item.Type),
+			Quantity: quantities[id],
 		})
 	}
 
