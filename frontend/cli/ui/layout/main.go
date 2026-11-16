@@ -1,11 +1,7 @@
+
 package layout
 
 import "github.com/charmbracelet/lipgloss"
-
-var (
-	mainViewStyle = PanelStyle
-	sidebarStyle  = PanelStyle
-)
 
 func RenderMain(
 	mainContent string,
@@ -14,10 +10,20 @@ func RenderMain(
 	sidebarWidth int,
 	height int,
 	sidebarVisible bool,
+	panelFocused bool,
 ) string {
 	contentHeight := maxInt(0, height-PanelHeightOffset)
 
-	main := mainViewStyle.
+	mainStyle := UnfocusedPanelStyle
+	sidebarPanelStyle := UnfocusedPanelStyle
+
+	if !panelFocused {
+		mainStyle = FocusedPanelStyle
+	} else {
+		sidebarPanelStyle = FocusedPanelStyle
+	}
+
+	main := mainStyle.
 		Width(maxInt(0, mainWidth-PanelBorderWidth)).
 		Height(contentHeight).
 		Render(mainContent)
@@ -26,7 +32,7 @@ func RenderMain(
 		return main
 	}
 
-	sidebar := sidebarStyle.
+	sidebar := sidebarPanelStyle.
 		Width(maxInt(0, sidebarWidth-PanelBorderWidth)).
 		Height(contentHeight).
 		Render(sidebarContent)

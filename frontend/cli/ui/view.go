@@ -83,6 +83,7 @@ func (m Model) renderView() string {
 		result.Sidebar.Width,
 		result.MainView.Height,
 		result.Sidebar.Visible,
+		m.ui.PanelFocused,
 	)
 
 	sections := []string{

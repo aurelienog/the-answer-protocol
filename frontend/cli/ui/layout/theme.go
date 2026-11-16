@@ -56,7 +56,7 @@ var (
 var (
 	PanelStyle = lipgloss.NewStyle().
 		Border(medievalBorder).
-		BorderForeground(Primary).
+		BorderForeground(Muted).
 		Padding(1, 2)
 
 	TitleStyle = lipgloss.NewStyle().
@@ -69,6 +69,16 @@ var (
 	InputStyle = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(Success)
+
+    FocusedPanelStyle = lipgloss.NewStyle().
+        Border(medievalBorder).
+        BorderForeground(Primary).
+        Padding(1, 2)
+
+    UnfocusedPanelStyle = lipgloss.NewStyle().
+        Border(medievalBorder).
+        BorderForeground(Muted).
+        Padding(1, 2)
 )
 
 const (

@@ -107,13 +107,26 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.navigation.CurrentView = ViewCombat
 	case "f8":
     	m.setView(ViewTalk)
+	case "<":
+		result := m.calculateLayout()
+
+		if result.Sidebar.Visible {
+			m.ui.PanelFocused = !m.ui.PanelFocused
+		} else {
+			m.ui.PanelFocused = false
+		}
+
+		return m, nil
 
 	case "up", "down", "pgup", "pgdown", "home", "end":
 		var cmd tea.Cmd
 
-		m.ui.MainViewport, cmd = m.ui.MainViewport.Update(msg)
+		if m.ui.PanelFocused {
+			m.ui.SidebarViewport, cmd = m.ui.SidebarViewport.Update(msg)
+		} else {
+			m.ui.MainViewport, cmd = m.ui.MainViewport.Update(msg)
+		}
 
-		// Scrolling only updates the Main View viewport.
 		return m, cmd
 
 	default:
@@ -170,6 +183,7 @@ func (m *Model) updateViewportSizes() {
 		m.ui.MainViewport.Height = 0
 		m.ui.SidebarViewport.Width = 0
 		m.ui.SidebarViewport.Height = 0
+		m.ui.PanelFocused = false
 		return
 	}
 
@@ -187,6 +201,7 @@ func (m *Model) updateViewportSizes() {
 	if !result.Sidebar.Visible {
 		m.ui.SidebarViewport.Width = 0
 		m.ui.SidebarViewport.Height = 0
+		m.ui.PanelFocused = false
 		return
 	}
 

@@ -124,6 +124,7 @@ type InterfaceState struct {
     MainViewport    viewport.Model
     SidebarViewport viewport.Model
     PendingRefresh RefreshTarget
+    PanelFocused bool
 }
 
 type Model struct {
