@@ -4,7 +4,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/viewport"
-
+    "the-answer-protocol/frontend/cli/ui/animations"
 	"the-answer-protocol/frontend/cli/network"
 )
 
@@ -111,6 +111,7 @@ type InterfaceState struct {
     SidebarViewport viewport.Model
     PendingRefresh RefreshTarget
     PanelFocused bool
+    CursorVisible bool
 }
 
 type Model struct {
@@ -149,7 +150,7 @@ func NewModel(client *network.Client) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return animations.CursorBlink()
 }
 
 func (m *Model) setView(view View) {

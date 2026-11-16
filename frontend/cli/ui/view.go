@@ -27,7 +27,7 @@ func (m Model) renderAuthentication() string {
 		"",
 		"Enter your username:",
 		"",
-		layout.InputStyle.Render("> "+m.ui.Input),
+		layout.InputStyle.Render(m.inputText()),
 		"",
 		layout.StatusStyle.Render(m.communication.StatusMessage),
 	)
@@ -135,7 +135,7 @@ func (m Model) renderView() string {
 	// Input and Status remain outside the content panels.
 	input := layout.InputStyle.
 		Width(contentWidth).
-		Render("> " + m.ui.Input)
+		Render(m.inputText())
 
 	status := layout.StatusStyle.
 		Width(contentWidth).
@@ -221,4 +221,14 @@ func (m Model) renderAvailableCommands(width int) string {
 	return layout.PanelStyle.
 		Width(panelWidth).
 		Render(m.availableCommandsContent())
+}
+
+func (m Model) inputText() string {
+	input := "> " + m.ui.Input
+
+	if m.ui.CursorVisible {
+		input += "█"
+	}
+
+	return input
 }

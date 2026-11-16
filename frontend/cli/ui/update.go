@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"the-answer-protocol/frontend/cli/ui/layout"
+	"the-answer-protocol/frontend/cli/ui/animations"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -33,8 +34,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.ui.Width = msg.Width
 		m.ui.Height = msg.Height
+	
+	case animations.CursorBlinkMsg:
+		m.ui.CursorVisible = !m.ui.CursorVisible
+		return refreshResult(m, animations.CursorBlink())
 	}
-
 	return refreshResult(m, nil)
 }
 
