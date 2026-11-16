@@ -25,6 +25,7 @@ const (
 	ViewQuests
 	ViewGroup
 	ViewCombat
+    ViewTalk
 )
 
 const (
@@ -34,6 +35,14 @@ const (
     ChatFilterGroup
 )
 
+type RefreshTarget uint8
+
+const (
+    RefreshNone RefreshTarget = iota
+    RefreshInventory
+    RefreshRoom
+    RefreshQuests
+)
 
 type ApplicationState struct {
     Current       AppState
@@ -55,14 +64,49 @@ type PlayerState struct {
     Username  string
     Status    PlayerStatus
     Inventory []InventoryItem
+    Quests    []Quest
+}
+
+type Room struct {
+    ID          string         `json:"id"`
+    Name        string         `json:"name"`
+    Description string         `json:"description"`
+    Exits       map[string]string `json:"exits"`
+    Items       map[string]int `json:"items"`
+    NPCs        []string       `json:"npcs"`
+}
+
+type Item struct {
+    ID          string `json:"id"`
+    Name        string `json:"name"`
+    Description string `json:"description"`
+    Type        string `json:"type"`
+    Attack      int    `json:"attack,omitempty"`
+    Defense     int    `json:"defense,omitempty"`
+    Speed       int    `json:"speed,omitempty"`
+    HP          int    `json:"hp,omitempty"`
+}
+
+type QuestSummary struct {
+    ID          string `json:"id"`
+    Name        string `json:"name"`
+    Description string `json:"description"`
+    Progress    string `json:"progress,omitempty"`
+}
+
+type NPCConversation struct {
+    NPC         NPCSummary   `json:"npc"`
+    Dialogue    []string     `json:"dialogue"`
+    Quest       *QuestSummary `json:"quest,omitempty"`
+    QuestStatus string       `json:"quest_status,omitempty"`
 }
 
 type WorldState struct {
-    Room     LookResponse
-    Quests   []Quest
-    Group    Group
-    InCombat bool
-    CombatID string
+    Room         LookResponse
+    Group        Group
+    Conversation *NPCConversation
+    InCombat     bool
+    CombatID     string
 }
 
 type CommunicationState struct {
@@ -79,6 +123,7 @@ type InterfaceState struct {
 
     MainViewport    viewport.Model
     SidebarViewport viewport.Model
+    PendingRefresh RefreshTarget
 }
 
 type Model struct {

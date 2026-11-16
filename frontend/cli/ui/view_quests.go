@@ -10,7 +10,7 @@ import (
 )
 
 func (m Model) renderQuests() string {
-	if len(m.world.Quests) == 0 {
+	if len(m.player.Quests) == 0 {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			layout.TitleStyle.Render(layout.IconQuest+" QUESTS"),
@@ -23,7 +23,7 @@ func (m Model) renderQuests() string {
 		layout.TitleStyle.Render(layout.IconQuest+" QUESTS"),
 	}
 
-	for _, quest := range m.world.Quests {
+	for _, quest := range m.player.Quests {
 		sections = append(sections, renderQuest(quest))
 	}
 

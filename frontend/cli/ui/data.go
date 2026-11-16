@@ -1,13 +1,5 @@
 package ui
 
-import "the-answer-protocol/internal/world"
-
-type LookResponse struct {
-    Room    world.Room         `json:"room"`
-    Players []string           `json:"players"`
-    Items   []world.Item       `json:"items"`
-    NPCs    []world.NPCSummary `json:"npcs"`
-}
 
 type Quest struct {
     ID          string `json:"id"`
@@ -34,4 +26,18 @@ type ChatMessage struct {
     Scope      string
     PlayerName string
     Message    string
+}
+
+type NPCSummary struct {
+    ID      string `json:"id"`
+    Name    string `json:"name"`
+    Role    string `json:"role"`
+    Hostile bool   `json:"hostile"`
+}
+
+type LookResponse struct {
+    Room    Room         `json:"room"`
+    Players []string     `json:"players"`
+    Items   []Item       `json:"items"`
+    NPCs    []NPCSummary `json:"npcs"`
 }

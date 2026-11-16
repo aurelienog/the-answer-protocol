@@ -105,6 +105,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.navigation.CurrentView = ViewGroup
 	case "f7":
 		m.navigation.CurrentView = ViewCombat
+	case "f8":
+    	m.setView(ViewTalk)
 
 	case "up", "down", "pgup", "pgdown", "home", "end":
 		var cmd tea.Cmd
@@ -231,6 +233,9 @@ func (m *Model) refreshViewports() {
 
 	case ViewCombat:
 		content = m.renderCombat()
+
+	case ViewTalk:
+    	content = m.renderTalk()
 
 	default:
 		content = "Unknown view"

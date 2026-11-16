@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"the-answer-protocol/frontend/cli/ui/layout"
-	"the-answer-protocol/internal/world"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -92,7 +91,7 @@ func renderPlayers(players []string) string {
 	return content.String()
 }
 
-func renderNPCs(npcs []world.NPCSummary) string {
+func renderNPCs(npcs []NPCSummary) string {
 	var content strings.Builder
 
 	content.WriteString(layout.TitleStyle.Render(layout.IconNPC + " NPCs"))
@@ -122,7 +121,7 @@ func renderNPCs(npcs []world.NPCSummary) string {
 	return content.String()
 }
 
-func renderObjects(items []world.Item) string {
+func renderObjects(items []Item) string {
 	var content strings.Builder
 
 	content.WriteString(layout.TitleStyle.Render(layout.IconInventory + " OBJECTS"))

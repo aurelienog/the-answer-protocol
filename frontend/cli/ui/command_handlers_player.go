@@ -1,20 +1,55 @@
 package ui
 
-import (
-    "encoding/json"
-)
+import "encoding/json"
 
 func handleStatusResponse(m *Model, payload string) error {
-    var status PlayerStatus
+	var status PlayerStatus
 
-    if err := json.Unmarshal([]byte(payload), &status); err != nil {
-        return err
-    }
+	if err := json.Unmarshal([]byte(payload), &status); err != nil {
+		return err
+	}
 
-    m.player.Status = status
-    m.setView(ViewCharacter)
+	m.player.Status = status
+	m.setView(ViewCharacter)
 
-    return nil
+	return nil
+}
+
+func handleGroupInfoResponse(m *Model, payload string) error {
+	var group Group
+
+	if err := json.Unmarshal([]byte(payload), &group); err != nil {
+		return err
+	}
+
+	m.world.Group = group
+	m.setView(ViewGroup)
+
+	return nil
+}
+
+func handleInventoryResponse(m *Model, payload string) error {
+	var inventory []InventoryItem
+
+	if err := json.Unmarshal([]byte(payload), &inventory); err != nil {
+		return err
+	}
+
+	m.player.Inventory = inventory
+
+	if m.ui.PendingRefresh != RefreshInventory {
+		m.setView(ViewInventory)
+	}
+
+	m.ui.PendingRefresh = RefreshNone
+
+	return nil
+}
+
+func handleQuestResponse(m *Model, payload string) error {
+    var quest QuestSummary
+
+    return json.Unmarshal([]byte(payload), &quest)
 }
 
 func handleQuestsResponse(m *Model, payload string) error {
@@ -24,33 +59,13 @@ func handleQuestsResponse(m *Model, payload string) error {
         return err
     }
 
-    m.world.Quests = quests
-    m.setView(ViewQuests)
+    m.player.Quests = quests
 
-    return nil
-}
+	if m.ui.PendingRefresh != RefreshQuests {
+		m.setView(ViewQuests)
+	}
 
-
-func handleGroupInfoResponse(m *Model, payload string) error {
-    var group Group
-
-    if err := json.Unmarshal([]byte(payload), &group); err != nil {
-        return err
-    }
-
-    m.world.Group = group
-    return nil
-}
-
-func handleInventoryResponse(m *Model, payload string) error {
-    var inventory []InventoryItem
-
-    if err := json.Unmarshal([]byte(payload), &inventory); err != nil {
-        return err
-    }
-
-    m.player.Inventory = inventory
-    m.setView(ViewInventory)
+	m.ui.PendingRefresh = RefreshNone
 
     return nil
 }
