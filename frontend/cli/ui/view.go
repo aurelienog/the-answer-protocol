@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-
 	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
@@ -43,6 +42,8 @@ func (m Model) renderCurrentView() string {
         return m.renderInventory()
     case ViewCharacter:
         return m.renderCharacter()
+	case ViewTalk:
+    	return m.renderTalk()
     case ViewQuests:
         return m.renderQuests()
     case ViewGroup:
@@ -76,8 +77,22 @@ func (m Model) renderView() string {
 		sidebarContent = m.ui.SidebarViewport.View()
 	}
 
+	mainContent := m.ui.MainViewport.View()
+
+	if m.ui.Transitioning &&
+		m.ui.TransitionPhase == TransitionReveal {
+
+		mainContent = lipgloss.Place(
+			m.ui.MainViewport.Width,
+			m.ui.MainViewport.Height,
+			lipgloss.Center,
+			lipgloss.Center,
+			layout.RenderSeparator(m.ui.MainViewport.Width),
+		)
+	}
+
 	body := layout.RenderMain(
-		m.ui.MainViewport.View(),
+		mainContent,
 		sidebarContent,
 		result.MainView.Width,
 		result.Sidebar.Width,

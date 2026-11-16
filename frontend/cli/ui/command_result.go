@@ -66,10 +66,35 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	pendingRefresh := m.ui.PendingRefresh
+
 	if err := handler(&m, msg.response.Payload); err != nil {
 		m.ui.PendingRefresh = RefreshNone
 		m.communication.StatusMessage = "Error parsing " + command + ": " + err.Error()
 		return m, nil
+	}
+
+	switch command {
+	case "LOOK":
+		if pendingRefresh != RefreshRoom {
+			return m, m.startViewTransition(ViewRoom)
+		}
+
+	case "INVENTORY":
+		if pendingRefresh != RefreshInventory {
+			return m, m.startViewTransition(ViewInventory)
+		}
+
+	case "QUESTS":
+		if pendingRefresh != RefreshQuests {
+			return m, m.startViewTransition(ViewQuests)
+		}
+
+	case "TALK":
+		return m, m.startViewTransition(ViewTalk)
+
+	case "GROUP INFO":
+		return m, m.startViewTransition(ViewGroup)
 	}
 
 	if command == "QUEST" {

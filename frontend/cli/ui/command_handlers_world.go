@@ -15,10 +15,6 @@ func handleLookResponse(m *Model, payload string) error {
 
     m.world.Room = response
 
-    if m.ui.PendingRefresh != RefreshRoom {
-        m.setView(ViewRoom)
-    }
-
     m.ui.PendingRefresh = RefreshNone
 
     return nil
@@ -36,7 +32,6 @@ func handleTalkResponse(m *Model, payload string) error {
     }
 
     m.world.Conversation = &conversation
-    m.setView(ViewTalk)
 
     return nil
 }

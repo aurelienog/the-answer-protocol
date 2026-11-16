@@ -38,6 +38,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case animations.CursorBlinkMsg:
 		m.ui.CursorVisible = !m.ui.CursorVisible
 		return refreshResult(m, animations.CursorBlink())
+	
+	case TransitionMsg:
+		switch msg.Phase {
+		case TransitionReveal:
+			m.ui.TransitionPhase = TransitionReveal
+			return m, NextTransition(TransitionComplete)
+
+		case TransitionComplete:
+			m.setView(m.ui.PendingView)
+			m.ui.Transitioning = false
+			m.ui.TransitionPhase = 0
+			m.ui.PendingView = 0
+
+			return refreshResult(m, nil)
+		}
+
 	}
 	return refreshResult(m, nil)
 }
@@ -77,9 +93,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.ui.Input = ""
 
 		if strings.EqualFold(command, "BACK") {
-			m.setView(ViewWorld)
-			m.communication.StatusMessage = "Returned to world view"
-			return m, nil
+			m.communication.StatusMessage = "Returning to world view..."
+			return m, m.startViewTransition(ViewWorld)
 		}
 
 		return m, sendCommand(m.client, command)
@@ -95,22 +110,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			(m.communication.ChatFilter + 1) % 4
 		return m, nil
 
-	case "f1":
-		m.navigation.CurrentView = ViewWorld
-	case "f2":
-		m.navigation.CurrentView = ViewRoom
-	case "f3":
-		m.navigation.CurrentView = ViewInventory
-	case "f4":
-		m.navigation.CurrentView = ViewCharacter
-	case "f5":
-		m.navigation.CurrentView = ViewQuests
-	case "f6":
-		m.navigation.CurrentView = ViewGroup
-	case "f7":
-		m.navigation.CurrentView = ViewCombat
-	case "f8":
-    	m.setView(ViewTalk)
 	case "<":
 		result := m.calculateLayout()
 

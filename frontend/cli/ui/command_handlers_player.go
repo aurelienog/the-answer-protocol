@@ -10,7 +10,6 @@ func handleStatusResponse(m *Model, payload string) error {
 	}
 
 	m.player.Status = status
-	m.setView(ViewCharacter)
 
 	return nil
 }
@@ -23,7 +22,6 @@ func handleGroupInfoResponse(m *Model, payload string) error {
 	}
 
 	m.world.Group = group
-	m.setView(ViewGroup)
 
 	return nil
 }
@@ -36,11 +34,6 @@ func handleInventoryResponse(m *Model, payload string) error {
 	}
 
 	m.player.Inventory = inventory
-
-	if m.ui.PendingRefresh != RefreshInventory {
-		m.setView(ViewInventory)
-	}
-
 	m.ui.PendingRefresh = RefreshNone
 
 	return nil
@@ -60,10 +53,6 @@ func handleQuestsResponse(m *Model, payload string) error {
     }
 
     m.player.Quests = quests
-
-	if m.ui.PendingRefresh != RefreshQuests {
-		m.setView(ViewQuests)
-	}
 
 	m.ui.PendingRefresh = RefreshNone
 

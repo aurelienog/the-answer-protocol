@@ -112,6 +112,11 @@ type InterfaceState struct {
     PendingRefresh RefreshTarget
     PanelFocused bool
     CursorVisible bool
+
+    Transitioning     bool
+    TransitionPhase   TransitionPhase
+    PendingView       View
+
 }
 
 type Model struct {
