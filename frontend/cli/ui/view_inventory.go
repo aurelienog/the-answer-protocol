@@ -24,12 +24,12 @@ func (m Model) renderInventory() string {
 	equipmentItems := make([]InventoryItem, 0)
 
 	for _, item := range m.player.Inventory {
-		switch item.Type {
-		case "common", "consumable":
+		switch {
+		case isDroppableItem(item):
 			commonItems = append(commonItems, item)
-		case "quest":
+		case item.Type == "quest":
 			questItems = append(questItems, item)
-		case "equipment", "unique":
+		case item.Type == "equipment", item.Type == "unique":
 			equipmentItems = append(equipmentItems, item)
 		}
 	}
@@ -127,4 +127,18 @@ func resolveInventoryColumnCount(width int) int {
 	default:
 		return 1
 	}
+}
+
+func isDroppableItem(item InventoryItem) bool {
+    return item.Type == "common" || item.Type == "consumable"
+}
+
+func (m Model) hasDroppableItems() bool {
+    for _, item := range m.player.Inventory {
+        if isDroppableItem(item) {
+            return true
+        }
+    }
+
+    return false
 }

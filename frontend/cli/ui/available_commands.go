@@ -191,16 +191,6 @@ func (m Model) hasGroup() bool {
 	return m.world.Group.ID != ""
 }
 
-func (m Model) hasDroppableItems() bool {
-    for _, item := range m.player.Inventory {
-        if item.Type == "common" || item.Type == "consumable" {
-            return true
-        }
-    }
-
-    return false
-}
-
 func (m Model) availableCommandsContent() string {
 	commands := make([]AvailableCommand, 0)
 
