@@ -93,11 +93,10 @@ func renderInventoryColumns(columns []string) []string {
 
 func renderInventoryColumn(title string, items []InventoryItem, width int) string {
 	titleStyle := layout.TitleStyle.Copy().Width(width)
-	separatorStyle := layout.MutedStyle.Copy().Width(width)
 
 	lines := []string{
 		titleStyle.Render(title),
-		separatorStyle.Render(strings.Repeat("─", width)),
+		layout.RenderSeparator(width),
 	}
 
 	if len(items) == 0 {

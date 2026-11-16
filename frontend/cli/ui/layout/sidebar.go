@@ -1,13 +1,26 @@
 package layout
 
-import "github.com/charmbracelet/lipgloss"
+import (
+    "strings"
+    "github.com/charmbracelet/lipgloss"
+)
+func RenderSidebar(questContent string, groupContent string, width int) string {
+    separatorWidth := (width * 60) / 100
+    padding := strings.Repeat("\n", 1)
 
-func RenderSidebar(questContent string, groupContent string) string {
+    separator := lipgloss.PlaceHorizontal(
+        width,
+        lipgloss.Center,
+        RenderSeparator(separatorWidth),
+    )
+
     return lipgloss.JoinVertical(
         lipgloss.Left,
-        TitleStyle.Render(IconQuest+" QUESTS"),
         questContent,
-        TitleStyle.Render(IconGroup+" GROUP"),
+        padding,
+        separator,
+        padding,
         groupContent,
+        padding,
     )
 }

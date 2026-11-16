@@ -241,6 +241,7 @@ func (m *Model) refreshViewports() {
 	sidebar := layout.RenderSidebar(
 		m.renderQuests(),
 		m.renderGroup(),
+		m.ui.SidebarViewport.Width,
 	)
 
 	m.ui.SidebarViewport.SetContent(sidebar)

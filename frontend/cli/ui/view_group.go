@@ -13,14 +13,14 @@ func (m Model) renderGroup() string {
 	if group.ID == "" {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			layout.TitleStyle.Render("GROUP"),
+			layout.TitleStyle.Render(layout.IconGroup+" GROUP"),
 			"",
 			layout.StatusStyle.Render("You are not in a group"),
 		)
 	}
 
 	sections := []string{
-		layout.TitleStyle.Render("GROUP"),
+		layout.TitleStyle.Render(layout.IconGroup+" GROUP"),
 		layout.TitleStyle.Render(group.Name),
 	}
 

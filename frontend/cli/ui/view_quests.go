@@ -13,14 +13,14 @@ func (m Model) renderQuests() string {
 	if len(m.world.Quests) == 0 {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			layout.TitleStyle.Render("QUESTS"),
+			layout.TitleStyle.Render(layout.IconQuest+" QUESTS"),
 			"",
 			layout.StatusStyle.Render("No quests discovered"),
 		)
 	}
 
 	sections := []string{
-		layout.TitleStyle.Render("QUESTS"),
+		layout.TitleStyle.Render(layout.IconQuest+" QUESTS"),
 	}
 
 	for _, quest := range m.world.Quests {
