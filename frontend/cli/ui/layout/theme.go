@@ -137,6 +137,15 @@ const (
 
 )
 
+func WrapText(content string, width int) string {
+    if width <= 0 {
+        return ""
+    }
+
+    return lipgloss.NewStyle().
+        Width(width).
+        Render(content)
+}
 
 // 1. Los colores tienen significado semántico. Por ejemplo, DangerStyle se utilizará para enemigos hostiles, alertas y errores; SuccessStyle, para acciones completadas o resultados positivos.
 

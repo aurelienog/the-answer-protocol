@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+
 	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
 func (m Model) renderTalk() string {
 	conversation := m.world.Conversation
+	width := m.ui.MainViewport.Width
 
 	if conversation == nil {
 		return lipgloss.JoinVertical(
@@ -26,41 +28,39 @@ func (m Model) renderTalk() string {
 		layout.TitleStyle.Render(conversation.NPC.Name),
 	}
 
-	if conversation.NPC.Role != "" {
-		sections = append(
-			sections,
-			layout.StatusStyle.Render(conversation.NPC.Role),
-		)
-	}
-
 	sections = append(sections, "")
 
 	// Display the NPC dialogue.
 	for _, line := range conversation.Dialogue {
-		sections = append(sections, line)
+		sections = append(
+			sections,
+			layout.WrapText(line, width),
+		)
 	}
 
 	// Display quest information when the NPC offers one.
 	if conversation.Quest != nil {
-		sections = append(sections,
+		sections = append(
+			sections,
 			"",
-			layout.RenderSeparator(m.ui.MainViewport.Width),
-			layout.TitleStyle.Render("QUEST"),
+			layout.RenderSeparator(width),
+			layout.TitleStyle.Render("QUEST\n"),
 			layout.TitleStyle.Render(conversation.Quest.Name),
 		)
 
 		if conversation.Quest.Description != "" {
 			sections = append(
 				sections,
-				layout.StatusStyle.Render(conversation.Quest.Description),
+				layout.WrapText(conversation.Quest.Description, width),
 			)
 		}
 
 		if conversation.Quest.Progress != "" {
 			sections = append(
 				sections,
-				layout.InfoStyle.Render(
+				layout.WrapText(
 					"Progress: "+conversation.Quest.Progress,
+					width,
 				),
 			)
 		}
@@ -72,15 +72,6 @@ func (m Model) renderTalk() string {
 				renderQuestStatus(conversation.QuestStatus),
 			),
 		)
-
-		if conversation.QuestStatus == "available" {
-			sections = append(
-				sections,
-				layout.InfoStyle.Render(
-					"Use QUEST <npc> to accept this quest",
-				),
-			)
-		}
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)

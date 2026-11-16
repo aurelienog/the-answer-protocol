@@ -12,7 +12,7 @@ import (
 
 
 func renderRoom(response LookResponse, availableWidth, availableHeight int) string {
-	contentWithoutArt := renderLocation(response, "")
+	contentWithoutArt := renderLocation(response, "", availableWidth)
 	contentWithoutArt += renderPlayers(response.Players)
 	contentWithoutArt += renderNPCs(response.NPCs)
 	contentWithoutArt += renderObjects(response.Items)
@@ -33,7 +33,7 @@ func renderRoom(response LookResponse, availableWidth, availableHeight int) stri
 		return contentWithoutArt
 	}
 
-	contentWithArt := renderLocation(response, renderedArt)
+	contentWithArt := renderLocation(response, renderedArt, availableWidth)
 	contentWithArt += renderPlayers(response.Players)
 	contentWithArt += renderNPCs(response.NPCs)
 	contentWithArt += renderObjects(response.Items)
@@ -48,23 +48,30 @@ func renderRoom(response LookResponse, availableWidth, availableHeight int) stri
 }
 
 
-func renderLocation(response LookResponse, renderedArt string) string {
-	var content strings.Builder
+func renderLocation(
+    response LookResponse,
+    renderedArt string,
+    availableWidth int,
+) string {
+    var content strings.Builder
 
-	content.WriteString(layout.TitleStyle.Render(
-		layout.IconLocation + " LOCATION: " + response.Room.Name,
-	))
-	content.WriteString("\n\n")
+    content.WriteString(layout.TitleStyle.Render(
+        layout.IconLocation + " LOCATION: " + response.Room.Name,
+    ))
+    content.WriteString("\n\n")
 
-	if renderedArt != "" {
-		content.WriteString(renderedArt)
-		content.WriteString("\n\n")
-	}
+    if renderedArt != "" {
+        content.WriteString(renderedArt)
+        content.WriteString("\n\n")
+    }
 
-	content.WriteString(response.Room.Description)
-	content.WriteString("\n\n")
+    content.WriteString(layout.WrapText(
+        response.Room.Description,
+        availableWidth,
+    ))
+    content.WriteString("\n\n")
 
-	return content.String()
+    return content.String()
 }
 
 

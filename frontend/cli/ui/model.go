@@ -87,20 +87,6 @@ type Item struct {
     HP          int    `json:"hp,omitempty"`
 }
 
-type QuestSummary struct {
-    ID          string `json:"id"`
-    Name        string `json:"name"`
-    Description string `json:"description"`
-    Progress    string `json:"progress,omitempty"`
-}
-
-type NPCConversation struct {
-    NPC         NPCSummary   `json:"npc"`
-    Dialogue    []string     `json:"dialogue"`
-    Quest       *QuestSummary `json:"quest,omitempty"`
-    QuestStatus string       `json:"quest_status,omitempty"`
-}
-
 type WorldState struct {
     Room         LookResponse
     Group        Group
