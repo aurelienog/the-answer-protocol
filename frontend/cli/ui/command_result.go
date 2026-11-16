@@ -97,6 +97,10 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		return m, sendCommand(m.client, "LOOK")
 	}
 
+	if command == "QUIT" {
+		return m, tea.Quit
+	}
+
 	m.communication.StatusMessage = command + " updated"
 	return m, nil
 }
