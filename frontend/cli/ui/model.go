@@ -44,9 +44,17 @@ type NavigationState struct {
     CurrentView View
 }
 
+type InventoryItem struct {
+    ID       string `json:"id"`
+    Name     string `json:"name"`
+    Type     string `json:"type"`
+    Quantity int    `json:"quantity"`
+}
+
 type PlayerState struct {
-    Username string
-    Status   PlayerStatus
+    Username  string
+    Status    PlayerStatus
+    Inventory []InventoryItem
 }
 
 type WorldState struct {
@@ -110,4 +118,8 @@ func NewModel(client *network.Client) Model {
 
 func (m Model) Init() tea.Cmd {
 	return nil
+}
+
+func (m *Model) setView(view View) {
+    m.navigation.CurrentView = view
 }

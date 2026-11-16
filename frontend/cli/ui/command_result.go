@@ -1,7 +1,6 @@
 package ui
 
 import (
-    "encoding/json"
     "strings"
 
     tea "github.com/charmbracelet/bubbletea"
@@ -13,6 +12,7 @@ type errorHandler func(*Model)
 
 var commandHandlers = map[string]commandHandler{
     "STATUS":     handleStatusResponse,
+    "INVENTORY":  handleInventoryResponse,
     "QUESTS":     handleQuestsResponse,
     "GROUP INFO": handleGroupInfoResponse,
     "LOOK":       handleLookResponse,
@@ -87,52 +87,4 @@ func getCommandName(rawCommand string) string {
     }
 
     return parts[0]
-}
-
-func handleStatusResponse(m *Model, payload string) error {
-    var status PlayerStatus
-
-    if err := json.Unmarshal([]byte(payload), &status); err != nil {
-        return err
-    }
-
-    m.player.Status = status
-    return nil
-}
-
-func handleQuestsResponse(m *Model, payload string) error {
-    var quests []Quest
-
-    if err := json.Unmarshal([]byte(payload), &quests); err != nil {
-        return err
-    }
-
-    m.world.Quests = quests
-    return nil
-}
-
-func handleGroupInfoResponse(m *Model, payload string) error {
-    var group Group
-
-    if err := json.Unmarshal([]byte(payload), &group); err != nil {
-        return err
-    }
-
-    m.world.Group = group
-    return nil
-}
-
-func handleLookResponse(m *Model, payload string) error {
-    var response LookResponse
-
-    if err := json.Unmarshal([]byte(payload), &response); err != nil {
-        return err
-    }
-
-    m.world.Room = response
-    return nil
-}
-
-func handleMoveResponse(m *Model, payload string) error {
-    return nil
 }

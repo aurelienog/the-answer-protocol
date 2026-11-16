@@ -8,17 +8,22 @@ const (
 	MinSidebarWidth    = 30
 
 	MinMainHeight      = 10
-	MinSidebarHeight   = 8
+	MinSidebarHeight   = 10
 
 	MaxMainWidth       = 120
 	MaxSidebarWidth    = 50
+
+	MaxMainHeight = 30
+	MaxSidebarHeight   = 30
+
+	MinInventoryColumnWidth = 30
 )
 
 const (
 	InputHeight             = 1
 	StatusHeight            = 1
-	EventLogPreferredHeight = 8
-	ChatPreferredHeight     = 8
+	EventLogPreferredHeight = 11
+	ChatPreferredHeight     = 11
 )
 
 type LayoutInput struct {
@@ -48,6 +53,7 @@ func DefaultRequirements() LayoutInput {
 				MaxWidth:       MaxMainWidth + PanelWidthOffset,
 				MinHeight:      MinMainHeight + PanelHeightOffset,
 				PreferredHeight: MinMainHeight + PanelHeightOffset,
+				MaxHeight:       MaxMainHeight + PanelHeightOffset,
 			},
 			Priority: PriorityCritical,
 			Required: true,
@@ -59,6 +65,7 @@ func DefaultRequirements() LayoutInput {
 				MaxWidth:       MaxMainWidth + PanelWidthOffset,
 				MinHeight:      MinSidebarHeight + PanelHeightOffset,
 				PreferredHeight: MinSidebarHeight + PanelHeightOffset,
+				MaxHeight:       MaxSidebarHeight + PanelHeightOffset,
 			},
 			Priority: PriorityNormal,
 			Required: false,

@@ -35,6 +35,25 @@ func (m Model) renderAuthentication() string {
 	return layout.PanelStyle.Render(content)
 }
 
+func (m Model) renderCurrentView() string {
+    switch m.navigation.CurrentView {
+    case ViewWorld, ViewRoom:
+        return m.renderWorld()
+    case ViewInventory:
+        return m.renderInventory()
+    case ViewCharacter:
+        return m.renderCharacter()
+    case ViewQuests:
+        return m.renderQuests()
+    case ViewGroup:
+        return m.renderGroup()
+    case ViewCombat:
+        return m.renderCombat()
+    default:
+        return m.renderWorld()
+    }
+}
+
 func (m Model) renderView() string {
 	result := m.calculateLayout()
 
@@ -135,22 +154,6 @@ func (m Model) renderWorld() string {
 		m.ui.MainViewport.Width,
 		m.ui.MainViewport.Height,
 	)
-}
-
-func (m Model) renderInventory() string {
-	return "Inventory View"
-}
-
-func (m Model) renderCharacter() string {
-	return "Character View"
-}
-
-func (m Model) renderQuests() string {
-	return "Quests View"
-}
-
-func (m Model) renderGroup() string {
-	return "Group View"
 }
 
 func (m Model) renderCombat() string {

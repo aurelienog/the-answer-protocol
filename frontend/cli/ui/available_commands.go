@@ -191,6 +191,16 @@ func (m Model) hasGroup() bool {
 	return m.world.Group.ID != ""
 }
 
+func (m Model) hasDroppableItems() bool {
+    for _, item := range m.player.Inventory {
+        if item.Type == "common" || item.Type == "consumable" {
+            return true
+        }
+    }
+
+    return false
+}
+
 func (m Model) availableCommandsContent() string {
 	commands := make([]AvailableCommand, 0)
 
@@ -207,31 +217,44 @@ func (m Model) availableCommandsContent() string {
 		addCommand(availableCommands, name)
 	}
 
-	if m.hasAvailableExits() {
+    add("LOOK")
+
+	if m.hasAvailableExits() && !m.world.InCombat {
 		add("MOVE")
 	}
 
-	if m.hasRoomItems() {
+	if m.hasFriendlyNPC() && !m.world.InCombat {
+		add("TALK")
+        // add("QUEST") if hasquest...
+	}
+
+    add("INVENTORY")
+
+	if m.hasRoomItems() && !m.world.InCombat {
 		add("TAKE")
 	}
 
-	if m.hasFriendlyNPC() {
-		add("TALK")
-	}
-
+    if m.hasDroppableItems() && !m.world.InCombat {
+        add("DROP")
+    }
+    
+	add("CHAT")
+    add("GROUP")
 	add("QUESTS")
 	add("WHO")
+    add("STATUS")
 
-	if m.hasGroup() {
-		addCommand(groupCommands, "INVITATIONS")
-		addCommand(groupCommands, "INFO")
-		addCommand(groupCommands, "LEAVE")
-	} else {
-		addCommand(groupCommands, "CREATE")
-		addCommand(groupCommands, "JOIN")
-	}
 
-	add("CHAT")
+	// if m.hasGroup() {
+	// 	addCommand(groupCommands, "INVITATIONS")
+	// 	addCommand(groupCommands, "INFO")
+	// 	addCommand(groupCommands, "LEAVE")
+	// } else {
+	// 	addCommand(groupCommands, "CREATE")
+	// 	addCommand(groupCommands, "JOIN")
+	// }
+
+
 
 	if !m.world.InCombat && m.hasHostileNPC() {
 		add("ATTACK")
@@ -243,6 +266,7 @@ func (m Model) availableCommandsContent() string {
 		}
 	}
 
+    add("QUIT")
 	usages := make([]string, 0, len(commands))
 
 	for _, command := range commands {
@@ -250,9 +274,9 @@ func (m Model) availableCommandsContent() string {
 
 		usage := layout.CommandUsageStyle.Render(parts[0])
 
-		if len(parts) == 2 {
-			usage += " " + layout.CommandArgumentStyle.Render(parts[1])
-		}
+		// if len(parts) == 2 {
+		// 	usage += " " + layout.CommandArgumentStyle.Render(parts[1])
+		// }
 
 		usages = append(usages, usage)
 	}

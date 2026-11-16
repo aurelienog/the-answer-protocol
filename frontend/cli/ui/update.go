@@ -69,8 +69,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		command := m.ui.Input
+		command := strings.TrimSpace(m.ui.Input)
 		m.ui.Input = ""
+
+		if strings.EqualFold(command, "BACK") {
+			m.setView(ViewWorld)
+			m.communication.StatusMessage = "Returned to world view"
+			return m, nil
+		}
 
 		return m, sendCommand(m.client, command)
 
