@@ -16,6 +16,8 @@ func (m Model) handleServerEvent(
 ) (tea.Model, tea.Cmd) {
     event := msg.event.Message
 
+    var cmd tea.Cmd
+
     if event.Kind == protocol.KindEVT && isChatEvent(event.Data) {
         chatMessage, ok := parseChatMessage(event.EventType, event.Data)
         if ok {
@@ -33,12 +35,21 @@ func (m Model) handleServerEvent(
     } else {
         m.appendEventLog(msg.event.Raw)
 
-        if event.Kind == protocol.KindEVT && event.EventType == "COMBAT" {
-            m.handleCombatEvent(event.Data)
+        if event.Kind == protocol.KindEVT {
+            switch event.EventType {
+            case "COMBAT":
+                m.handleCombatEvent(event.Data)
+
+            case "GROUP":
+                cmd = m.handleGroupEvent(event.Data)
+            }
         }
     }
 
-    return m, waitForServerEvent(m.client)
+    return m, tea.Batch(
+        cmd,
+        waitForServerEvent(m.client),
+    )
 }
 
 func isChatEvent(data string) bool {
@@ -172,5 +183,26 @@ func (m *Model) appendEventLog(message string) {
         m.communication.EventLog = m.communication.EventLog[
             len(m.communication.EventLog)-maxEventLogEntries:
         ]
+    }
+}
+
+func (m *Model) handleGroupEvent(data string) tea.Cmd {
+    if m.navigation.CurrentView != ViewGroup {
+        return nil
+    }
+
+    parts := strings.Fields(data)
+    if len(parts) == 0 {
+        return nil
+    }
+
+    switch parts[0] {
+    case "JOIN", "LEAVE":
+        // Refresh group information when another member joins or leaves.
+        m.ui.PendingRefresh = RefreshGroup
+        return sendCommand(m.client, "GROUP INFO")
+
+    default:
+        return nil
     }
 }
