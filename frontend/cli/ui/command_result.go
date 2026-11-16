@@ -11,22 +11,30 @@ type commandHandler func(*Model, string) error
 type errorHandler func(*Model)
 
 var commandHandlers = map[string]commandHandler{
-    "STATUS":     handleStatusResponse,
-    "QUESTS":     handleQuestsResponse,
-    "QUEST":      handleQuestResponse,
-    "GROUP INFO": handleGroupInfoResponse,
-    "LOOK":       handleLookResponse,
-    "MOVE":       handleMoveResponse,
-    "TALK":       handleTalkResponse,
-    "INVENTORY":  handleInventoryResponse,
-    "TAKE":       handleTakeResponse,
-    "DROP":       handleDropResponse,
+    "STATUS":       handleStatusResponse,
+    "QUESTS":       handleQuestsResponse,
+    "QUEST":        handleQuestResponse,
+    "GROUP INFO":   handleGroupInfoResponse,
+    "GROUP CREATE": handleGroupActionResponse,
+    "GROUP JOIN":   handleGroupActionResponse,
+    "GROUP INVITE": handleGroupActionResponse,
+    "GROUP LEAVE":  handleGroupActionResponse,
+    "LOOK":         handleLookResponse,
+    "MOVE":         handleMoveResponse,
+    "TALK":         handleTalkResponse,
+    "INVENTORY":    handleInventoryResponse,
+    "TAKE":         handleTakeResponse,
+    "DROP":         handleDropResponse,
 }
 
 var commandErrorHandlers = map[string]errorHandler{
     "NOT_IN_GROUP": func(m *Model) {
         m.world.Group = Group{}
     },
+}
+
+func handleGroupActionResponse(_ *Model, _ string) error {
+    return nil
 }
 
 
@@ -74,6 +82,7 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle commands that navigate to another view.
 	switch command {
 	case "LOOK":
 		if pendingRefresh != RefreshRoom {
@@ -94,7 +103,9 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		return m, m.startViewTransition(ViewTalk)
 
 	case "GROUP INFO":
-		return m, m.startViewTransition(ViewGroup)
+		if pendingRefresh != RefreshGroup {
+			return m, m.startViewTransition(ViewGroup)
+		}
 	}
 
 	if command == "QUEST" {
@@ -115,6 +126,23 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 			m.ui.PendingRefresh = RefreshRoom
 			return m, sendCommand(m.client, "LOOK")
 		}
+	}
+	// Refresh group information after group operations.
+	switch command {
+	case "GROUP CREATE", "GROUP JOIN":
+		m.communication.StatusMessage = "Group updated. Loading group..."
+		m.ui.PendingRefresh = RefreshNone
+		return m, sendCommand(m.client, "GROUP INFO")
+
+	case "GROUP INVITE":
+		m.communication.StatusMessage = "Invitation sent."
+		m.ui.PendingRefresh = RefreshGroup
+		return m, sendCommand(m.client, "GROUP INFO")
+
+	case "GROUP LEAVE":
+		m.world.Group = Group{}
+		m.communication.StatusMessage = "You left the group."
+		return m, nil
 	}
 
 	if command == "MOVE" {
