@@ -10,6 +10,7 @@ func handleStatusResponse(m *Model, payload string) error {
 	}
 
 	m.player.Status = status
+	m.ui.PendingRefresh = RefreshNone
 
 	return nil
 }

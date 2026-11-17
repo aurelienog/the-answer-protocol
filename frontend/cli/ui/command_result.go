@@ -99,6 +99,12 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 			return m, m.startViewTransition(ViewQuests)
 		}
 
+	case "STATUS":
+		if pendingRefresh != RefreshNone {
+			return m, nil
+		}
+		return m, m.startViewTransition(ViewCharacter)
+
 	case "TALK":
 		return m, m.startViewTransition(ViewTalk)
 
