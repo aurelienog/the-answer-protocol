@@ -94,6 +94,7 @@ type WorldState struct {
     Conversation *NPCConversation
     InCombat     bool
     CombatID     string
+    OnlinePlayers   int
 }
 
 type CommunicationState struct {

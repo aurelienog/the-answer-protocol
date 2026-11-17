@@ -4,6 +4,7 @@ import (
     "fmt"
     "strings"
     "encoding/json"
+	"strconv"
 )
 
 func handleLookResponse(m *Model, payload string) error {
@@ -63,5 +64,25 @@ func handleTakeResponse(_ *Model, payload string) error {
 		return fmt.Errorf("TAKE response contains an empty item ID")
 	}
 
+	return nil
+}
+
+func handleWhoResponse(m *Model, payload string) error {
+	const prefix = "players="
+
+	if !strings.HasPrefix(payload, prefix) {
+		return fmt.Errorf("invalid WHO response")
+	}
+
+	count, err := strconv.Atoi(strings.TrimPrefix(payload, prefix))
+	if err != nil {
+		return err
+	}
+
+	if count < 0 {
+		return fmt.Errorf("invalid player count")
+	}
+
+	m.world.OnlinePlayers = count
 	return nil
 }

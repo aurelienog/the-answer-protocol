@@ -2,6 +2,7 @@ package ui
 
 import (
     "strings"
+	"fmt"
 
     tea "github.com/charmbracelet/bubbletea"
     "the-answer-protocol/internal/protocol"
@@ -12,6 +13,7 @@ type errorHandler func(*Model)
 
 var commandHandlers = map[string]commandHandler{
     "STATUS":       handleStatusResponse,
+	"WHO": 			handleWhoResponse,
     "QUESTS":       handleQuestsResponse,
     "QUEST":        handleQuestResponse,
     "GROUP INFO":   handleGroupInfoResponse,
@@ -158,6 +160,14 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 
 	if command == "QUIT" {
 		return m, tea.Quit
+	}
+
+	if command == "WHO" {
+		m.communication.StatusMessage = fmt.Sprintf(
+			"Players online: %d",
+			m.world.OnlinePlayers,
+		)
+		return m, nil
 	}
 
 	m.communication.StatusMessage = command + " updated"
