@@ -182,6 +182,7 @@ func (w *World) GetPlayerQuests(
 			ID:          quest.ID,
 			Name:        quest.Name,
 			Description: quest.Description,
+			GiverNPCName: w.getQuestGiverNameLocked(quest),
 			Status:      progress.Status,
 			Progress:    questProgress,
 		})
@@ -255,6 +256,7 @@ func (w *World) GetPlayerQuestSummary(
 		ID:          quest.ID,
 		Name:        quest.Name,
 		Description: quest.Description,
+		GiverNPCName: w.getQuestGiverNameLocked(quest),
 		Status:      progress.Status,
 		Progress:    questProgress,
 	}, nil
@@ -286,4 +288,15 @@ func (w *World) getQuestProgressLocked(
 	}
 
 	return fmt.Sprintf("%d/%d", quantity, quest.RequiredItemQuantity)
+}
+
+// getQuestGiverNameLocked returns the name of the NPC that gives a quest.
+// The caller must hold at least a read lock.
+func (w *World) getQuestGiverNameLocked(quest Quest) string {
+	npc, exists := w.npcs[quest.GiverNPCID]
+	if !exists {
+		return ""
+	}
+
+	return npc.Name
 }

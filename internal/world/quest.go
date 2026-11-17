@@ -42,9 +42,10 @@ type PlayerQuest struct {
 // PlayerQuestSummary contains the public information about a quest
 // discovered by a player.
 type PlayerQuestSummary struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Status      QuestStatus `json:"status"`
-	Progress    string      `json:"progress,omitempty"`
+    ID           string      `json:"id"`
+    Name         string      `json:"name"`
+    Description  string      `json:"description"`
+    GiverNPCName string      `json:"giver_npc_name,omitempty"`
+    Status       QuestStatus `json:"status"`
+    Progress     string      `json:"progress,omitempty"`
 }
