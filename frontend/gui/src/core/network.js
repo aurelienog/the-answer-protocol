@@ -429,8 +429,10 @@ const App = {
                     if (GameState.inCombat) {
                         const hasHostileHere = GameState.npcsInRoom.some(n => GameState.getNpcMeta(n).hostile);
                         if (!hasHostileHere) {
-                            CombatModal.showOutcome(false, 'Your party was defeated! Respawned at Harbor Square.');
-                            this.sendCommand('STATUS');
+                            if (!CombatModal.outcomeShown) {
+                                CombatModal.showOutcome(false, 'Your party was defeated! Respawned at Harbor Square.');
+                                this.sendCommand('STATUS');
+                            }
                         } else {
                             CombatModal.syncRoomBackground();
                         }
@@ -508,8 +510,10 @@ const App = {
                     UI.updateHUDStats();
 
                     if (GameState.inCombat && CombatModal.isFallen && data.hp > 0) {
-                        CombatModal.showOutcome(false, 'Combat ended! Respawned at Harbor Square.');
-                        this.sendCommand('LOOK');
+                        if (!CombatModal.outcomeShown) {
+                            CombatModal.showOutcome(false, 'Combat ended! Respawned at Harbor Square.');
+                            this.sendCommand('LOOK');
+                        }
                         return;
                     }
 

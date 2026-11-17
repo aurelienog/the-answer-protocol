@@ -38,7 +38,7 @@
 
     background-position:
         top left, top right, bottom left, bottom right,
-        top 1px center, bottom 1px center, left 1px center, right 1px center !important;
+        top 2px center, bottom 1px center, left 1px center, right 1px center !important;
 
     background-size:
         28px 28px, 28px 28px, 28px 28px, 28px 28px,

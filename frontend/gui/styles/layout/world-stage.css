@@ -95,7 +95,7 @@
         url('/assets/ui/slot-edge-v.png');
 
     background-position:
-        top left, top right, bottom left, bottom right,
+        top -2px left -2px, top -2px right -2px, bottom -2px left -2px, bottom -2px right -2px,
         top center, bottom center, left center, right center;
 
     background-size:

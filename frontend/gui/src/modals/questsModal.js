@@ -76,6 +76,17 @@ const QuestsModal = {
         const qId = q.id || q.quest_id || '';
         const qTitle = q.name || qId || 'Quest';
         document.getElementById('quest-detail-title').textContent = qTitle;
+
+        const giverEl = document.getElementById('quest-detail-giver');
+        if (giverEl) {
+            let giver = q.giver_npc_name || '';
+            if (!giver && GameState.worldQuests && GameState.worldQuests[qId]) {
+                const gId = GameState.worldQuests[qId].giver_npc_id;
+                if (gId) giver = GameState.getNpcMeta(gId).name;
+            }
+            giverEl.textContent = giver ? `Quest Giver: ${giver}` : 'Kingdom of Arvendale';
+        }
+
         document.getElementById('quest-detail-desc').textContent = q.description || '';
         document.getElementById('quest-detail-obj').innerHTML = q.progress
             ? `<img src="/assets/icons/ui/target.webp" alt="" class="ui-ico">Progress: ${q.progress} (${q.status})`
