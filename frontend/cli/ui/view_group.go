@@ -2,12 +2,14 @@
 package ui
 
 import (
+	"sort"
+
 	"github.com/charmbracelet/lipgloss"
 
 	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
-func (m Model) renderGroup() string {
+func (m Model) renderGroup(detailed bool) string {
 	group := m.world.Group
 
 	if group.ID == "" {
@@ -15,33 +17,33 @@ func (m Model) renderGroup() string {
 			lipgloss.Left,
 			layout.TitleStyle.Render(layout.IconGroup+" GROUP"),
 			"",
-			layout.StatusStyle.Render("You are not in a group"),
+			layout.MutedStyle.Render("You are not in a group"),
 		)
 	}
+
+	title := layout.TitleStyle.Render(layout.IconGroup + " GROUP " + group.Name)
 
 	sections := []string{
-		layout.TitleStyle.Render(layout.IconGroup+" GROUP"),
-		layout.TitleStyle.Render(group.Name),
+		lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			title,
+		),
 	}
 
-	if group.ID != "" {
+
+	if detailed {
 		sections = append(
 			sections,
-			layout.StatusStyle.Render("ID: "+group.ID),
+			layout.MutedStyle.Render("ID: "+group.ID),
+			"",
+			layout.TitleStyle.Render("MEMBERS"),
 		)
 	}
-
-	sections = append(sections, "")
-
-	sections = append(
-		sections,
-		layout.TitleStyle.Render("MEMBERS"),
-	)
-
 	if len(group.Members) == 0 {
 		sections = append(
 			sections,
-			layout.StatusStyle.Render("No members"),
+			"",
+			layout.MutedStyle.Render("No members"),
 		)
 	} else {
 		for _, member := range group.Members {
@@ -52,31 +54,35 @@ func (m Model) renderGroup() string {
 		}
 	}
 
-	pendingInvitations := make([]string, 0)
-
-	for player, pending := range group.Invitations {
-		if pending {
-			pendingInvitations = append(pendingInvitations, player)
-		}
-	}
-
-	sections = append(sections, "")
-	sections = append(
-		sections,
-		layout.TitleStyle.Render("PENDING INVITATIONS"),
-	)
-
-	if len(pendingInvitations) == 0 {
+	if detailed {
 		sections = append(
 			sections,
-			layout.StatusStyle.Render("No pending invitations"),
+			"",
+			layout.TitleStyle.Render("PENDING INVITATIONS"),
 		)
-	} else {
-		for _, player := range pendingInvitations {
+
+		pendingInvitations := make([]string, 0)
+
+		for player, pending := range group.Invitations {
+			if pending {
+				pendingInvitations = append(pendingInvitations, player)
+			}
+		}
+
+		sort.Strings(pendingInvitations)
+
+		if len(pendingInvitations) == 0 {
 			sections = append(
 				sections,
-				layout.WarningStyle.Render("[?] "+player),
+				layout.MutedStyle.Render("No pending invitations"),
 			)
+		} else {
+			for _, player := range pendingInvitations {
+				sections = append(
+					sections,
+					layout.WarningStyle.Render("[?] "+player),
+				)
+			}
 		}
 	}
 

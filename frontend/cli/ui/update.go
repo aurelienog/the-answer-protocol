@@ -244,10 +244,10 @@ func (m *Model) refreshViewports() {
 		content = m.renderCharacter()
 
 	case ViewQuests:
-		content = m.renderQuests()
+		content = m.renderQuests(true, m.ui.MainViewport.Width)
 
 	case ViewGroup:
-		content = m.renderGroup()
+		content = m.renderGroup(true)
 
 	case ViewCombat:
 		content = m.renderCombat()
@@ -262,8 +262,8 @@ func (m *Model) refreshViewports() {
 	m.ui.MainViewport.SetContent(content)
 
 	sidebar := layout.RenderSidebar(
-		m.renderQuests(),
-		m.renderGroup(),
+		m.renderQuests(false, m.ui.SidebarViewport.Width),
+		m.renderGroup(false),
 		m.ui.SidebarViewport.Width,
 	)
 

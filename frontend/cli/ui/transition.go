@@ -17,7 +17,7 @@ type TransitionMsg struct {
 	Phase TransitionPhase
 }
 
-const transitionDuration = 120 * time.Millisecond
+const transitionDuration = 240 * time.Millisecond
 
 func NextTransition(phase TransitionPhase) tea.Cmd {
 	return tea.Tick(transitionDuration, func(time.Time) tea.Msg {

@@ -45,9 +45,9 @@ func (m Model) renderCurrentView() string {
 	case ViewTalk:
     	return m.renderTalk()
     case ViewQuests:
-        return m.renderQuests()
+        return m.renderQuests(true, m.ui.MainViewport.Width)
     case ViewGroup:
-        return m.renderGroup()
+        return m.renderGroup(true)
     case ViewCombat:
         return m.renderCombat()
     default:

@@ -5,6 +5,7 @@ type Quest struct {
     ID          string `json:"id"`
     Name        string `json:"name"`
     Description string `json:"description"`
+    GiverNPCName string `json:"giver_npc_name,omitempty"`
     Status      string `json:"status"`
     Progress    string `json:"progress,omitempty"`
 }

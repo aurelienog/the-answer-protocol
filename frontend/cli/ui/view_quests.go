@@ -3,28 +3,39 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 
 	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
-func (m Model) renderQuests() string {
+func (m Model) renderQuests(detailed bool, availableWidth int) string {
+	title := layout.TitleStyle.Render(layout.IconQuest + " QUESTS")
+
 	if len(m.player.Quests) == 0 {
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			layout.TitleStyle.Render(layout.IconQuest+" QUESTS"),
+			title,
 			"",
-			layout.StatusStyle.Render("No quests discovered"),
+			layout.MutedStyle.Render("No quests discovered"),
 		)
 	}
 
 	sections := []string{
-		layout.TitleStyle.Render(layout.IconQuest+" QUESTS"),
+		title,
+		"",
 	}
 
-	for _, quest := range m.player.Quests {
-		sections = append(sections, renderQuest(quest))
+	for i, quest := range m.player.Quests {
+		if i > 0 {
+			sections = append(sections, "")
+		}
+
+		sections = append(
+			sections,
+			renderQuest(quest, detailed, availableWidth),
+		)
 	}
 
 	return lipgloss.JoinVertical(
@@ -33,26 +44,47 @@ func (m Model) renderQuests() string {
 	)
 }
 
-func renderQuest(quest Quest) string {
-    title := layout.TitleStyle.Render(quest.Name)
-    status := renderQuestStatus(quest.Status)
+func renderQuest(quest Quest, detailed bool, availableWidth int) string {
+	title := layout.TitleStyle.Render(quest.Name)
+	status := renderQuestStatus(quest.Status)
 
-    lines := []string{
-        title,
-        fmt.Sprintf("Status: %s", status),
-    }
+	lines := []string{
+		title,
+		fmt.Sprintf("%s %s", layout.MutedStyle.Render("Status:"), status),
+	}
 
-    if quest.Description != "" {
-        lines = append(lines, layout.StatusStyle.Render(quest.Description))
-    }
+	if detailed {
+		if quest.GiverNPCName != "" {
+			lines = append(
+				lines,
+				fmt.Sprintf("%s %s",
+					layout.MutedStyle.Render("Giver:"),
+					layout.InfoStyle.Render(quest.GiverNPCName),
+				),
+			)
+		}
+	}
 
-    if quest.Progress != "" {
-        lines = append(lines, layout.InfoStyle.Render("Progress: "+quest.Progress))
-    }
+	if quest.Description != "" {
+		description := quest.Description
 
-    lines = append(lines, "")
+		if detailed {
+			description = layout.WrapText(layout.MutedStyle.Render("Description: ")+description, availableWidth)
+		} else {
+			description = strings.SplitN(layout.MutedStyle.Render(description), "\n", 2)[0]
+		}
 
-    return lipgloss.JoinVertical(lipgloss.Left, lines...)
+		lines = append(lines, description)
+	}
+
+	if quest.Progress != "" {
+		lines = append(
+			lines,
+			layout.InfoStyle.Render("Progress: "+quest.Progress),
+		)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
 func renderQuestStatus(status string) string {
@@ -66,6 +98,6 @@ func renderQuestStatus(status string) string {
 	case "locked":
 		return layout.MutedStyle.Render(status)
 	default:
-		return layout.StatusStyle.Render(status)
+		return layout.MutedStyle.Render(status)
 	}
 }
