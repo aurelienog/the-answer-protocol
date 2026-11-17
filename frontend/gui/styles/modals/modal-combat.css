@@ -47,9 +47,9 @@
     /* 🔧 1. A Left-Wing Fighter — A Hero */
     --hero-combat-w: 350px;
     --hero-combat-h: 92px;
-    --hero-combat-avatar-size: 58px;
+    --hero-combat-avatar-size: 65px;
     --hero-combat-avatar-radius: 50%;
-    --hero-combat-avatar-left: 50px;
+    --hero-combat-avatar-left: 46px;
     --hero-combat-avatar-y: -5px;
     --hero-combat-name-left: 135px;
     --hero-combat-name-y: 24px;
@@ -65,7 +65,7 @@
     --enemy-combat-h: 92px;
     --enemy-combat-avatar-size: 65px;
     --enemy-combat-avatar-radius: 50%;
-    --enemy-combat-avatar-right: 45px;
+    --enemy-combat-avatar-right: 46px;
     --enemy-combat-avatar-y: -3px;
     --enemy-combat-name-right: 140px;
     --enemy-combat-name-y: 24px;
@@ -73,7 +73,7 @@
     --enemy-combat-hp-y: 48px;
     --enemy-combat-hp-w: 193px;
     --enemy-combat-hp-h: 16px;
-    --enemy-hp-text-x: 130px;
+    --enemy-hp-text-x: 125px;
     --enemy-hp-text-y: 0px;
 }
 
