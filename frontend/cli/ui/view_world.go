@@ -62,9 +62,9 @@ func (m Model) renderWorld() string {
 			lipgloss.JoinHorizontal(lipgloss.Top, nodes...),
 		)
 
-		if row < 4 {
-			rows = append(rows, renderWorldConnections(row))
-		}
+		// if row < 4 {
+		// 	rows = append(rows, renderWorldConnections(row))
+		// }
 	}
 
 	return lipgloss.JoinVertical(
