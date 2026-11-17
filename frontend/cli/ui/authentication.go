@@ -18,6 +18,8 @@ func (m Model) handleAuthenticationResult(
     m.player.Status.HP = 100
     m.player.Status.MaxHP = 100
     m.application.Current = StateGame
+    m.world.Room.Room.ID = "harbor_square"
+    m.world.Room.Room.Name = "Harbor Square"
     m.communication.StatusMessage = "Successfully connected"
 
     return m, tea.Batch(

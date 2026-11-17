@@ -170,17 +170,6 @@ func (m Model) renderView() string {
 	)
 }
 
-func (m Model) renderWorld() string {
-    title := layout.TitleStyle.Render("WORLD MAP")
-
-    return lipgloss.JoinVertical(
-        lipgloss.Left,
-        title,
-        "",
-        layout.StatusStyle.Render("World map will be displayed here"),
-    )
-}
-
 func (m Model) renderCombat() string {
 	return "Combat View"
 }

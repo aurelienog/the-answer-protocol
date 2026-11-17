@@ -14,6 +14,11 @@ type AvailableCommand struct {
 
 var availableCommands = []AvailableCommand{
     {
+        Name:        "MAP",
+        Usage:       "MAP",
+        Description: "Display the world map.",
+    },
+    {
         Name:        "LOOK",
         Usage:       "LOOK",
         Description: "Look around the current room.",
@@ -207,8 +212,9 @@ func (m Model) availableCommandsContent() string {
 		addCommand(availableCommands, name)
 	}
 
+    add("MAP")
     add("LOOK")
-
+    
 	if m.hasAvailableExits() && !m.world.InCombat {
 		add("MOVE")
 	}
@@ -234,7 +240,6 @@ func (m Model) availableCommandsContent() string {
 	add("WHO")
     add("STATUS")
 
-
 	// if m.hasGroup() {
 	// 	addCommand(groupCommands, "INVITATIONS")
 	// 	addCommand(groupCommands, "INFO")
@@ -243,8 +248,6 @@ func (m Model) availableCommandsContent() string {
 	// 	addCommand(groupCommands, "CREATE")
 	// 	addCommand(groupCommands, "JOIN")
 	// }
-
-
 
 	if !m.world.InCombat && m.hasHostileNPC() {
 		add("ATTACK")
@@ -255,14 +258,14 @@ func (m Model) availableCommandsContent() string {
 			commands = append(commands, command)
 		}
 	}
-
     add("QUIT")
+
 	usages := make([]string, 0, len(commands))
 
 	for _, command := range commands {
 		parts := strings.SplitN(command.Usage, " ", 2)
 
-		usage := layout.CommandUsageStyle.Render(parts[0])
+		usage := parts[0]
 
 		// if len(parts) == 2 {
 		// 	usage += " " + layout.CommandArgumentStyle.Render(parts[1])
