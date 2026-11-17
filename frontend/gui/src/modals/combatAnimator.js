@@ -22,8 +22,8 @@ const CombatAnimator = {
                 offsetY: 10,
                 states: {
                     idle: {
-                        frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-                        fps: 10,
+                        frames: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+                        fps: 14,
                         loop: true
                     },
                     attack: {
@@ -91,7 +91,7 @@ const CombatAnimator = {
                 scale: 1.2,
                 offsetY: 0,
                 states: {
-                    idle:   { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 10,  loop: true },
+                    idle:   { frames: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], fps: 12,  loop: true },
                     attack: { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 10, loop: false, impactDelayMs: 400, extraHoldMs: 200 },
                     defend: { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 10, loop: false, extraHoldMs: 200 },
                     heal:   { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 10, loop: false, extraHoldMs: 200 },
