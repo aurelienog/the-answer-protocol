@@ -42,70 +42,70 @@ const ASSETS = {
         "harbor_square": {
             icon:    "⚓",
             img:     "/assets/rooms/harbor_square.webp",
-            cardImg: "/assets/rooms/cards/harbor_square.jpeg",
+            cardImg: "/assets/rooms/cards/harbor_square.webp",
             iconImg: "/assets/rooms/icons/harbor_square.png",
             region:  "Harbor District · Kingdom of Arvendale"
         },
         "market_street": {
             icon:    "🎪",
             img:     "/assets/rooms/market_street.webp",
-            cardImg: "/assets/rooms/cards/market_street.jpeg",
+            cardImg: "/assets/rooms/cards/market_street.webp",
             iconImg: "/assets/rooms/icons/market_street.png",
             region:  "Trade Quarter · Kingdom of Arvendale"
         },
         "blacksmith_forge": {
             icon:    "⚒️",
             img:     "/assets/rooms/blacksmith_forge.webp",
-            cardImg: "/assets/rooms/cards/blacksmith_forge.jpeg",
+            cardImg: "/assets/rooms/cards/blacksmith_forge.webp",
             iconImg: "/assets/rooms/icons/blacksmith_forge.png",
             region:  "Artisan Quarter · Kingdom of Arvendale"
         },
         "apothecary": {
             icon:    "⚗️",
             img:     "/assets/rooms/apothecary.webp",
-            cardImg: "/assets/rooms/cards/apothecary.jpeg",
+            cardImg: "/assets/rooms/cards/apothecary.webp",
             iconImg: "/assets/rooms/icons/apothecary.png",
             region:  "Alchemist Alley · Kingdom of Arvendale"
         },
         "tavern": {
             icon:    "🍺",
             img:     "/assets/rooms/tavern.webp",
-            cardImg: "/assets/rooms/cards/tavern.jpeg",
+            cardImg: "/assets/rooms/cards/tavern.webp",
             iconImg: "/assets/rooms/icons/tavern.png",
             region:  "Harbor District · Kingdom of Arvendale"
         },
         "docks": {
             icon:    "⛵",
             img:     "/assets/rooms/docks.webp",
-            cardImg: "/assets/rooms/cards/docks.jpeg",
+            cardImg: "/assets/rooms/cards/docks.webp",
             iconImg: "/assets/rooms/icons/docks.png",
             region:  "The Great Pier · Kingdom of Arvendale"
         },
         "warehouse": {
             icon:    "📦",
             img:     "/assets/rooms/warehouse.webp",
-            cardImg: "/assets/rooms/cards/warehouse.jpeg",
+            cardImg: "/assets/rooms/cards/warehouse.webp",
             iconImg: "/assets/rooms/icons/warehouse.png",
             region:  "Outer Docks · Smuggler's Lair"
         },
         "town_gate": {
             icon:    "⛩️",
             img:     "/assets/rooms/town_gate.webp",
-            cardImg: "/assets/rooms/cards/town_gate.jpeg",
+            cardImg: "/assets/rooms/cards/town_gate.webp",
             iconImg: "/assets/rooms/icons/town_gate.png",
             region:  "Northern Fortifications"
         },
         "forest_edge": {
             icon:    "🌲",
             img:     "/assets/rooms/forest_edge.webp",
-            cardImg: "/assets/rooms/cards/forest_edge.jpeg",
+            cardImg: "/assets/rooms/cards/forest_edge.webp",
             iconImg: "/assets/rooms/icons/forest_edge.png",
             region:  "Whispering Woods"
         },
         "default": {
             icon:    "🏰",
             img:     "/assets/rooms/harbor_square.webp",
-            cardImg: "/assets/rooms/cards/harbor_square.jpeg",
+            cardImg: "/assets/rooms/cards/harbor_square.webp",
             iconImg: "/assets/rooms/icons/harbor_square.png",
             region:  "Kingdom of Arvendale"
         }

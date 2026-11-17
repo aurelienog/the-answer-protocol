@@ -47,7 +47,7 @@ const InventoryModal = {
 
     clearInspector() {
         GameState.selectedInventoryItem = null;
-        UI.setArt(document.getElementById('inv-item-icon'), '/assets/ui/card/look-items.jpeg', '🗡️');
+        UI.setArt(document.getElementById('inv-item-icon'), '/assets/ui/card/look-items.webp', '🗡️');
         document.getElementById('inv-item-name').textContent = 'Select an Item';
         document.getElementById('inv-stat-type').textContent = '-';
         document.getElementById('inv-stat-weight').textContent = '-';

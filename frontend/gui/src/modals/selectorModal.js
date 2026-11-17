@@ -121,14 +121,14 @@ const SelectorModal = {
 
         if (options.length === 0) {
             const emptyCards = {
-                move:   '/assets/ui/card/look-exits.jpeg',
-                take:   '/assets/ui/card/look-items.jpeg',
-                talk:   '/assets/ui/card/look-npcs.jpeg',
-                attack: '/assets/ui/card/look-npcs.jpeg'
+                move:   '/assets/ui/card/look-exits.webp',
+                take:   '/assets/ui/card/look-items.webp',
+                talk:   '/assets/ui/card/look-npcs.webp',
+                attack: '/assets/ui/card/look-npcs.webp'
             };
             const artEl = document.getElementById('sel-preview-art');
             artEl.classList.remove('tall');
-            UI.setArt(artEl, emptyCards[mode] || '/assets/ui/card/look-items.jpeg', '', 'No items available');
+            UI.setArt(artEl, emptyCards[mode] || '/assets/ui/card/look-items.webp', '', 'No items available');
 
             listEl.innerHTML = `<li class="select-card static-card"><span class="card-sub">Nothing available for ${mode.toUpperCase()} in this room.</span></li>`;
             document.getElementById('sel-preview-title').textContent = 'None Available';

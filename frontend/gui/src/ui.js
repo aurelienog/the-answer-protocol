@@ -203,7 +203,7 @@ const UI = {
     // A versatile helper: it displays an image (img or iconImg), or shows an emoji if none is available!
     setArt(el, imgUrl, fallbackEmoji = '', altText = 'Game illustration') {
         if (!el) return;
-        const src = imgUrl || '/assets/ui/card/look-items.jpeg';
+        const src = imgUrl || '/assets/ui/card/look-items.webp';
 
         if (el.tagName === 'IMG') {
             el.src = src;
