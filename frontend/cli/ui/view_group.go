@@ -21,15 +21,13 @@ func (m Model) renderGroup(detailed bool) string {
 		)
 	}
 
-	title := layout.TitleStyle.Render(layout.IconGroup + " GROUP " + group.Name)
+	title := layout.TitleStyle.Render(
+		layout.IconGroup + " GROUP " + group.Name,
+	)
 
 	sections := []string{
-		lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			title,
-		),
+		title,
 	}
-
 
 	if detailed {
 		sections = append(
@@ -38,11 +36,16 @@ func (m Model) renderGroup(detailed bool) string {
 			"",
 			layout.TitleStyle.Render("MEMBERS"),
 		)
-	}
-	if len(group.Members) == 0 {
+	} else {
 		sections = append(
 			sections,
 			"",
+		)
+	}
+
+	if len(group.Members) == 0 {
+		sections = append(
+			sections,
 			layout.MutedStyle.Render("No members"),
 		)
 	} else {
