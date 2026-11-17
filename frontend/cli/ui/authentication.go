@@ -15,12 +15,12 @@ func (m Model) handleAuthenticationResult(
     }
 
     m.player.Username = msg.username
+    m.player.Status.HP = 100
+    m.player.Status.MaxHP = 100
     m.application.Current = StateGame
     m.communication.StatusMessage = "Successfully connected"
 
     return m, tea.Batch(
-        sendCommand(m.client, "LOOK"),
-        sendCommand(m.client, "STATUS"),
         waitForServerEvent(m.client),
     )
 }

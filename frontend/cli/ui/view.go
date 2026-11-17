@@ -36,8 +36,14 @@ func (m Model) renderAuthentication() string {
 
 func (m Model) renderCurrentView() string {
     switch m.navigation.CurrentView {
-    case ViewWorld, ViewRoom:
+	case ViewWorld:
         return m.renderWorld()
+    case ViewRoom:
+        return renderRoom(
+			m.world.Room,
+			m.ui.MainViewport.Width,
+			m.ui.MainViewport.Height,
+		)
     case ViewInventory:
         return m.renderInventory()
     case ViewCharacter:
@@ -165,11 +171,14 @@ func (m Model) renderView() string {
 }
 
 func (m Model) renderWorld() string {
-	return renderRoom(
-		m.world.Room,
-		m.ui.MainViewport.Width,
-		m.ui.MainViewport.Height,
-	)
+    title := layout.TitleStyle.Render("WORLD MAP")
+
+    return lipgloss.JoinVertical(
+        lipgloss.Left,
+        title,
+        "",
+        layout.StatusStyle.Render("World map will be displayed here"),
+    )
 }
 
 func (m Model) renderCombat() string {

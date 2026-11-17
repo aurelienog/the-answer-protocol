@@ -92,7 +92,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		command := strings.TrimSpace(m.ui.Input)
 		m.ui.Input = ""
 
-		if strings.EqualFold(command, "BACK") {
+		if strings.EqualFold(command, "MAP") {
 			m.communication.StatusMessage = "Returning to world view..."
 			return m, m.startViewTransition(ViewWorld)
 		}
