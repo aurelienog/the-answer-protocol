@@ -247,13 +247,17 @@ func (dispatcher *NotificationDispatcher) handleParticipantDied(
 func (dispatcher *NotificationDispatcher) handleCombatStarted(
 	event world.CombatStarted,
 ) {
-	participants := strings.Join(event.Participants, ",")
+	participantsJSON, err := json.Marshal(event.Participants)
+	if err != nil {
+		log.Printf("Failed to serialize combat participants: %v", err)
+		return
+	}
 
 	notification := protocol.EVT(
 		"COMBAT",
 		"STARTED combat="+event.CombatID+
 			" room="+event.RoomID+
-			" participants="+participants,
+			" participants="+string(participantsJSON),
 	)
 
 	dispatcher.notifyPlayers(
@@ -262,6 +266,7 @@ func (dispatcher *NotificationDispatcher) handleCombatStarted(
 		notification,
 	)
 }
+
 
 func (dispatcher *NotificationDispatcher) handleCombatAttack(
 	event world.CombatAttack,

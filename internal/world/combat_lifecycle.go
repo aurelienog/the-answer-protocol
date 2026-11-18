@@ -199,17 +199,26 @@ func (w *World) StartCombat(
 
 	w.combats[combatID] = combat
 
+	
 	event := &CombatStarted{
 		CombatID:     combat.ID,
 		RoomID:       combat.RoomID,
-		Participants: make([]string, 0),
+		Participants: make([]CombatParticipantInfo, 0, len(combat.Participants)),
 		Recipients:   w.getCombatRecipientsLocked(combat),
 	}
 
 	for _, participant := range combat.Participants {
-		if participant.IsPlayer {
-			event.Participants = append(event.Participants, participant.ID)
-		}
+		event.Participants = append(
+			event.Participants,
+			CombatParticipantInfo{
+				ID:       participant.ID,
+				Name:     participant.Name,
+				IsPlayer: participant.IsPlayer,
+				HP:       participant.Stats.HP,
+				MaxHP:    participant.Stats.MaxHP,
+				Alive:    participant.Alive,
+			},
+		)
 	}
 
 	return cloneCombat(combat), event, nil

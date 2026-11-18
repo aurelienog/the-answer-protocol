@@ -82,10 +82,20 @@ type ChatMessage struct {
 
 // CombatStarted represents the beginning of a combat.
 type CombatStarted struct {
-	CombatID     string
-	RoomID       string
-	Participants []string
-	Recipients   []string
+	CombatID     string                  `json:"combat_id"`
+	RoomID       string                  `json:"room_id"`
+	Participants []CombatParticipantInfo `json:"participants"`
+	Recipients   []string                `json:"-"`
+}
+
+// CombatParticipantInfo contains the initial state of a combat participant.
+type CombatParticipantInfo struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	IsPlayer bool   `json:"is_player"`
+	HP       int    `json:"hp"`
+	MaxHP    int    `json:"max_hp"`
+	Alive    bool   `json:"alive"`
 }
 
 // CombatAttack represents an attack performed during combat.
