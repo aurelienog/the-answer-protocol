@@ -116,7 +116,7 @@ const UI = {
             if (cmdBtn) {
                 const cmd = cmdBtn.dataset.cmd || '';
                 if (GameState.inCombat && cmd.toUpperCase().startsWith('MOVE ')) {
-                    UI.addChatLine('ROOM', '⚔️ In Combat', 'You cannot leave the room during combat! Use "🏃 Flee" to retreat.', 'chat-err');
+                    UI.addChatLine('COMBAT', '⚔️ In Combat', 'You cannot leave the room during combat! Use "🏃 Flee" to retreat.', 'chat-err');
                     return;
                 }
                 App.sendCommand(cmd);

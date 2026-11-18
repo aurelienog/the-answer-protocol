@@ -99,6 +99,7 @@ const App = {
                 ROOM: [],
                 GLOBAL: [],
                 GROUP: [],
+                COMBAT: [],
                 LOG: []
             };
             UI.updateHUDStats();
@@ -157,7 +158,7 @@ const App = {
 
         const upper = cmd.toUpperCase();
         if (GameState.inCombat && upper.startsWith('MOVE ')) {
-            UI.addChatLine('ROOM', '⚔️ In Combat', 'You cannot leave the room during combat! Use "🏃 Flee" to retreat.', 'chat-err');
+            UI.addChatLine('COMBAT', '⚔️ In Combat', 'You cannot leave the room during combat! Use "🏃 Flee" to retreat.', 'chat-err');
             return;
         }
 
@@ -200,7 +201,7 @@ const App = {
             return;
         }
 
-        const scope = GameState.activeChatScope;
+        const scope = GameState.activeChatScope === 'COMBAT' ? 'ROOM' : GameState.activeChatScope;
         this.sendCommand(`CHAT ${scope} ${text}`);
     },
 
@@ -277,7 +278,12 @@ const App = {
             }
 
             const [title, friendlyMsg] = this.formatFriendlyError(raw, failedVerb);
-            UI.addChatLine('ROOM', title, friendlyMsg, 'chat-err');
+            const isCombatErr = GameState.inCombat ||
+                raw.includes('COMBAT') ||
+                raw.includes('NOT_YOUR_TURN') ||
+                raw.includes('NPC_NOT_HOSTILE') ||
+                raw.includes('NPC_RESPAWNING');
+            UI.addChatLine(isCombatErr ? 'COMBAT' : 'ROOM', title, friendlyMsg, 'chat-err');
             return;
         }
 
@@ -347,14 +353,14 @@ const App = {
                 GameState.hp = Math.min(GameState.maxHp, GameState.hp + healed);
                 UI.updateHUDStats();
             }
-            UI.addChatLine('ROOM', '🧪 Used Item', `Used ${meta.name} (+${healed} HP)!`, 'chat-sys');
+            UI.addChatLine(GameState.inCombat ? 'COMBAT' : 'ROOM', '🧪 Used Item', `Used ${meta.name} (+${healed} HP)!`, 'chat-sys');
             this.sendCommand('INVENTORY');
             return;
         }
         if (payload.startsWith('defended=')) {
             const redMatch = payload.match(/(?:reduction|defense_bonus)=(\d+)/);
             const pct = parseInt(redMatch ? redMatch[1] : '50', 10);
-            UI.addChatLine('ROOM', '🛡️ Defend', `Defensive stance active (+${pct}% defense on next hit).`, 'chat-sys');
+            UI.addChatLine('COMBAT', '🛡️ Defend', `Defensive stance active (+${pct}% defense on next hit).`, 'chat-sys');
             return;
         }
         if (payload.startsWith('fled=')) {
@@ -365,12 +371,12 @@ const App = {
             GameState.activeHelpPlayer = null;
             UI.updateHUDStats();
             CombatModal.close();
-            UI.addChatLine('ROOM', '🏃 Retreated', `You fled from combat (took ${dmgMatch ? dmgMatch[1] : 0} escape penalty damage).`, 'chat-err');
+            UI.addChatLine('COMBAT', '🏃 Retreated', `You fled from combat (took ${dmgMatch ? dmgMatch[1] : 0} escape penalty damage).`, 'chat-err');
             this.sendCommand('LOOK');
             return;
         }
         if (payload.startsWith('help_requested=')) {
-            UI.addChatLine('ROOM', '📯 Call for Help', 'Your call for help echoed through the room!', 'chat-sys');
+            UI.addChatLine('COMBAT', '📯 Call for Help', 'Your call for help echoed through the room!', 'chat-sys');
             return;
         }
         if (payload.startsWith('joined=')) {
@@ -384,7 +390,7 @@ const App = {
             CombatModal.setInitialParticipants([caller]);
             CombatModal.addJoinedParticipant(GameState.playerName);
             CombatModal.queueTurnBanner(caller, undefined);
-            UI.addChatLine('ROOM', '⚔️ Joined Battle', `You joined the battle against ${CombatModal.enemyName}! You will act on the next round!`, 'chat-sys');
+            UI.addChatLine('COMBAT', '⚔️ Joined Battle', `You joined the battle against ${CombatModal.enemyName}! You will act on the next round!`, 'chat-sys');
             UI.renderRoom();
             return;
         }
@@ -528,7 +534,7 @@ const App = {
                         this.sendCommand(`CHAT GROUP [COMBAT_ID:${data.combat_id}]`);
                     }
                     CombatModal.open(CombatModal.enemyId || 'dire_wolf', data.attacker_hp, data.target_hp);
-                    UI.addChatLine('ROOM', '⚔️ Combat', `Battle started against ${CombatModal.enemyName}!`, 'chat-sys');
+                    UI.addChatLine('COMBAT', '⚔️ Combat', `Battle started against ${CombatModal.enemyName}!`, 'chat-sys');
                     return;
                 }
 
@@ -664,13 +670,13 @@ const App = {
                         ? 'YOUR STRIKE'
                         : `${attackerName.toUpperCase()} STRIKES`;
                     CombatModal.playHitEffect('enemy_hit', dmg, remHp, banner, '', attackerName);
-                    UI.addChatLine('ROOM', '🗡️ Strike', `${attackerName} hits ${targetName} for ${dmg} damage! (Enemy HP: ${remHp})`, 'chat-sys');
+                    UI.addChatLine('COMBAT', '🗡️ Strike', `${attackerName} hits ${targetName} for ${dmg} damage! (Enemy HP: ${remHp})`, 'chat-sys');
                 } else if (targetIsMe) {
                     CombatModal.playHitEffect('me_hit', dmg, remHp);
-                    UI.addChatLine('ROOM', '🛡️ Enemy Strike', `${attackerName} attacks you for ${dmg} damage! (HP: ${remHp})`, 'chat-err');
+                    UI.addChatLine('COMBAT', '⚔️ Enemy Strike', `${attackerName} attacks you for ${dmg} damage! (HP: ${remHp})`, 'chat-err');
                 } else {
                     CombatModal.playHitEffect('ally_hit', dmg, undefined, '', targetName);
-                    UI.addChatLine('ROOM', '🛡️ Ally Hit', `${attackerName} strikes ${targetName} for ${dmg} damage! (${targetName} HP: ${remHp})`, 'chat-err');
+                    UI.addChatLine('COMBAT', '🗡️ Ally Hit', `${attackerName} strikes ${targetName} for ${dmg} damage! (${targetName} HP: ${remHp})`, 'chat-err');
                 }
                 return;
             }
@@ -685,7 +691,7 @@ const App = {
                     GameState.activeHelpPlayer = caller;
                     UI.renderRoom();
                 }
-                UI.addChatLine('ROOM', '📯 Call for Arms!', `${caller} is requesting help in combat! Click "⚔️ Aid" in the player list or attack the enemy to join!`, 'chat-err');
+                UI.addChatLine('COMBAT', '📯 Call for Arms!', `${caller} is requesting help in combat! Click "⚔️ Aid" in the player list or attack the enemy to join!`, 'chat-err');
                 return;
             }
 
@@ -695,20 +701,20 @@ const App = {
                 if (ally) {
                     CombatModal.addJoinedParticipant(ally);
                 }
-                UI.addChatLine('ROOM', '🛡️ Ally Joined!', `${ally || 'An ally'} has joined the battle!`, 'chat-sys');
+                UI.addChatLine('COMBAT', '🛡️ Ally Joined!', `${ally || 'An ally'} has joined the battle!`, 'chat-sys');
                 return;
             }
 
             if (sub === 'PLAYER_FLED') {
                 const pMatch = rest.match(/player=([^\s]+)/);
                 const runner = pMatch ? pMatch[1] : 'A player';
-                UI.addChatLine('ROOM', '🏃 Ally Fled', `${runner} fled from the battle!`, 'chat-err');
+                UI.addChatLine('COMBAT', '🏃 Ally Fled', `${runner} fled from the battle!`, 'chat-err');
                 CombatModal.handleAllyFled(runner);
                 return;
             }
 
             if (sub === 'NPC_DIED') {
-                UI.addChatLine('ROOM', '🏆 Victory!', `${CombatModal.enemyName} defeated! Rewards added to your bag!`, 'chat-sys');
+                UI.addChatLine('COMBAT', '🏆 Victory!', `${CombatModal.enemyName} defeated! Rewards added to your bag!`, 'chat-sys');
                 if (GameState.inCombat) {
                     CombatModal.showOutcome(true, `${CombatModal.enemyName} defeated! Rewards claimed!`);
                 }
@@ -723,9 +729,9 @@ const App = {
                 const diedIsMe = (fallenName.toLowerCase() === GameState.playerName.toLowerCase());
 
                 if (diedIsMe) {
-                    UI.addChatLine('ROOM', '💀 Fallen', 'You fell in battle!', 'chat-err');
+                    UI.addChatLine('COMBAT', '💀 Fallen', 'You fell in battle!', 'chat-err');
                 } else {
-                    UI.addChatLine('ROOM', '💀 Ally Fallen', `${fallenName || 'Your ally'} has fallen in battle!`, 'chat-err');
+                    UI.addChatLine('COMBAT', '💀 Ally Fallen', `${fallenName || 'Your ally'} has fallen in battle!`, 'chat-err');
                 }
 
                 CombatModal.handlePlayerDeath(diedIsMe, fallenName);

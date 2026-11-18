@@ -37,6 +37,7 @@ const GameState = {
         ROOM: [],
         GLOBAL: [],
         GROUP: [],
+        COMBAT: [],
         LOG: []
     },
 

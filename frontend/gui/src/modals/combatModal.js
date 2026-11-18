@@ -171,7 +171,7 @@ const CombatModal = {
                 const healOrder = ['item.healing_potion', 'item.wine', 'item.bread'];
                 const itemToUse = healOrder.find(id => GameState.inventory.includes(id));
                 if (!itemToUse) {
-                    UI.addChatLine('ROOM', '🧪 No Consumables', 'You have no Healing Elixir, Wine, or Bread in your bag!', 'chat-err');
+                    UI.addChatLine('COMBAT', '🧪 No Consumables', 'You have no Healing Elixir, Wine, or Bread in your bag!', 'chat-err');
                     return;
                 }
                 App.sendCommand(`COMBAT USE ${itemToUse}`);

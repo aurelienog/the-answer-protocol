@@ -8,7 +8,8 @@ const ChatView = {
         document.querySelectorAll('.chat-panel .chat-tab').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.chatScope === scope);
         });
-        document.getElementById('chat-scope-badge').textContent = `[${scope}]`;
+        const badgeScope = scope === 'COMBAT' ? 'ROOM' : scope;
+        document.getElementById('chat-scope-badge').textContent = `[${badgeScope}]`;
         this.renderChatMessages();
     },
 
