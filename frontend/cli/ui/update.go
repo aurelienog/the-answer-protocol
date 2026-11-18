@@ -91,6 +91,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		command := strings.TrimSpace(m.ui.Input)
 		m.ui.Input = ""
+		m.ui.InputOffset = 0
 
 		if strings.EqualFold(command, "MAP") {
 			m.communication.StatusMessage = "Returning to world view..."

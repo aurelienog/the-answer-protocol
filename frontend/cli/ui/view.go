@@ -237,11 +237,59 @@ func (m Model) renderAvailableCommands(width int) string {
 }
 
 func (m Model) inputText() string {
-	input := "> " + m.ui.Input
+    prefix := "> "
+    availableWidth := m.ui.Width - 4
 
-	if m.ui.CursorVisible {
-		input += "█"
-	}
+    if availableWidth < 1 {
+        availableWidth = 1
+    }
 
-	return input
+    input := strings.ReplaceAll(m.ui.Input, "\n", " ")
+    input = strings.ReplaceAll(input, "\r", "")
+
+    runes := []rune(input)
+    maxWidth := availableWidth - lipgloss.Width(prefix)
+
+    if m.ui.CursorVisible {
+        maxWidth--
+    }
+
+    if maxWidth < 1 {
+        maxWidth = 1
+    }
+
+    offset := m.ui.InputOffset
+
+    if offset < 0 {
+        offset = 0
+    }
+
+    if offset > len(runes) {
+        offset = len(runes)
+    }
+
+    cursor := len(runes)
+
+    if cursor-offset >= maxWidth {
+        offset = cursor - maxWidth + 1
+    }
+
+    if cursor < offset {
+        offset = cursor
+    }
+
+    end := offset + maxWidth
+    if end > len(runes) {
+        end = len(runes)
+    }
+
+    visibleInput := string(runes[offset:end])
+
+    result := prefix + visibleInput
+
+    if m.ui.CursorVisible {
+        result += "█"
+    }
+
+    return result
 }

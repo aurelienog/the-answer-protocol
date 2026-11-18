@@ -106,6 +106,8 @@ type CommunicationState struct {
 
 type InterfaceState struct {
     Input  string
+    InputOffset int
+
     Width  int
     Height int
 
