@@ -59,14 +59,14 @@ type NPCSummary struct {
 }
 
 type CombatParticipantState struct {
-    ID        string
-    Name      string
-    IsPlayer  bool
-    HP        int
-    MaxHP     int
-    Alive     bool
-    Connected bool
-    Escaped   bool
+    ID        string `json:"id"`
+    Name      string `json:"name"`
+    IsPlayer  bool   `json:"is_player"`
+    HP        int    `json:"hp"`
+    MaxHP     int    `json:"max_hp"`
+    Alive     bool   `json:"alive"`
+    Connected bool   `json:"-"`
+    Escaped   bool   `json:"-"`
 }
 
 type CombatState struct {

@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "strings"
     "strconv"
+    "fmt"
 
     tea "github.com/charmbracelet/bubbletea"
     "the-answer-protocol/internal/protocol"
@@ -88,67 +89,23 @@ func parseChatMessage(scope, data string) (ChatMessage, bool) {
 }
 
 func (m *Model) handleCombatEvent(data string) {
+    if strings.HasPrefix(data, "STARTED ") {
+        m.handleCombatStartedEvent(strings.TrimPrefix(data, "STARTED "))
+        return
+    }
+
     parts := strings.Fields(data)
     if len(parts) == 0 {
         return
     }
 
+    fields := parseCombatFields(parts[1:])
+
     switch parts[0] {
-    case "STARTED":
-        fields := parseCombatFields(parts[1:])
-
-        combatID := fields["combat"]
-        participants := strings.Split(fields["participants"], ",")
-
-        if combatID == "" {
-            return
-        }
-
-        isParticipant := false
-
-        for _, name := range participants {
-            if name == m.player.Username {
-                isParticipant = true
-                break
-            }
-        }
-
-        if !isParticipant {
-            return
-        }
-
-        combat := CombatState{
-            ID:     combatID,
-            Active: true,
-            Round:  1,
-        }
-
-        for _, name := range participants {
-            if name == "" {
-                continue
-            }
-
-            combat.Participants = append(
-                combat.Participants,
-                CombatParticipantState{
-                    ID:        name,
-                    Name:      name,
-                    IsPlayer:  true,
-                    Alive:     true,
-                    Connected: true,
-                },
-            )
-        }
-
-        m.world.Combat = combat
-        m.appendCombatLog("Combat started.")
-
     case "TURN":
         if !m.world.Combat.Active {
             return
         }
-
-        fields := parseCombatFields(parts[1:])
 
         m.world.Combat.CurrentTurn = fields["participant"]
 
@@ -160,9 +117,7 @@ func (m *Model) handleCombatEvent(data string) {
             m.world.Combat.AvailableActions = actions
         }
 
-        m.appendCombatLog(
-            "Turn: " + m.world.Combat.CurrentTurn,
-        )
+        m.appendCombatLog("Turn: " + m.world.Combat.CurrentTurn)
 
     case "ATTACK":
         if !m.world.Combat.Active {
@@ -196,8 +151,23 @@ func (m *Model) handleCombatEvent(data string) {
 
         amount, _ := strconv.Atoi(fields["amount"])
         remainingHP, _ := strconv.Atoi(fields["remaining_hp"])
+        m.appendEventLog(
+            fmt.Sprintf(
+                "DEBUG DAMAGE: target=%s remainingHP=%d",
+                target,
+                remainingHP,
+            ),
+        )
+        targetIsPlayer := false
 
-        participant := m.ensureCombatParticipant(target, false)
+        for _, existing := range m.world.Combat.Participants {
+            if existing.ID == target || existing.Name == target {
+                targetIsPlayer = existing.IsPlayer
+                break
+            }
+        }
+
+        participant := m.ensureCombatParticipant(target, targetIsPlayer)
 
         if participant != nil {
             participant.HP = remainingHP
@@ -347,14 +317,20 @@ func (m *Model) handleGroupEvent(data string) tea.Cmd {
 
 func parseCombatFields(parts []string) map[string]string {
     fields := make(map[string]string)
+    currentKey := ""
 
     for _, part := range parts {
         key, value, ok := strings.Cut(part, "=")
-        if !ok {
+
+        if ok {
+            currentKey = key
+            fields[currentKey] = value
             continue
         }
 
-        fields[key] = value
+        if currentKey != "" {
+            fields[currentKey] += " " + part
+        }
     }
 
     return fields
@@ -371,7 +347,7 @@ func (m *Model) ensureCombatParticipant(
     for i := range m.world.Combat.Participants {
         participant := &m.world.Combat.Participants[i]
 
-        if participant.ID == name {
+        if participant.ID == name || participant.Name == name {
             return participant
         }
     }
@@ -400,5 +376,54 @@ func (m *Model) appendCombatLog(message string) {
         m.world.Combat.Log = m.world.Combat.Log[
             len(m.world.Combat.Log)-maxEventLogEntries:
         ]
+    }
+}
+
+func (m *Model) handleCombatStartedEvent(data string) {
+    header, participantsJSON, ok := strings.Cut(data, " participants=")
+    if !ok {
+        return
+    }
+
+    fields := parseCombatFields(strings.Fields(header))
+    combatID := fields["combat"]
+
+    if combatID == "" {
+        return
+    }
+
+    var participants []CombatParticipantState
+
+    if err := json.Unmarshal([]byte(participantsJSON), &participants); err != nil {
+        m.appendEventLog("Unable to read combat participants.")
+        return
+    }
+
+    isParticipant := false
+
+    for i := range participants {
+        participant := &participants[i]
+
+        if participant.IsPlayer {
+            participant.Connected = true
+
+            if participant.ID == m.player.Username ||
+                participant.Name == m.player.Username {
+                isParticipant = true
+            }
+        }
+    }
+
+    // Ignore combat events if the local player is not a participant.
+    if !isParticipant {
+        return
+    }
+
+    m.world.Combat = CombatState{
+        ID:           combatID,
+        Active:       true,
+        Round:        1,
+        Participants: participants,
+        Log:          []string{"Combat started."},
     }
 }
