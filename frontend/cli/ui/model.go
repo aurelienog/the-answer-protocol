@@ -1,4 +1,3 @@
-
 package ui
 
 import (
@@ -92,8 +91,7 @@ type WorldState struct {
     Room         LookResponse
     Group        Group
     Conversation *NPCConversation
-    InCombat     bool
-    CombatID     string
+    Combat        CombatState
     OnlinePlayers   int
 }
 

@@ -112,11 +112,6 @@ var groupCommands = []AvailableCommand{
         Description: "Invite a player to your group.",
     },
     {
-        Name:        "INVITATIONS",
-        Usage:       "GROUP INVITATIONS",
-        Description: "Display your pending group invitations.",
-    },
-    {
         Name:        "JOIN",
         Usage:       "GROUP JOIN <name>",
         Description: "Join a group.",
@@ -215,22 +210,22 @@ func (m Model) availableCommandsContent() string {
     add("MAP")
     add("LOOK")
     
-	if m.hasAvailableExits() && !m.world.InCombat {
+	if m.hasAvailableExits() && !m.world.Combat.Active {
 		add("MOVE")
 	}
 
-	if m.hasFriendlyNPC() && !m.world.InCombat {
+	if m.hasFriendlyNPC() && !m.world.Combat.Active {
 		add("TALK")
         // add("QUEST") if hasquest...
 	}
 
     add("INVENTORY")
 
-	if m.hasRoomItems() && !m.world.InCombat {
+	if m.hasRoomItems() && !m.world.Combat.Active {
 		add("TAKE")
 	}
 
-    if m.hasDroppableItems() && !m.world.InCombat {
+    if m.hasDroppableItems() && !m.world.Combat.Active {
         add("DROP")
     }
     
@@ -249,11 +244,11 @@ func (m Model) availableCommandsContent() string {
 	// 	addCommand(groupCommands, "JOIN")
 	// }
 
-	if !m.world.InCombat && m.hasHostileNPC() {
+	if !m.world.Combat.Active && m.hasHostileNPC() {
 		add("ATTACK")
 	}
 
-	if m.world.InCombat {
+	if m.world.Combat.Active {
 		for _, command := range combatCommands {
 			commands = append(commands, command)
 		}
@@ -267,6 +262,9 @@ func (m Model) availableCommandsContent() string {
 
 		usage := parts[0]
 
+        if strings.HasPrefix(command.Usage, "COMBAT ") {
+            usage = command.Usage
+        }
 		// if len(parts) == 2 {
 		// 	usage += " " + layout.CommandArgumentStyle.Render(parts[1])
 		// }

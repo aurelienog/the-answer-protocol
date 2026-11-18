@@ -57,3 +57,24 @@ type NPCSummary struct {
     Role    string `json:"role"`
     Hostile bool   `json:"hostile"`
 }
+
+type CombatParticipantState struct {
+    ID        string
+    Name      string
+    IsPlayer  bool
+    HP        int
+    MaxHP     int
+    Alive     bool
+    Connected bool
+    Escaped   bool
+}
+
+type CombatState struct {
+    ID               string
+    Active           bool
+    Round            int
+    Participants     []CombatParticipantState
+    CurrentTurn      string
+    AvailableActions int
+    Log              []string
+}

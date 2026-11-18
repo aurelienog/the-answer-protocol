@@ -170,10 +170,6 @@ func (m Model) renderView() string {
 	)
 }
 
-func (m Model) renderCombat() string {
-	return "Combat View"
-}
-
 func (m Model) renderEventLog(width, height int) string {
 	return renderRecentPanel(
 		layout.TitleStyle.Render("EVENT LOG"),

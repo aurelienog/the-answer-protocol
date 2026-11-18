@@ -255,7 +255,6 @@ func (m *Model) refreshViewports() {
 
 	case ViewTalk:
     	content = m.renderTalk()
-
 	default:
 		content = "Unknown view"
 	}
