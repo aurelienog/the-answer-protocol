@@ -7,6 +7,19 @@
     white-space: nowrap;
 }
 
+/* Prevent bottom panels from overflowing past the right edge of narrow windows */
+.chat-panel,
+.players-panel {
+    min-width: 0;
+}
+.chat-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.dock-window-controls {
+    flex-shrink: 0;
+}
+
 /* Fix mobile browser address bar cutting off bottom dock (dvh = dynamic viewport height) */
 body,
 #login-screen,
@@ -260,6 +273,41 @@ body,
         min-width: 105px;
         padding: 8px 12px !important;
         font-size: 14px !important;
+    }
+}
+
+/* Narrow desktop / split-screen range (768px - 960px): fit all 3 bottom panels cleanly */
+@media (max-width: 960px) and (min-width: 768px) {
+    .bottom-dock {
+        gap: 5px;
+    }
+    .compass-dock {
+        width: 148px;
+    }
+    .compass-rose-wrap {
+        transform: scale(0.6);
+        transform-origin: center center;
+    }
+    .chat-panel,
+    .players-panel {
+        padding: 10px 14px 12px 14px;
+    }
+    .chat-tabs {
+        gap: 3px;
+        padding: 3px 4px;
+    }
+    .chat-tab {
+        font-size: 11px !important;
+        padding: 3px 6px !important;
+    }
+    .dock-ctrl-btn {
+        width: 22px;
+        height: 21px;
+        font-size: 11px;
+    }
+    .sound-btn-ico {
+        width: 13px;
+        height: 13px;
     }
 }
 
@@ -554,13 +602,15 @@ body,
         transform-origin: top right;
     }
 
-    /* Compact 1-row action bar below Top HUD */
+    /* Compact 1-row action bar centered below Top HUD */
     .right-action-bar {
         top: 52px;
         bottom: auto;
         left: 50%;
         right: auto;
-        width: auto;
+        transform: translateX(-50%);
+        width: fit-content;
+        max-width: calc(100vw - 24px);
         height: 48px;
         max-height: none;
         padding: 3px 16px;
@@ -602,7 +652,7 @@ body,
         gap: 6px;
     }
     .action-btn {
-        flex: 1 0 62px;
+        flex: 0 0 62px;
         height: 38px;
     }
     .right-action-bar .cmd-icon-img {
