@@ -27,14 +27,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case serverEventMsg:
 		model, cmd := m.handleServerEvent(msg)
 
-		if updated, ok := model.(Model); ok {
-			m = updated
+		updated, ok := model.(Model)
+		if !ok {
+			return model, cmd
+		}
 
-			if m.navigation.CurrentView == ViewCombat {
-				if m.syncCombatHealthBars() {
-					cmd = tea.Batch(cmd, healthBarTick())
-				}
-			}
+		m = updated
+
+		if m.syncCombatHealthBars() {
+			cmd = tea.Batch(cmd, healthBarTick())
 		}
 
 		return refreshResult(m, cmd)
@@ -54,10 +55,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case healthBarTickMsg:
 		animating := false
 
-		for _, bar := range m.ui.healthBars {
+		for id, bar := range m.ui.healthBars {
 			if bar.Tick() {
 				animating = true
 			}
+
+			// Persistimos el estado actualizado.
+			m.ui.healthBars[id] = bar
 		}
 
 		if animating {

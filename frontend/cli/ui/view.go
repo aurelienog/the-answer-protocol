@@ -71,9 +71,9 @@ func (m Model) renderView() string {
 	// All content panels share the same outer width.
 	contentWidth := result.MainView.Width + result.Sidebar.Width
 
-	header := layout.RenderHeader(
+	header := layout.RenderHeaderWithHealth(
 		m.player.Username,
-		m.player.Status.HP,
+		m.playerHealthAnimation(),
 		m.player.Status.MaxHP,
 		contentWidth,
 	)

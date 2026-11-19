@@ -120,7 +120,7 @@ type InterfaceState struct {
     TransitionPhase   TransitionPhase
     PendingView       View
 
-    healthBars        map[string]*animations.HealthBarAnimation
+    healthBars        map[string]animations.HealthBarAnimation
 
 }
 
@@ -173,4 +173,14 @@ func healthBarTick() tea.Cmd {
 	return tea.Tick(33*time.Millisecond, func(t time.Time) tea.Msg {
 		return healthBarTickMsg(t)
 	})
+}
+
+func (m Model) playerHealthAnimation() float64 {
+    bar, exists := m.ui.healthBars[m.player.Username]
+
+    if exists && bar.Initialized {
+        return bar.Current
+    }
+
+    return float64(m.player.Status.HP)
 }

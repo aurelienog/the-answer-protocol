@@ -1,26 +1,51 @@
 package layout
 
 import (
-	"github.com/charmbracelet/lipgloss"
+    "github.com/charmbracelet/lipgloss"
 )
 
 func RenderHeader(
-	username string,
-	hp, maxHP, width int,
-    ) string {
-	content := HeaderContent(username, hp, maxHP)
+    username string,
+    hp, maxHP, width int,
+) string {
+    return RenderHeaderWithHealth(
+        username,
+        float64(hp),
+        maxHP,
+        width,
+    )
+}
 
-	panelWidth := maxInt(0, width-PanelBorderWidth)
+func RenderHeaderWithHealth(
+    username string,
+    hp float64,
+    maxHP, width int,
+) string {
+    content := HeaderContentWithHealth(username, hp, maxHP)
 
-	return PanelStyle.
-		Width(panelWidth).
-		Render(content)
+    panelWidth := maxInt(0, width-PanelBorderWidth)
+
+    return PanelStyle.
+        Width(panelWidth).
+        Render(content)
 }
 
 func HeaderContent(playerName string, hp, maxHP int) string {
+    return HeaderContentWithHealth(
+        playerName,
+        float64(hp),
+        maxHP,
+    )
+}
+
+func HeaderContentWithHealth(
+    playerName string,
+    hp float64,
+    maxHP int,
+) string {
     title := TitleStyle.Render("THE ANSWER PROTOCOL")
     player := "Player: " + playerName
-    health := "HP  " + RenderHealthBar(hp, maxHP, 20)
+    health := "HP  " + RenderAnimatedHealthBar(hp, maxHP, 20)
 
     return lipgloss.JoinVertical(
         lipgloss.Left,
