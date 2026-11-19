@@ -1,11 +1,12 @@
 /* ==========================================================================
-   LAYOUT: FLOATING RIGHT ACTION BAR (Scrollable inside top/bottom arches!)
+   LAYOUT: FLOATING RIGHT ACTION BAR (Fixed button proportions + smart scroll)
    ========================================================================== */
 
 .right-action-bar {
     position: absolute !important;
-    top: 90px;
-    bottom: 230px;
+    top: 100px;
+    bottom: auto;
+    max-height: calc(100vh - 320px);
     right: 14px;
     width: 98px;
     min-height: 0;
@@ -20,7 +21,7 @@
 }
 
 .right-menu-scroll {
-    flex: 1;
+    flex: 0 1 auto;
     width: 100%;
     min-height: 0;
     display: flex;
@@ -35,10 +36,12 @@
 
 .right-menu-scroll::-webkit-scrollbar {
     width: 4px;
+    height: 4px;
 }
 
 .action-btn {
-    flex: 1 0 46px;
+    flex: 1 0 50px;
+    height: 50px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -53,6 +56,6 @@
 }
 
 .act-label {
-    font-size: 10.5px;
+    font-size: 10px;
     letter-spacing: 0.6px;
 }

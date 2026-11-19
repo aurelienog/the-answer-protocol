@@ -1,0 +1,755 @@
+/* ==========================================================================
+   LAYOUT: RESPONSIVE WEB DESIGN (2K, Split-Screen 3-4 Players, Mobile)
+   ========================================================================== */
+
+/* Keep tabs and modal footers clean across any zoom level */
+.chat-tab {
+    white-space: nowrap;
+}
+
+/* Fix mobile browser address bar cutting off bottom dock (dvh = dynamic viewport height) */
+body,
+#login-screen,
+#game-screen,
+.game-workspace {
+    height: 100vh;
+    height: 100dvh;
+}
+
+/* Keep Bottom Dock (Chat & Players) above Combat Arena (40), but below Modals (48) & Flee (60) */
+.bottom-dock {
+    z-index: 45;
+}
+.rpg-modal {
+    z-index: 48 !important;
+}
+
+/* ==================== 1. 2K / ULTRAWIDE MONITORS (>= 2050px) ==================== */
+@media (min-width: 2050px) and (min-height: 1050px) {
+    .gold-panel {
+        --frame-scale: 0.72;
+    }
+    .chat-panel.gold-panel,
+    .players-panel.gold-panel,
+    .modal-sm.gold-panel {
+        --frame-scale: 0.56;
+    }
+
+    .hud-left.gold-frame {
+        transform: scale(1.22);
+        transform-origin: top left;
+    }
+    .hud-center {
+        transform: translateX(-50%) scale(1.22);
+        transform-origin: top center;
+    }
+    .hud-right.gold-frame {
+        transform: scale(1.22);
+        transform-origin: top right;
+    }
+
+    .left-npcs-dock {
+        top: 132px;
+        left: 20px;
+        transform: scale(1.18);
+        transform-origin: top left;
+    }
+
+    .stage-backdrop {
+        padding-top: 120px;
+        padding-bottom: 290px;
+    }
+
+    .right-action-bar {
+        top: 140px;
+        max-height: calc(100vh - 440px);
+        width: 112px;
+    }
+    .action-btn {
+        flex: 0 0 60px;
+        height: 60px;
+    }
+    .right-action-bar .cmd-icon-img {
+        width: 36px;
+        height: 36px;
+    }
+    .act-label {
+        font-size: 11px;
+    }
+
+    .chat-panel,
+    .players-panel {
+        height: 280px;
+        padding: 18px 34px 20px 34px;
+    }
+    .chat-panel.chat-tall {
+        height: 360px;
+    }
+    .chat-history,
+    .rpg-table {
+        font-size: 15px;
+    }
+
+    .compass-dock {
+        transform: scale(1.18);
+        transform-origin: bottom center;
+        bottom: 24px;
+        margin: 0 22px;
+    }
+
+    .rpg-modal {
+        width: 1160px;
+        top: 95px;
+        bottom: 265px;
+        max-height: calc(100vh - 360px);
+        padding: 26px 42px 30px 42px;
+    }
+
+    .combat-arena {
+        top: 14px !important;
+        bottom: 270px !important;
+        padding: 26px 38px 28px 38px;
+    }
+}
+
+/* ==================== 2. SPLIT-SCREEN / COMPACT WINDOWS (<= 1100px width) ==================== */
+@media (max-width: 1100px) {
+    .hud-left.gold-frame {
+        transform: scale(0.76);
+        transform-origin: top left;
+    }
+    .hud-center {
+        transform: translateX(-50%) scale(0.72);
+        transform-origin: top center;
+    }
+    .hud-right.gold-frame {
+        transform: scale(0.76);
+        transform-origin: top right;
+    }
+
+    .left-npcs-dock {
+        top: 82px;
+        transform: scale(0.84);
+        transform-origin: top left;
+    }
+
+    .compass-dock {
+        width: 215px;
+        height: 195px;
+        bottom: 4px;
+    }
+    .compass-rose-wrap {
+        transform: scale(0.82);
+        transform-origin: center bottom;
+    }
+
+    .chat-panel,
+    .players-panel {
+        padding: 12px 20px 14px 20px;
+    }
+    .chat-tab {
+        font-size: 11.5px !important;
+        padding: 4px 8px !important;
+    }
+
+    .rpg-modal {
+        min-height: 0;
+        padding: 18px 26px 20px 26px;
+    }
+}
+
+/* ==================== 3. SHORT WINDOWS / 4-PLAYER SPLIT OR MOBILE LANDSCAPE ==================== */
+@media (max-height: 700px) {
+    .gold-panel {
+        --frame-scale: 0.45;
+    }
+    .chat-panel.gold-panel,
+    .players-panel.gold-panel,
+    .modal-sm.gold-panel {
+        --frame-scale: 0.36;
+    }
+
+    .hud-left.gold-frame {
+        transform: scale(0.75);
+        transform-origin: top left;
+    }
+    .hud-center {
+        transform: translateX(-50%) scale(0.72);
+        transform-origin: top center;
+    }
+    .hud-right.gold-frame {
+        transform: scale(0.75);
+        transform-origin: top right;
+    }
+
+    .stage-backdrop {
+        padding: 72px 86px 175px 86px;
+    }
+
+    .right-action-bar {
+        top: 75px;
+        max-height: calc(100vh - 255px);
+        width: 98px;
+        padding: 24px 8px;
+    }
+    .action-btn {
+        flex: 0 0 42px;
+        height: 42px;
+    }
+    .right-action-bar .cmd-icon-img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .chat-panel,
+    .players-panel {
+        height: 168px;
+        padding: 10px 18px 12px 18px;
+    }
+    .chat-panel.chat-tall {
+        height: 220px;
+    }
+
+    .compass-dock {
+        width: 190px;
+        height: 168px;
+        bottom: 2px;
+    }
+    .compass-rose-wrap {
+        transform: scale(0.7);
+        transform-origin: center;
+    }
+
+    .rpg-modal {
+        top: 56px;
+        bottom: 172px;
+        min-height: 0;
+        max-height: calc(100vh - 228px);
+        padding: 14px 24px 16px 24px;
+    }
+    .preview-artwork {
+        height: 120px;
+    }
+    .preview-artwork.tall {
+        height: 150px;
+    }
+
+    .combat-arena {
+        top: 4px !important;
+        bottom: 172px !important;
+        padding: 12px 20px 14px 20px;
+    }
+    .combat-top-bar {
+        height: 82px;
+    }
+    .combat-fighter-hud.fighter-left  { transform: scale(0.72); }
+    .combat-turn-banner               { transform: translateX(-50%) scale(0.72); }
+    .combat-fighter-hud.fighter-right { transform: scale(0.72); }
+    .combat-act-btn {
+        min-width: 105px;
+        padding: 8px 12px !important;
+        font-size: 14px !important;
+    }
+}
+
+/* ==================== 4. MOBILE PORTRAIT & NARROW WINDOWS (<= 767px) ==================== */
+@media (max-width: 767px) {
+    #login-screen {
+        justify-content: center;
+        padding: 16px;
+    }
+    .login-container {
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .gold-panel {
+        --frame-scale: 0.38;
+    }
+    .chat-panel.gold-panel,
+    .players-panel.gold-panel,
+    .modal-sm.gold-panel {
+        --frame-scale: 0.34;
+    }
+
+    .top-hud {
+        left: 6px;
+        right: 6px;
+    }
+    .hud-center {
+        display: none;
+    }
+    .hud-left.gold-frame {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: scale(0.52);
+        transform-origin: top left;
+    }
+    .hud-right.gold-frame {
+        position: absolute;
+        right: 0;
+        top: 0;
+        transform: scale(0.52);
+        transform-origin: top right;
+    }
+
+    /* Horizontal scrollable action bar with ornate gold frame */
+    .right-action-bar {
+        top: 56px;
+        bottom: auto;
+        left: 15px;
+        right: 15px;
+        width: auto;
+        height: 60px;
+        max-height: none;
+        padding: 5px 16px;
+        background: linear-gradient(180deg, rgba(7, 15, 28, 0.94), rgba(4, 9, 18, 0.96)) !important;
+        border: none !important;
+        border-radius: 4px;
+    }
+    .right-action-bar::before {
+        display: none;
+    }
+    .right-action-bar::after {
+        display: block;
+        top: -1px;
+        bottom: -1px;
+        left: -10px;
+        right: -10px;
+        background-image:
+            url('/assets/ui/menu-left.png'),
+            url('/assets/ui/menu-right.png'),
+            url('/assets/ui/line-gold.png'),
+            url('/assets/ui/line-gold.png');
+        background-position:
+            left center,
+            right center,
+            top 1px center,
+            bottom 1px center;
+        background-size:
+            24px 64px,
+            24px 64px,
+            calc(100% - 44px) 2px,
+            calc(100% - 44px) 2px;
+        background-repeat: no-repeat;
+    }
+    .right-menu-scroll {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 4px;
+    }
+    .action-btn {
+        flex: 0 0 64px;
+        height: 46px;
+    }
+    .right-action-bar .cmd-icon-img {
+        width: 22px;
+        height: 22px;
+    }
+    .act-label {
+        font-size: 9px;
+    }
+
+    .stage-backdrop {
+        justify-content: flex-start;
+        gap: 6px;
+        padding: 122px 10px 0 10px;
+    }
+    .stage-banner {
+        min-width: 0;
+        width: 100%;
+        max-width: 350px;
+        padding: 8px 14px;
+    }
+    #stage-room-title {
+        font-size: 16px;
+    }
+
+    /* Stack NPCs cleanly BELOW the location banner so they never overlap */
+    .left-npcs-dock {
+        position: static;
+        align-self: flex-start;
+        transform: scale(0.76);
+        transform-origin: top left;
+        margin-top: 2px;
+        gap: 6px;
+    }
+
+    /* Stack Bottom Dock cleanly without squishing horizontally */
+    .bottom-dock {
+        flex-wrap: wrap;
+        gap: 4px;
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
+    }
+    .compass-dock {
+        display: none;
+    }
+    .chat-tabs {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    .chat-tab {
+        font-size: 11px !important;
+        padding: 4px 7px !important;
+    }
+    .dock-window-controls {
+        flex-shrink: 0;
+    }
+    .chat-panel {
+        order: 2;
+        flex: 1 1 100%;
+        height: 150px;
+        padding: 10px 14px 12px 14px;
+    }
+    .chat-panel.chat-tall {
+        height: 205px;
+    }
+    .players-panel {
+        order: 3;
+        flex: 1 1 100%;
+        height: 115px;
+        padding: 10px 14px 12px 14px;
+    }
+
+    /* Stack 2-column modals into 1 scrollable column */
+    .rpg-modal {
+        width: 96vw;
+        top: 56px;
+        bottom: 168px;
+        min-height: 0;
+        max-height: calc(100dvh - 224px);
+        padding: 14px 16px 16px 16px;
+    }
+    .rpg-modal.modal-sm,
+    .rpg-modal.modal-quit {
+        width: 92vw;
+        height: auto;
+        min-height: 240px;
+        top: 0;
+        bottom: 0;
+    }
+    .modal-header-icon-img {
+        width: 32px;
+        height: 32px;
+    }
+    .modal-title {
+        font-size: 16px;
+    }
+    .window-tabs {
+        overflow-x: auto;
+    }
+    .tab-btn {
+        font-size: 12px !important;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+    .modal-split-body {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .split-left-preview,
+    .split-right-list {
+        flex: none;
+        overflow-y: visible !important;
+    }
+    .inner-gold-box.flush-portrait {
+        height: 180px;
+    }
+    .inventory-grid {
+        flex: none;
+        min-height: 172px;
+        max-height: 182px;
+        gap: 8px;
+    }
+
+    /* Compact Combat Arena on mobile portrait so Chat stays cleanly below or overlays on top */
+    .combat-arena {
+        top: 6px !important;
+        left: 4px !important;
+        right: 4px !important;
+        bottom: auto !important;
+        height: min(355px, calc(100dvh - 255px)) !important;
+        padding: 12px 14px 14px 14px;
+    }
+    .combat-scene {
+        padding: 10px 10px;
+    }
+    .combat-top-bar {
+        height: 74px;
+    }
+    .combat-fighter-hud.fighter-left  { transform: scale(0.46); }
+    .combat-turn-banner               { transform: translateX(-50%) scale(0.5); top: 44px; }
+    .combat-fighter-hud.fighter-right { transform: scale(0.46); }
+    .fighter-spot {
+        width: 45vw;
+        max-height: 23vh;
+    }
+    .combat-outcome {
+        width: 88vw;
+        height: auto;
+        padding: 16px;
+    }
+    .combat-outcome h2 {
+        font-size: 22px;
+    }
+    .combat-action-bar {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .combat-act-btn {
+        min-width: 0;
+        flex: 1 1 28%;
+        padding: 7px 6px !important;
+        font-size: 12px !important;
+    }
+}
+
+/* ==================== 5. MOBILE LANDSCAPE (<= 500px height, e.g. 667x375 / 844x390) ==================== */
+@media (max-height: 500px) and (orientation: landscape) {
+    .gold-panel {
+        --frame-scale: 0.34;
+    }
+    .chat-panel.gold-panel,
+    .players-panel.gold-panel,
+    .modal-sm.gold-panel {
+        --frame-scale: 0.3;
+    }
+
+    .hud-center,
+    .compass-dock {
+        display: none !important;
+    }
+
+    .hud-left.gold-frame {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: scale(0.56);
+        transform-origin: top left;
+    }
+    .hud-right.gold-frame {
+        position: absolute;
+        right: 0;
+        top: 0;
+        transform: scale(0.56);
+        transform-origin: top right;
+    }
+
+    /* Compact 1-row action bar below Top HUD */
+    .right-action-bar {
+        top: 52px;
+        bottom: auto;
+        left: 10px;
+        right: 10px;
+        width: auto;
+        height: 48px;
+        max-height: none;
+        padding: 3px 16px;
+        background: linear-gradient(180deg, rgba(7, 15, 28, 0.94), rgba(4, 9, 18, 0.96)) !important;
+        border: none !important;
+        border-radius: 4px;
+    }
+    .right-action-bar::before {
+        display: none;
+    }
+    .right-action-bar::after {
+        display: block;
+        top: -2px;
+        bottom: -2px;
+        left: -6px;
+        right: -6px;
+        background-image:
+            url('/assets/ui/menu-left.png'),
+            url('/assets/ui/menu-right.png'),
+            url('/assets/ui/line-gold.png'),
+            url('/assets/ui/line-gold.png');
+        background-position:
+            left center,
+            right center,
+            top 1px center,
+            bottom 1px center;
+        background-size:
+            20px 52px,
+            20px 52px,
+            calc(100% - 36px) 2px,
+            calc(100% - 36px) 2px;
+        background-repeat: no-repeat;
+    }
+    .right-menu-scroll {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        align-items: center;
+        gap: 6px;
+    }
+    .action-btn {
+        flex: 1 0 62px;
+        height: 38px;
+    }
+    .right-action-bar .cmd-icon-img {
+        width: 19px;
+        height: 19px;
+    }
+    .act-label {
+        font-size: 8.5px;
+    }
+
+    /* Location banner centered below action bar; NPCs on the left */
+    .stage-backdrop {
+        justify-content: flex-start;
+        padding: 104px 12px 0 12px;
+    }
+    .stage-banner {
+        min-width: 0;
+        width: auto;
+        max-width: 340px;
+        padding: 5px 18px;
+    }
+    .stage-banner-icon-img {
+        width: 28px;
+        height: 28px;
+    }
+    #stage-room-title {
+        font-size: 15px;
+    }
+    .left-npcs-dock {
+        position: absolute;
+        top: 106px;
+        left: 8px;
+        transform: scale(0.66);
+        transform-origin: top left;
+        gap: 6px;
+    }
+
+    /* Bottom dock SIDE-BY-SIDE (1 row: Chat left + Players right) */
+    .bottom-dock {
+        flex-wrap: nowrap;
+        gap: 6px;
+        left: 6px;
+        right: 6px;
+        bottom: 4px;
+    }
+    .chat-panel {
+        order: 1;
+        flex: 1.25;
+        height: 122px;
+        padding: 8px 14px 10px 14px;
+    }
+    .chat-panel.chat-tall {
+        height: 175px;
+    }
+    .players-panel {
+        order: 2;
+        flex: 1;
+        height: 122px;
+        padding: 8px 14px 10px 14px;
+    }
+    .chat-panel.dock-collapsed,
+    .players-panel.dock-collapsed {
+        height: 48px !important;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    /* Modals use full vertical space in 2 columns */
+    .rpg-modal {
+        width: 94vw;
+        top: 6px;
+        bottom: 56px;
+        min-height: 0;
+        max-height: calc(100dvh - 62px);
+        padding: 12px 20px 14px 20px;
+    }
+    .modal-header {
+        padding: 0 6px;
+    }
+    .modal-header-icon-img {
+        width: 28px;
+        height: 28px;
+    }
+    .modal-title {
+        font-size: 15px;
+    }
+    .modal-subtitle {
+        font-size: 11px;
+    }
+    .modal-split-body {
+        flex-direction: row;
+        overflow: hidden;
+        padding: 6px 4px;
+        gap: 8px;
+    }
+    .split-left-preview {
+        flex: 0.9;
+        overflow-y: auto !important;
+    }
+    .split-right-list {
+        flex: 1.25;
+        overflow-y: auto !important;
+    }
+    .inner-gold-box.flush-portrait {
+        height: auto;
+    }
+    .inventory-grid {
+        flex: 1.15;
+        min-height: 0;
+        max-height: none;
+        gap: 6px;
+    }
+    .preview-artwork,
+    .preview-artwork.tall {
+        height: 100px;
+    }
+    .modal-footer {
+        padding: 4px 8px 0 8px;
+    }
+    .btn-modal-primary,
+    .btn-modal-secondary,
+    .btn-modal-danger {
+        padding: 6px 16px;
+        font-size: 14px !important;
+    }
+
+    /* Combat Arena landscape: full horizontal duel */
+    .combat-arena {
+        top: 4px !important;
+        left: 6px !important;
+        right: 6px !important;
+        bottom: 56px !important;
+        height: auto !important;
+        padding: 10px 18px 12px 18px;
+    }
+    .combat-scene {
+        padding: 8px 14px;
+    }
+    .combat-top-bar {
+        height: 58px;
+    }
+    .combat-fighter-hud.fighter-left  { transform: scale(0.56); }
+    .combat-turn-banner               { transform: translateX(-50%) scale(0.54); top: 0; }
+    .combat-fighter-hud.fighter-right { transform: scale(0.56); }
+    .combat-stage-fighters {
+        padding: 0 6% 4px 6%;
+    }
+    .fighter-spot {
+        width: 34vw;
+        max-height: 44vh;
+    }
+    .combat-action-bar {
+        flex-wrap: nowrap;
+        gap: 8px;
+        padding-top: 4px;
+    }
+    .combat-act-btn {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px !important;
+        font-size: 12.5px !important;
+    }
+}

@@ -35,3 +35,6 @@
 @import url('./modals/modal-quit.css');
 
 @import url('./modals/modal-combat.css');
+
+/* 6. Responsive Web Design (2K, Split-Screen, Mobile) */
+@import url('./layout/responsive.css');
