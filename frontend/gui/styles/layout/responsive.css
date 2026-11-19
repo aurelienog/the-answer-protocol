@@ -16,9 +16,20 @@ body,
     height: 100dvh;
 }
 
-/* Keep Bottom Dock (Chat & Players) above Combat Arena (40), but below Modals (48) & Flee (60) */
+/* Remove shared stacking context on .bottom-dock so Compass stays under Combat while Chat stays above */
 .bottom-dock {
+    z-index: auto;
+}
+.compass-dock {
+    z-index: 20;
+}
+.players-panel {
+    position: relative;
     z-index: 45;
+}
+.chat-panel {
+    position: relative;
+    z-index: 46;
 }
 .rpg-modal {
     z-index: 48 !important;
@@ -140,7 +151,7 @@ body,
     }
     .compass-rose-wrap {
         transform: scale(0.82);
-        transform-origin: center bottom;
+        transform-origin: center;
     }
 
     .chat-panel,
@@ -221,17 +232,17 @@ body,
     }
 
     .rpg-modal {
-        top: 56px;
-        bottom: 172px;
+        top: 8%;
+        bottom: auto;
         min-height: 0;
-        max-height: calc(100vh - 228px);
+        max-height: calc(100vh - 160px);
         padding: 14px 24px 16px 24px;
     }
     .preview-artwork {
         height: 120px;
     }
     .preview-artwork.tall {
-        height: 150px;
+        height: auto;
     }
 
     .combat-arena {
@@ -294,13 +305,15 @@ body,
         transform-origin: top right;
     }
 
-    /* Horizontal scrollable action bar with ornate gold frame */
+    /* Horizontal scrollable action bar centered to fit buttons */
     .right-action-bar {
         top: 56px;
         bottom: auto;
-        left: 15px;
-        right: 15px;
-        width: auto;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: fit-content;
+        max-width: calc(100vw - 24px);
         height: 60px;
         max-height: none;
         padding: 5px 16px;
@@ -420,10 +433,10 @@ body,
     /* Stack 2-column modals into 1 scrollable column */
     .rpg-modal {
         width: 96vw;
-        top: 56px;
-        bottom: 168px;
+        top: 50px;
+        bottom: 150px;
         min-height: 0;
-        max-height: calc(100dvh - 224px);
+        max-height: calc(100dvh - 190px);
         padding: 14px 16px 16px 16px;
     }
     .rpg-modal.modal-sm,
@@ -545,8 +558,8 @@ body,
     .right-action-bar {
         top: 52px;
         bottom: auto;
-        left: 10px;
-        right: 10px;
+        left: 50%;
+        right: auto;
         width: auto;
         height: 48px;
         max-height: none;
@@ -704,7 +717,7 @@ body,
     }
     .preview-artwork,
     .preview-artwork.tall {
-        height: 100px;
+        height: auto;
     }
     .modal-footer {
         padding: 4px 8px 0 8px;

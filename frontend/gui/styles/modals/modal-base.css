@@ -5,16 +5,16 @@
 .rpg-modal {
     color: var(--text-main);
     position: absolute;
-    top: 65px;
-    bottom: 150px;
+    top: 8%;
+    bottom: auto;
     left: 0;
     right: 0;
     margin: auto;
     width: 920px;
     max-width: 95%;
     height: auto;
-    min-height: 500px;
-    max-height: calc(100vh - 240px);
+    min-height: 550px;
+    max-height: calc(100vh - 200px);
     z-index: 35 !important;
     display: flex;
     flex-direction: column;
@@ -124,7 +124,7 @@
 }
 
 .preview-artwork.tall {
-    height: 230px;
+    height: auto;
 }
 
 .preview-artwork.full-h {
