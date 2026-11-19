@@ -20,7 +20,7 @@ func RenderHeader(
 func HeaderContent(playerName string, hp, maxHP int) string {
     title := TitleStyle.Render("THE ANSWER PROTOCOL")
     player := "Player: " + playerName
-    health := "HP  " + RenderProgressBar(hp, maxHP, 20)
+    health := "HP  " + RenderHealthBar(hp, maxHP, 20)
 
     return lipgloss.JoinVertical(
         lipgloss.Left,

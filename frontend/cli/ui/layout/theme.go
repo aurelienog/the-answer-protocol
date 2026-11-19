@@ -137,6 +137,35 @@ const (
 
 )
 
+var (
+	CombatStartStyle = lipgloss.NewStyle().
+		Foreground(Primary).
+		Bold(true)
+
+	CombatTurnStyle = lipgloss.NewStyle().
+		Foreground(Secondary).
+		Bold(true)
+
+	CombatAttackStyle = lipgloss.NewStyle().
+		Foreground(Warning)
+
+	CombatDamageStyle = lipgloss.NewStyle().
+		Foreground(Danger)
+
+	CombatVictoryStyle = lipgloss.NewStyle().
+		Foreground(Success).
+		Bold(true)
+
+	CombatHealingStyle = lipgloss.NewStyle().
+		Foreground(Success)
+
+	CombatInfoStyle = lipgloss.NewStyle().
+		Foreground(Info)
+
+	CombatMissStyle = lipgloss.NewStyle().
+		Foreground(Muted)
+)
+
 func WrapText(content string, width int) string {
     if width <= 0 {
         return ""

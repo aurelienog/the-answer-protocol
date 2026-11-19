@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func RenderProgressBar(current, maximum, width int) string {
+func RenderHealthBar(current, maximum, width int) string {
 	if maximum <= 0 {
 		return MutedStyle.Render("[No data]")
 	}
@@ -21,13 +21,21 @@ func RenderProgressBar(current, maximum, width int) string {
 		width = 1
 	}
 
+	percentage := current * 100 / maximum
 	filled := current * width / maximum
 	empty := width - filled
 
-	bar := SuccessStyle.Render(strings.Repeat("█", filled)) +
-		MutedStyle.Render(strings.Repeat("░", empty))
+	healthStyle := SuccessStyle
 
-	percentage := current * 100 / maximum
+	switch {
+	case percentage <= 25:
+		healthStyle = DangerStyle
+	case percentage <= 50:
+		healthStyle = WarningStyle
+	}
+
+	bar := healthStyle.Render(strings.Repeat("█", filled)) +
+		MutedStyle.Render(strings.Repeat("░", empty))
 
 	return fmt.Sprintf(
 		"%s %d/%d (%d%%)",

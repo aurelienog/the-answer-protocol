@@ -30,7 +30,11 @@ func (m Model) renderCombat() string {
 		"",
 		renderCombatTurn(combat),
 		"",
-		renderCombatLog(combat.Log, width),
+		renderCombatLog(
+			combat.Log,
+			width,
+			combat.CurrentTurn,
+		),
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
@@ -86,97 +90,131 @@ func renderCombatParticipant(participant CombatParticipantState, width int) stri
 		nameStyle = layout.InfoStyle
 	}
 
-	state := "Alive"
+	state := "ALIVE"
 	stateStyle := layout.SuccessStyle
 
 	switch {
 	case participant.Escaped:
-		state = "Escaped"
+		state = "ESCAPED"
 		stateStyle = layout.WarningStyle
 	case !participant.Alive:
-		state = "Dead"
+		state = "DEAD"
 		stateStyle = layout.DangerStyle
 	case !participant.Connected && participant.IsPlayer:
-		state = "Disconnected"
+		state = "DISCONNECTED"
 		stateStyle = layout.WarningStyle
 	}
 
 	header := fmt.Sprintf(
-		"%s %s %s",
+		"%s  %s  %s",
 		nameStyle.Render(name),
-		layout.MutedStyle.Render("["+participantType+"]"),
-		stateStyle.Render("("+state+")"),
+		layout.MutedStyle.Render(participantType),
+		stateStyle.Render(state),
 	)
 
 	lines := []string{header}
 
 	if participant.MaxHP > 0 {
-		health := fmt.Sprintf(
-			"HP: %d/%d",
+		health := layout.RenderHealthBar(
 			participant.HP,
 			participant.MaxHP,
+			14,
 		)
 
-		healthStyle := layout.SuccessStyle
-		if participant.HP <= participant.MaxHP/4 {
-			healthStyle = layout.DangerStyle
-		}
-
-		lines = append(lines, healthStyle.Render(health))
+		lines = append(lines, "   "+health)
 	}
 
-	return lipgloss.NewStyle().
-		Width(width).
-		Render(strings.Join(lines, "\n"))
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		lines...,
+	)
 }
 
 func renderCombatTurn(combat CombatState) string {
-	lines := []string{
-		layout.TitleStyle.Render("CURRENT TURN"),
-	}
-
 	if !combat.Active {
-		lines = append(lines, layout.StatusStyle.Render("Combat has ended"))
-		return lipgloss.JoinVertical(lipgloss.Left, lines...)
+		return layout.MutedStyle.Render("Combat has ended")
 	}
 
 	if combat.CurrentTurn == "" {
-		lines = append(lines, layout.StatusStyle.Render("Waiting for turn information"))
-	} else {
-		lines = append(
-			lines,
-			fmt.Sprintf(
-				"%s %s",
-				layout.StatusStyle.Render("Participant:"),
-				layout.InfoStyle.Render(combat.CurrentTurn),
-			),
-			fmt.Sprintf(
-				"%s %d",
-				layout.StatusStyle.Render("Available actions:"),
-				combat.AvailableActions,
-			),
-		)
+		return layout.StatusStyle.Render("Waiting for turn information")
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+	return fmt.Sprintf(
+		"%s  %s",
+		layout.TitleStyle.Render("CURRENT TURN"),
+		layout.InfoStyle.Render("⚔ "+combat.CurrentTurn),
+	)
 }
 
-func renderCombatLog(log []string, width int) string {
+func renderCombatLog(
+	log []string,
+	width int,
+	currentTurn string,
+) string {
 	lines := []string{
-		layout.TitleStyle.Render("COMBAT LOG"),
+		layout.TitleStyle.Render("BATTLE CHRONICLE"),
 		layout.RenderSeparator(width),
 	}
 
 	if len(log) == 0 {
-		lines = append(lines, layout.StatusStyle.Render("No combat events yet"))
+		lines = append(
+			lines,
+			layout.StatusStyle.Render("No combat events yet"),
+		)
 	} else {
 		for _, entry := range log {
+			styledEntry := styleCombatEvent(entry, currentTurn)
+
 			lines = append(
 				lines,
-				layout.WrapText(entry, width),
+				layout.WrapText(styledEntry, width),
 			)
 		}
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+func styleCombatEvent(entry string, currentTurn string) string {
+	event := strings.ToLower(strings.TrimSpace(entry))
+
+	switch {
+	case strings.Contains(event, "combat started"):
+		return layout.CombatStartStyle.Render("✦ " + entry)
+
+	case strings.Contains(event, "combat ended"):
+		return layout.CombatVictoryStyle.Render("✦ " + entry)
+
+	case strings.HasPrefix(event, "turn:"):
+		turn := strings.TrimSpace(entry[len("Turn:"):])
+
+		if strings.EqualFold(turn, currentTurn) {
+			return layout.TitleStyle.Render("◆ " + entry)
+		}
+
+		return layout.CombatTurnStyle.Render("◆ " + entry)
+
+	case strings.Contains(event, " attacks "):
+		return layout.CombatAttackStyle.Render("⚔ " + entry)
+
+	case strings.Contains(event, " deals ") &&
+		strings.Contains(event, " damage "):
+		return layout.CombatDamageStyle.Render("▼ " + entry)
+
+	case strings.Contains(event, " heals ") ||
+		strings.Contains(event, " restores "):
+		return layout.CombatHealingStyle.Render("✚ " + entry)
+
+	case strings.Contains(event, " misses ") ||
+		strings.Contains(event, " dodges "):
+		return layout.CombatMissStyle.Render("◇ " + entry)
+
+	case strings.Contains(event, " defeated ") ||
+		strings.Contains(event, " killed ") ||
+		strings.Contains(event, " died"):
+		return layout.CombatVictoryStyle.Render("☠ " + entry)
+
+	default:
+		return layout.CombatInfoStyle.Render("· " + entry)
+	}
 }
