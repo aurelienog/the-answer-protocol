@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
     "the-answer-protocol/frontend/cli/ui/animations"
 	"the-answer-protocol/frontend/cli/network"
+    "time"
 )
 
 type View uint8
@@ -119,6 +120,8 @@ type InterfaceState struct {
     TransitionPhase   TransitionPhase
     PendingView       View
 
+    healthBars        map[string]*animations.HealthBarAnimation
+
 }
 
 type Model struct {
@@ -162,4 +165,12 @@ func (m Model) Init() tea.Cmd {
 
 func (m *Model) setView(view View) {
     m.navigation.CurrentView = view
+}
+
+type healthBarTickMsg time.Time
+
+func healthBarTick() tea.Cmd {
+	return tea.Tick(33*time.Millisecond, func(t time.Time) tea.Msg {
+		return healthBarTickMsg(t)
+	})
 }

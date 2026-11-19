@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"the-answer-protocol/frontend/cli/ui/layout"
+	"the-answer-protocol/frontend/cli/ui/animations"
 )
 
 func (m Model) renderCombat() string {
@@ -26,7 +27,7 @@ func (m Model) renderCombat() string {
 		"",
 		renderCombatInfo(combat),
 		"",
-		renderCombatParticipants(combat.Participants, width),
+		m.renderCombatParticipants(combat.Participants, width),
 		"",
 		renderCombatTurn(combat),
 		"",
@@ -58,7 +59,7 @@ func renderCombatInfo(combat CombatState) string {
 	)
 }
 
-func renderCombatParticipants(participants []CombatParticipantState, width int) string {
+func (m Model) renderCombatParticipants(participants []CombatParticipantState, width int) string {
 	lines := []string{
 		layout.TitleStyle.Render("PARTICIPANTS"),
 		layout.RenderSeparator(width),
@@ -70,13 +71,13 @@ func renderCombatParticipants(participants []CombatParticipantState, width int) 
 	}
 
 	for _, participant := range participants {
-		lines = append(lines, renderCombatParticipant(participant, width))
+		lines = append(lines, m.renderCombatParticipant(participant, width))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
-func renderCombatParticipant(participant CombatParticipantState, width int) string {
+func (m Model) renderCombatParticipant(participant CombatParticipantState, width int) string {
 	name := participant.Name
 	if name == "" {
 		name = participant.ID
@@ -115,11 +116,28 @@ func renderCombatParticipant(participant CombatParticipantState, width int) stri
 	lines := []string{header}
 
 	if participant.MaxHP > 0 {
-		health := layout.RenderHealthBar(
-			participant.HP,
-			participant.MaxHP,
-			14,
-		)
+		id := participant.ID
+		if id == "" {
+			id = participant.Name
+		}
+
+		bar := m.ui.healthBars[id]
+
+		var health string
+
+		if bar != nil {
+			health = layout.RenderAnimatedHealthBar(
+				bar.Current,
+				participant.MaxHP,
+				14,
+			)
+		} else {
+			health = layout.RenderHealthBar(
+				participant.HP,
+				participant.MaxHP,
+				14,
+			)
+		}
 
 		lines = append(lines, "   "+health)
 	}
@@ -217,4 +235,38 @@ func styleCombatEvent(entry string, currentTurn string) string {
 	default:
 		return layout.CombatInfoStyle.Render("· " + entry)
 	}
+}
+
+func (m *Model) syncCombatHealthBars() bool {
+	if m.ui.healthBars == nil {
+		m.ui.healthBars = make(
+			map[string]*animations.HealthBarAnimation,
+		)
+	}
+
+	animating := false
+
+	for _, participant := range m.world.Combat.Participants {
+		id := participant.ID
+		if id == "" {
+			id = participant.Name
+		}
+
+		if id == "" {
+			continue
+		}
+
+		bar, exists := m.ui.healthBars[id]
+
+		if !exists {
+			bar = &animations.HealthBarAnimation{}
+			m.ui.healthBars[id] = bar
+		}
+
+		if bar.SetTarget(participant.HP, participant.MaxHP) {
+			animating = true
+		}
+	}
+
+	return animating
 }

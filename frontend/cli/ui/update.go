@@ -25,7 +25,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return refreshResult(m.handleAuthenticationResult(msg))
 
 	case serverEventMsg:
-		return refreshResult(m.handleServerEvent(msg))
+		model, cmd := m.handleServerEvent(msg)
+
+		if updated, ok := model.(Model); ok {
+			m = updated
+
+			if m.navigation.CurrentView == ViewCombat {
+				if m.syncCombatHealthBars() {
+					cmd = tea.Batch(cmd, healthBarTick())
+				}
+			}
+		}
+
+		return refreshResult(m, cmd)
 
 	case clientDoneMsg:
 		m.communication.StatusMessage = "Connection to server closed"
@@ -38,6 +50,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case animations.CursorBlinkMsg:
 		m.ui.CursorVisible = !m.ui.CursorVisible
 		return refreshResult(m, animations.CursorBlink())
+
+	case healthBarTickMsg:
+		animating := false
+
+		for _, bar := range m.ui.healthBars {
+			if bar.Tick() {
+				animating = true
+			}
+		}
+
+		if animating {
+			return refreshResult(m, healthBarTick())
+		}
+
+		return refreshResult(m, nil)
 	
 	case TransitionMsg:
 		switch msg.Phase {
