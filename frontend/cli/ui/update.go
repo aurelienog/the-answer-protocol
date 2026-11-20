@@ -19,7 +19,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return refreshResult(m.handleKey(msg))
 
 	case commandResultMsg:
-		return refreshResult(m.handleCommandResult(msg))
+		model, cmd := m.handleCommandResult(msg)
+
+		updated, ok := model.(Model)
+		if !ok {
+			return model, cmd
+		}
+
+		m = updated
+
+		if m.syncCombatHealthBars() {
+			cmd = tea.Batch(cmd, healthBarTick())
+		}
+
+		return refreshResult(m, cmd)
 
 	case authenticationResultMsg:
 		return refreshResult(m.handleAuthenticationResult(msg))
@@ -34,11 +47,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m = updated
 
+		var batch []tea.Cmd
+		if cmd != nil {
+			batch = append(batch, cmd)
+		}
+		if m.client != nil {
+			batch = append(batch, waitForServerEvent(m.client))
+		}
 		if m.syncCombatHealthBars() {
-			cmd = tea.Batch(cmd, healthBarTick())
+			batch = append(batch, healthBarTick())
 		}
 
-		return refreshResult(m, cmd)
+		return refreshResult(m, tea.Batch(batch...))
 
 	case clientDoneMsg:
 		m.communication.StatusMessage = "Connection to server closed"
@@ -129,15 +149,27 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.startViewTransition(ViewWorld)
 		}
 
-		// Abrir la vista de combate para cualquier comando combat.
-		if strings.EqualFold(command, "combat") ||
-			strings.HasPrefix(strings.ToLower(command), "combat ") {
-
+		// Combat navigation: "combat" opens the view without sending a command.
+		if strings.EqualFold(command, "combat") {
 			if m.navigation.CurrentView != ViewCombat {
-				m.setView(ViewCombat)
+				return m, m.startViewTransition(ViewCombat)
 			}
 
-			return m, sendCommand(m.client, command)
+			return m, nil
+		}
+
+		// Combat actions: open the view with transition and send the action to the server.
+		if strings.HasPrefix(strings.ToLower(command), "combat ") {
+			sendActionCmd := sendCommand(m.client, command)
+
+			if m.navigation.CurrentView != ViewCombat {
+				return m, tea.Batch(
+					m.startViewTransition(ViewCombat),
+					sendActionCmd,
+				)
+			}
+
+			return m, sendActionCmd
 		}
 
 		return m, sendCommand(m.client, command)

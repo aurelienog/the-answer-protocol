@@ -120,6 +120,9 @@ func (m Model) renderCombatParticipant(participant CombatParticipantState, width
 		if id == "" {
 			id = participant.Name
 		}
+		if participant.IsPlayer && m.player.Username != "" {
+			id = m.player.Username
+		}
 
 		bar, exists := m.ui.healthBars[id]
 

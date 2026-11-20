@@ -1,44 +1,50 @@
 package ui
 
 import (
-    "strings"
 	"fmt"
+	"strings"
 
-    tea "github.com/charmbracelet/bubbletea"
-    "the-answer-protocol/internal/protocol"
+	tea "github.com/charmbracelet/bubbletea"
+	"the-answer-protocol/internal/protocol"
 )
 
 type commandHandler func(*Model, string) error
 type errorHandler func(*Model)
 
 var commandHandlers = map[string]commandHandler{
-    "STATUS":       handleStatusResponse,
-	"WHO": 			handleWhoResponse,
-    "QUESTS":       handleQuestsResponse,
-    "QUEST":        handleQuestResponse,
-    "GROUP INFO":   handleGroupInfoResponse,
-    "GROUP CREATE": handleGroupActionResponse,
-    "GROUP JOIN":   handleGroupActionResponse,
-    "GROUP INVITE": handleGroupActionResponse,
-    "GROUP LEAVE":  handleGroupActionResponse,
-    "LOOK":         handleLookResponse,
-    "MOVE":         handleMoveResponse,
-    "TALK":         handleTalkResponse,
-    "INVENTORY":    handleInventoryResponse,
-    "TAKE":         handleTakeResponse,
-    "DROP":         handleDropResponse,
+	"STATUS":        handleStatusResponse,
+	"WHO":           handleWhoResponse,
+	"QUESTS":        handleQuestsResponse,
+	"QUEST":         handleQuestResponse,
+	"GROUP INFO":    handleGroupInfoResponse,
+	"GROUP CREATE":  handleGroupActionResponse,
+	"GROUP JOIN":    handleGroupActionResponse,
+	"GROUP INVITE":  handleGroupActionResponse,
+	"GROUP LEAVE":   handleGroupActionResponse,
+	"LOOK":          handleLookResponse,
+	"MOVE":          handleMoveResponse,
+	"TALK":          handleTalkResponse,
+	"INVENTORY":     handleInventoryResponse,
+	"TAKE":          handleTakeResponse,
+	"DROP":          handleDropResponse,
+	"ATTACK":        handleCombatActionResponse,
+	"COMBAT ATTACK": handleCombatActionResponse,
+	"COMBAT DEFEND": handleCombatActionResponse,
+	"COMBAT USE":    handleCombatUseResponse,
+	"COMBAT FLEE":   handleCombatFleeResponse,
+	"COMBAT HELP":   handleCombatActionResponse,
+	"COMBAT JOIN":   handleCombatActionResponse,
 }
 
 var commandErrorHandlers = map[string]errorHandler{
-    "NOT_IN_GROUP": func(m *Model) {
-        m.world.Group = Group{}
-    },
+	"NOT_IN_GROUP": func(m *Model) {
+		m.world.Group = Group{}
+	},
 }
 
 func handleGroupActionResponse(_ *Model, _ string) error {
-    return nil
+	return nil
 }
-
 
 func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 	// Handle transport and client errors first.
@@ -135,6 +141,7 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 			return m, sendCommand(m.client, "LOOK")
 		}
 	}
+
 	// Refresh group information after group operations.
 	switch command {
 	case "GROUP CREATE", "GROUP JOIN":
@@ -170,24 +177,51 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Combat responses: UI messages, view transition, and background refreshes.
+	switch command {
+	case "ATTACK", "COMBAT ATTACK":
+		m.communication.StatusMessage = "Attack executed."
+		if m.navigation.CurrentView != ViewCombat {
+			return m, m.startViewTransition(ViewCombat)
+		}
+		return m, nil
+
+	case "COMBAT DEFEND":
+		fields := parsePayloadFields(msg.response.Payload)
+		m.communication.StatusMessage = fmt.Sprintf(
+			"Defending (+%s%% defense)",
+			fields["defense_bonus"],
+		)
+		return m, nil
+
+	case "COMBAT FLEE":
+		m.communication.StatusMessage = "You fled from combat!"
+		return m, nil
+
+	case "COMBAT USE":
+		fields := parsePayloadFields(msg.response.Payload)
+		m.communication.StatusMessage = "Used " + fields["used"]
+		m.ui.PendingRefresh = RefreshInventory
+		return m, sendCommand(m.client, "INVENTORY")
+	}
+
 	m.communication.StatusMessage = command + " updated"
 	return m, nil
 }
 
 func getCommandName(rawCommand string) string {
-    parts := strings.Fields(strings.ToUpper(rawCommand))
+	parts := strings.Fields(strings.ToUpper(rawCommand))
 
-    if len(parts) == 0 {
-        return ""
-    }
+	if len(parts) == 0 {
+		return ""
+	}
 
-    // Algunos comandos tienen dos palabras, como GROUP INFO.
-    if len(parts) >= 2 {
-        twoWords := parts[0] + " " + parts[1]
-        if _, exists := commandHandlers[twoWords]; exists {
-            return twoWords
-        }
-    }
+	if len(parts) >= 2 {
+		twoWords := parts[0] + " " + parts[1]
+		if _, exists := commandHandlers[twoWords]; exists {
+			return twoWords
+		}
+	}
 
-    return parts[0]
+	return parts[0]
 }

@@ -34,33 +34,6 @@ func (m Model) renderAuthentication() string {
 	return layout.PanelStyle.Render(content)
 }
 
-func (m Model) renderCurrentView() string {
-    switch m.navigation.CurrentView {
-	case ViewWorld:
-        return m.renderWorld()
-    case ViewRoom:
-        return renderRoom(
-			m.world.Room,
-			m.ui.MainViewport.Width,
-			m.ui.MainViewport.Height,
-		)
-    case ViewInventory:
-        return m.renderInventory()
-    case ViewCharacter:
-        return m.renderCharacter()
-	case ViewTalk:
-    	return m.renderTalk()
-    case ViewQuests:
-        return m.renderQuests(true, m.ui.MainViewport.Width)
-    case ViewGroup:
-        return m.renderGroup(true)
-    case ViewCombat:
-        return m.renderCombat()
-    default:
-        return m.renderWorld()
-    }
-}
-
 func (m Model) renderView() string {
 	result := m.calculateLayout()
 
