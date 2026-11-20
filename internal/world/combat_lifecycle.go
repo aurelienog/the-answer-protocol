@@ -5,13 +5,12 @@ import (
 	"strings"
 )
 
-// StartCombat starts a combat against a hostile NPC.
-// The initiating player and their group members in the same room
-// become participants.
+// StartCombat starts a combat against a hostile NPC, initializes turn order,
+// and resolves any initial NPC turns if the NPC acts first.
 func (w *World) StartCombat(
-    playerName string,
-    npcID string,
-) (*Combat, *CombatStarted, error) {
+	playerName string,
+	npcID string,
+	) (*Combat, []any, error) {
 	if w == nil {
 		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
@@ -73,7 +72,6 @@ func (w *World) StartCombat(
 		)
 	}
 
-	// Prevent the initiating player from joining multiple combats.
 	if w.playerInActiveCombatLocked(playerName) {
 		return nil, nil, fmt.Errorf(
 			"%w: %q",
@@ -82,7 +80,6 @@ func (w *World) StartCombat(
 		)
 	}
 
-	// Prevent the target NPC from joining multiple combats.
 	if w.npcInActiveCombatLocked(npcID) {
 		return nil, nil, fmt.Errorf(
 			"%w: %q",
@@ -103,11 +100,7 @@ func (w *World) StartCombat(
 			)
 		}
 
-		if groupPlayer.RoomID != player.RoomID {
-			return nil
-		}
-
-		if groupPlayer.CombatStats.HP <= 0 {
+		if groupPlayer.RoomID != player.RoomID || groupPlayer.CombatStats.HP <= 0 {
 			return nil
 		}
 
@@ -119,7 +112,6 @@ func (w *World) StartCombat(
 					name,
 				)
 			}
-
 			return nil
 		}
 
@@ -142,12 +134,10 @@ func (w *World) StartCombat(
 
 	groupID := w.playerGroups[playerName]
 
-	// Add the player who initiated the combat first.
 	if err := addPlayer(playerName); err != nil {
 		return nil, nil, err
 	}
 
-	// Add the other members of the player's group.
 	if groupID != "" {
 		group, exists := w.groups[groupID]
 		if !exists {
@@ -192,15 +182,21 @@ func (w *World) StartCombat(
 		RoomID:       player.RoomID,
 		GroupID:      groupID,
 		Participants: participants,
-		TurnIndex:    0,
+		TurnIndex:    -1,
 		Round:        1,
 		Active:       true,
 	}
 
+	// Initialize first round turns before registering the combat in w.combats
+	// so failed initialization requires zero cleanup.
+	turnEvent, err := w.initializeCombatTurnsLocked(combat)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	w.combats[combatID] = combat
 
-	
-	event := &CombatStarted{
+	startedEvent := CombatStarted{
 		CombatID:     combat.ID,
 		RoomID:       combat.RoomID,
 		Participants: make([]CombatParticipantInfo, 0, len(combat.Participants)),
@@ -208,8 +204,8 @@ func (w *World) StartCombat(
 	}
 
 	for _, participant := range combat.Participants {
-		event.Participants = append(
-			event.Participants,
+		startedEvent.Participants = append(
+			startedEvent.Participants,
 			CombatParticipantInfo{
 				ID:       participant.ID,
 				Name:     participant.Name,
@@ -221,30 +217,52 @@ func (w *World) StartCombat(
 		)
 	}
 
-	return cloneCombat(combat), event, nil
+	events := make([]any, 0, 8)
+	events = append(events, startedEvent)
+	if turnEvent != nil {
+		events = append(events, *turnEvent)
+	}
+
+	// If the NPC won initiative, resolve its turn(s) immediately until a player's turn arrives.
+	progressionEvents, err := w.resolveCombatProgressionLocked(combat)
+	if err != nil {
+		return nil, nil, err
+	}
+	events = append(events, progressionEvents...)
+
+	return cloneCombat(combat), events, nil
 }
 
-// removePlayerFromCombatsLocked removes a player from active combats and
-// advances the turn when necessary.
+// removePlayerFromCombatsLocked removes a player from active combats,
+// advances turns, executes any resulting NPC actions, or ends combats
+// that no longer have active players.
 // The caller must hold w.mu.Lock().
-func (w *World) removePlayerFromCombatsLocked(playerName string) {
+func (w *World) removePlayerFromCombatsLocked(playerName string) ([]any, error) {
+	events := make([]any, 0)
+
 	for _, combat := range w.combats {
 		if combat == nil || !combat.Active {
 			continue
 		}
+
+		removed := false
+		wasCurrentTurn := false
 
 		for i, participant := range combat.Participants {
 			if !participant.IsPlayer || participant.ID != playerName {
 				continue
 			}
 
+			removed = true
 			previousTurnIndex := combat.TurnIndex
+			wasCurrentTurn = previousTurnIndex == i
+
 			combat.Participants = append(
 				combat.Participants[:i],
 				combat.Participants[i+1:]...,
 			)
 
-			if !combatHasActivePlayersLocked(combat) {
+			if !combatHasActivePlayersLocked(combat) || len(combat.Participants) == 0 {
 				combat.TurnIndex = -1
 			} else if previousTurnIndex > i {
 				combat.TurnIndex = previousTurnIndex - 1
@@ -252,6 +270,13 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) {
 				combat.TurnIndex = -1
 				for offset := 0; offset < len(combat.Participants); offset++ {
 					index := (i + offset) % len(combat.Participants)
+					candidate := combat.Participants[index]
+					if !candidate.Alive || candidate.Escaped || (candidate.IsPlayer && !candidate.Connected) {
+						continue
+					}
+					if _, err := w.updateCombatEffectsLocked(combat, candidate.ID); err != nil {
+						return nil, err
+					}
 					if AvailableActions(combat.Participants[index]) > 0 {
 						combat.TurnIndex = index
 						break
@@ -261,7 +286,31 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) {
 
 			break
 		}
+
+		if !removed {
+			continue
+		}
+
+		// If the disconnected player held the active turn and someone else still has actions,
+		// emit the immediate turn change before resolving subsequent NPC turns.
+		if wasCurrentTurn &&
+			combatHasActivePlayersLocked(combat) &&
+			combat.TurnIndex >= 0 &&
+			combat.TurnIndex < len(combat.Participants) {
+			if turnEvent := w.buildCombatTurnChangedLocked(combat); turnEvent != nil {
+				events = append(events, *turnEvent)
+			}
+		}
+
+		// Atomically end the combat if no active players remain, or advance rounds / NPC turns.
+		progressionEvents, err := w.resolveCombatProgressionLocked(combat)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, progressionEvents...)
 	}
+
+	return events, nil
 }
 
 func combatHasActivePlayersLocked(combat *Combat) bool {
@@ -307,163 +356,5 @@ func (w *World) GetCombat(combatID string) (*Combat, error) {
 	}
 
 	return cloneCombat(combat), nil
-}
-
-// StartCombatRound starts the next combat round.
-func (w *World) StartCombatRound(
-	combatID string,
-) (*Combat, *CombatTurnChanged, error) {
-	if w == nil {
-		return nil, nil, fmt.Errorf(
-			"%w: world is nil",
-			ErrInvalidWorldState,
-		)
-	}
-
-	combatID = strings.TrimSpace(combatID)
-	if combatID == "" {
-		return nil, nil, ErrInvalidArgument
-	}
-
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return nil, nil, fmt.Errorf(
-			"%w: active combat %q not found",
-			ErrInvalidWorldState,
-			combatID,
-		)
-	}
-
-	if !combat.TurnsInitialized {
-		return nil, nil, fmt.Errorf(
-			"%w: combat turns have not been initialized",
-			ErrInvalidWorldState,
-		)
-	}
-
-	if !combatHasLivingPlayersLocked(combat) {
-		return nil, nil, fmt.Errorf(
-			"%w: combat has no living players",
-			ErrInvalidWorldState,
-		)
-	}
-
-	if !combatHasLivingNPCsLocked(combat) {
-		return nil, nil, fmt.Errorf(
-			"%w: all NPCs have been defeated",
-			ErrInvalidWorldState,
-		)
-	}
-
-	// A new round can only start after all available actions are exhausted.
-	if combatHasAvailableActionsLocked(combat) {
-		return nil, nil, fmt.Errorf(
-			"%w: combat still has available actions",
-			ErrInvalidWorldState,
-		)
-	}
-
-	// Advance to the next round.
-	combat.Round++
-
-	// Accumulate speed using the effects currently active.
-	for i := range combat.Participants {
-		participant := &combat.Participants[i]
-
-		if !participant.Alive ||
-			participant.Escaped ||
-			(participant.IsPlayer && !participant.Connected) {
-			continue
-		}
-
-		participant.SpeedPoints += calculateEffectiveSpeed(*participant)
-	}
-
-	// Effects are not updated here.
-	// Their duration is reduced when their owner starts their next turn.
-
-	// Select the participant with the highest available speed points.
-	// Ties preserve the participant order.
-	combat.TurnIndex = -1
-	highestSpeedPoints := -1
-
-	for i := range combat.Participants {
-		participant := combat.Participants[i]
-
-		if AvailableActions(participant) <= 0 {
-			continue
-		}
-
-		if participant.SpeedPoints > highestSpeedPoints {
-			highestSpeedPoints = participant.SpeedPoints
-			combat.TurnIndex = i
-		}
-	}
-	if combat.TurnIndex == -1 {
-		return nil, nil, fmt.Errorf(
-			"%w: no participants have available actions",
-			ErrInvalidWorldState,
-		)
-	}
-
-	event := w.buildCombatTurnChangedLocked(combat)
-
-	return cloneCombat(combat), event, nil
-
-}
-
-// IsCombatRoundComplete reports whether all active participants have exhausted their actions.
-func (w *World) IsCombatRoundComplete(
-	combatID string,
-) (bool, error) {
-	if w == nil {
-		return false, fmt.Errorf(
-			"%w: world is nil",
-			ErrInvalidWorldState,
-		)
-	}
-
-	combatID = strings.TrimSpace(combatID)
-	if combatID == "" {
-		return false, ErrInvalidArgument
-	}
-
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return false, fmt.Errorf(
-			"%w: active combat %q not found",
-			ErrInvalidWorldState,
-			combatID,
-		)
-	}
-
-	if !combat.TurnsInitialized {
-		return false, fmt.Errorf(
-			"%w: combat turns have not been initialized",
-			ErrInvalidWorldState,
-		)
-	}
-
-	if !combatHasLivingPlayersLocked(combat) {
-		return false, fmt.Errorf(
-			"%w: combat has no living players",
-			ErrInvalidWorldState,
-		)
-	}
-
-	if !combatHasLivingNPCsLocked(combat) {
-		return false, fmt.Errorf(
-			"%w: all NPCs have been defeated",
-			ErrInvalidWorldState,
-		)
-	}
-
-	return !combatHasAvailableActionsLocked(combat), nil
 }
 

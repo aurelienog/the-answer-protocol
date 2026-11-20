@@ -126,7 +126,7 @@ func (w *World) findActiveCombatForPlayerLocked(
 }
 
 // getCombatRecipientsLocked returns the names of connected players
-// participating in a combat.
+// actively participating in a combat (excluding those who fled).
 // The caller must hold w.mu.
 func (w *World) getCombatRecipientsLocked(combat *Combat) []string {
 	if combat == nil {
@@ -137,7 +137,8 @@ func (w *World) getCombatRecipientsLocked(combat *Combat) []string {
 
 	for _, participant := range combat.Participants {
 		if !participant.IsPlayer ||
-			!participant.Connected {
+			!participant.Connected ||
+			participant.Escaped {
 			continue
 		}
 

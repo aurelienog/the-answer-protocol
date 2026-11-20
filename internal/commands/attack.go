@@ -48,25 +48,13 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		), nil
 	}
 
-	combat, event, err := ctx.World.StartCombat(ctx.PlayerName, target)
+	combat, domainEvents, err := ctx.World.StartCombat(ctx.PlayerName, target)
 	if err != nil {
 		return mapAttackError(err)
 	}
 
-	combat, turnEvent, err := ctx.World.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		if _, endErr := endCombat(ctx, combat.ID); endErr != nil {
-			return protocol.ERR(protocol.CodeInternalError, "INTERNAL_ERROR"), endErr
-		}
-		return mapCombatError(err), nil
-	}
+	publishDomainEvents(ctx.Events, domainEvents)
 
-	if event != nil && ctx.Events != nil {
-		ctx.Events.Publish(*event)
-	}
-	if turnEvent != nil && ctx.Events != nil {
-		ctx.Events.Publish(*turnEvent)
-	}
 	var attackerHP int
 	var targetHP int
 
@@ -80,6 +68,11 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		}
 	}
 
+	status := "combat"
+	if !combat.Active {
+		status = "ended"
+	}
+
 	response := struct {
 		CombatID   string `json:"combat_id"`
 		AttackerHP int    `json:"attacker_hp"`
@@ -91,7 +84,7 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		AttackerHP: attackerHP,
 		TargetHP:   targetHP,
 		Damage:     0,
-		Status:     "combat",
+		Status:     status,
 	}
 
 	return protocol.OKJSON(response)

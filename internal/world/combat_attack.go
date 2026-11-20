@@ -10,12 +10,9 @@ func (w *World) AttackCombatParticipant(
 	combatID string,
 	attackerID string,
 	targetID string,
-) (*Combat, int, *CombatAttack, *CombatDamage, *ParticipantDied, error) {
+) (*Combat, int, []any, error) {
 	if w == nil {
-		return nil, 0, nil, nil, nil, fmt.Errorf(
-			"%w: world is nil",
-			ErrInvalidWorldState,
-		)
+		return nil, 0, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	combatID = strings.TrimSpace(combatID)
@@ -23,11 +20,10 @@ func (w *World) AttackCombatParticipant(
 	targetID = strings.TrimSpace(targetID)
 
 	if combatID == "" || attackerID == "" || targetID == "" {
-		return nil, 0, nil, nil, nil, ErrInvalidArgument
+		return nil, 0, nil, ErrInvalidArgument
 	}
-
 	if attackerID == targetID {
-		return nil, 0, nil, nil, nil, ErrInvalidCombatTarget
+		return nil, 0, nil, ErrInvalidCombatTarget
 	}
 
 	w.mu.Lock()
@@ -35,76 +31,61 @@ func (w *World) AttackCombatParticipant(
 
 	combat, err := w.getActiveCombatLocked(combatID)
 	if err != nil {
-		return nil, 0, nil, nil, nil, err
+		return nil, 0, nil, err
 	}
 
 	attacker, err := w.getCurrentAttackerLocked(combat, attackerID)
 	if err != nil {
-		return nil, 0, nil, nil, nil, err
+		return nil, 0, nil, err
 	}
 
-	target, err := w.getCombatTargetLocked(
-		combat,
-		targetID,
-		attacker.IsPlayer,
-	)
+	target, err := w.getCombatTargetLocked(combat, targetID, attacker.IsPlayer)
 	if err != nil {
-		return nil, 0, nil, nil, nil, err
+		return nil, 0, nil, err
 	}
 
-	// Keep the target index because advancing the turn can restore
-	// the Participants slice during rollback.
 	targetIndex := -1
-
 	for i := range combat.Participants {
 		if combat.Participants[i].ID == targetID {
 			targetIndex = i
 			break
 		}
 	}
-
 	if targetIndex == -1 {
-		return nil, 0, nil, nil, nil, ErrInvalidCombatTarget
+		return nil, 0, nil, ErrInvalidCombatTarget
 	}
 
-	// Calculate damage using effective stats.
 	damage := calculateDamage(
 		calculateEffectiveStat(*attacker, CombatStatAttack),
 		calculateEffectiveStat(*target, CombatStatDefense),
 	)
 
-	// Preserve the target state in case action consumption fails.
 	previousHP := target.Stats.HP
 	previousAlive := target.Alive
 
 	var previousEntityHP int
-
 	if target.IsPlayer {
 		player := w.players[target.ID]
 		if player == nil {
-			return nil, 0, nil, nil, nil, ErrPlayerNotFound
+			return nil, 0, nil, ErrPlayerNotFound
 		}
 		previousEntityHP = player.CombatStats.HP
 	} else {
 		npc, exists := w.npcs[target.ID]
 		if !exists {
-			return nil, 0, nil, nil, nil, ErrNPCNotFound
+			return nil, 0, nil, ErrNPCNotFound
 		}
 		previousEntityHP = npc.CombatStats.HP
 	}
 
 	damage, err = w.applyCombatDamageLocked(target, damage)
 	if err != nil {
-		return nil, 0, nil, nil, nil, err
+		return nil, 0, nil, err
 	}
 
-	// Consume one action and advance the turn when necessary.
 	if err := w.consumeCombatActionLocked(combat); err != nil {
-		// Restore the target participant.
 		combat.Participants[targetIndex].Stats.HP = previousHP
 		combat.Participants[targetIndex].Alive = previousAlive
-
-		// Restore the entity's HP.
 		if target.IsPlayer {
 			w.players[targetID].CombatStats.HP = previousEntityHP
 		} else {
@@ -112,51 +93,63 @@ func (w *World) AttackCombatParticipant(
 			npc.CombatStats.HP = previousEntityHP
 			w.npcs[targetID] = npc
 		}
-
-		return nil, 0, nil, nil, nil, err
+		return nil, 0, nil, err
 	}
 
-	// Retrieve the target again after consuming the action.
 	target = &combat.Participants[targetIndex]
-
 	recipients := w.getCombatRecipientsLocked(combat)
 
-	attackEvent := &CombatAttack{
-		CombatID:     combat.ID,
-		AttackerID:   attacker.ID,
-		AttackerName: attacker.Name,
-		TargetID:     target.ID,
-		TargetName:   target.Name,
-		IsPlayer:     attacker.IsPlayer,
-		Recipients:   recipients,
-	}
-
-	damageEvent := &CombatDamage{
-		CombatID:     combat.ID,
-		AttackerID:   attacker.ID,
-		AttackerName: attacker.Name,
-		TargetID:     target.ID,
-		TargetName:   target.Name,
-		Damage:       damage,
-		RemainingHP:  target.Stats.HP,
-		Recipients:   recipients,
-	}
-
-	var deathEvent *ParticipantDied
+	events := make([]any, 0, 8)
+	events = append(events,
+		CombatAttack{
+			CombatID:     combat.ID,
+			AttackerID:   attacker.ID,
+			AttackerName: attacker.Name,
+			TargetID:     target.ID,
+			TargetName:   target.Name,
+			IsPlayer:     attacker.IsPlayer,
+			Recipients:   recipients,
+		},
+		CombatDamage{
+			CombatID:     combat.ID,
+			AttackerID:   attacker.ID,
+			AttackerName: attacker.Name,
+			TargetID:     target.ID,
+			TargetName:   target.Name,
+			Damage:       damage,
+			RemainingHP:  target.Stats.HP,
+			Recipients:   recipients,
+		},
+	)
 
 	if !target.Alive {
-		deathEvent = &ParticipantDied{
+		events = append(events, ParticipantDied{
 			CombatID:        combat.ID,
 			ParticipantID:   target.ID,
 			ParticipantName: target.Name,
 			IsPlayer:        target.IsPlayer,
 			KillerID:        attacker.ID,
 			Recipients:      recipients,
+		})
+	}
+
+	// If the player still has remaining actions (Speed >= 20), emit updated turn actions.
+	if combat.Active &&
+		combat.TurnIndex >= 0 &&
+		combat.TurnIndex < len(combat.Participants) &&
+		combat.Participants[combat.TurnIndex].ID == attackerID {
+		if turnEvent := w.buildCombatTurnChangedLocked(combat); turnEvent != nil {
+			events = append(events, *turnEvent)
 		}
 	}
 
-	return cloneCombat(combat), damage,
-		attackEvent, damageEvent, deathEvent, nil
+	progressionEvents, err := w.resolveCombatProgressionLocked(combat)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	events = append(events, progressionEvents...)
+
+	return cloneCombat(combat), damage, events, nil
 }
 
 // getActiveCombatLocked retrieves an active combat.

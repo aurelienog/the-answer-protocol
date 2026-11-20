@@ -10,14 +10,13 @@ import (
 func (w *World) DefendCombatParticipant(
 	combatID string,
 	participantID string,
-) (*Combat, *CombatTurnChanged, error) {
+) (*Combat, []any, error) {
 	if w == nil {
 		return nil, nil, ErrInvalidWorldState
 	}
 
 	combatID = strings.TrimSpace(combatID)
 	participantID = strings.TrimSpace(participantID)
-
 	if combatID == "" || participantID == "" {
 		return nil, nil, ErrInvalidArgument
 	}
@@ -25,14 +24,12 @@ func (w *World) DefendCombatParticipant(
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	combat, exists := w.combats[combatID]
-	if !exists || combat == nil || !combat.Active {
-		return nil, nil, ErrInvalidWorldState
+	combat, err := w.getActiveCombatLocked(combatID)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if !combat.TurnsInitialized ||
-		combat.TurnIndex < 0 ||
-		combat.TurnIndex >= len(combat.Participants) {
+	if combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
 		return nil, nil, ErrInvalidWorldState
 	}
 
@@ -47,15 +44,10 @@ func (w *World) DefendCombatParticipant(
 		return nil, nil, ErrInvalidCombatTurn
 	}
 
-	// Preserve the original state for rollback.
-	previousEffects := append(
-		[]CombatEffect(nil),
-		participant.Effects...,
-	)
+	previousEffects := append([]CombatEffect(nil), participant.Effects...)
 	previousSpeedPoints := participant.SpeedPoints
 
-	// Apply the defensive effect.
-	effect := CombatEffect{
+	participant.Effects = append(participant.Effects, CombatEffect{
 		ID: fmt.Sprintf(
 			"defend_%s_%d_%d",
 			participantID,
@@ -68,17 +60,25 @@ func (w *World) DefendCombatParticipant(
 		ModifierPercent: DefaultDefenseBonusPercent,
 		Duration:        1,
 		RemainingTurns:  1,
-	}
+	})
 
-	participant.Effects = append(participant.Effects, effect)
-
-	// End all remaining actions and advance the turn.
-	event, err := w.skipRemainingCombatActionsLocked(combat)
+	turnEvent, err := w.skipRemainingCombatActionsLocked(combat)
 	if err != nil {
 		combat.Participants[participantIndex].Effects = previousEffects
 		combat.Participants[participantIndex].SpeedPoints = previousSpeedPoints
 		return nil, nil, err
 	}
 
-	return cloneCombat(combat), event, nil
+	events := make([]any, 0, 8)
+	if turnEvent != nil {
+		events = append(events, *turnEvent)
+	}
+
+	progressionEvents, err := w.resolveCombatProgressionLocked(combat)
+	if err != nil {
+		return nil, nil, err
+	}
+	events = append(events, progressionEvents...)
+
+	return cloneCombat(combat), events, nil
 }

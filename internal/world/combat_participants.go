@@ -142,7 +142,7 @@ func (w *World) JoinCombat(
 			IsPlayer:    true,
 			Connected:   true,
 			Stats:       effectiveStats,
-			SpeedPoints: 0,
+			SpeedPoints: 0, // Joins initiative on the next round via StartCombatRound.
 			Alive:       true,
 		},
 	)

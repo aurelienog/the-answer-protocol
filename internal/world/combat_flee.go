@@ -6,22 +6,20 @@ import (
 )
 
 // FleeCombat allows a player to escape from an active combat.
+// The player cannot rejoin this combat, may join other combats,
+// and receives no further combat events after fleeing.
 func (w *World) FleeCombat(
 	combatID string,
 	playerID string,
-) (*Combat, *PlayerFled, error) {
+) (*Combat, int, int, []any, error) {
 	if w == nil {
-		return nil, nil, fmt.Errorf(
-			"%w: world is nil",
-			ErrInvalidWorldState,
-		)
+		return nil, 0, 0, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	combatID = strings.TrimSpace(combatID)
 	playerID = strings.TrimSpace(playerID)
-
 	if combatID == "" || playerID == "" {
-		return nil, nil, ErrInvalidArgument
+		return nil, 0, 0, nil, ErrInvalidArgument
 	}
 
 	w.mu.Lock()
@@ -29,31 +27,28 @@ func (w *World) FleeCombat(
 
 	combat, err := w.getActiveCombatLocked(combatID)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, 0, nil, err
 	}
 
 	participant, err := w.getCurrentAttackerLocked(combat, playerID)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, 0, nil, err
 	}
 
 	if !participant.IsPlayer {
-		return nil, nil, ErrInvalidCombatTurn
+		return nil, 0, 0, nil, ErrInvalidCombatTurn
 	}
 
 	player, exists := w.players[playerID]
 	if !exists || player == nil {
-		return nil, nil, ErrPlayerNotFound
+		return nil, 0, 0, nil, ErrPlayerNotFound
 	}
 
-	// Calculate the escape penalty using current HP.
 	damage := participant.Stats.HP * FleeHealthPenaltyPercent / 100
-
 	if damage < MinimumDamage {
 		damage = MinimumDamage
 	}
 
-	// Never allow fleeing to kill the player.
 	maxDamage := participant.Stats.HP - 1
 	if damage > maxDamage {
 		damage = maxDamage
@@ -62,21 +57,31 @@ func (w *World) FleeCombat(
 	participant.Stats.HP -= damage
 	player.CombatStats.HP = participant.Stats.HP
 	participant.Escaped = true
+	remainingHP := participant.Stats.HP
 
-	// Consume all remaining action points.
-	participant.SpeedPoints = 0
-
-	// Advance the turn.
-	combat.TurnIndex = (combat.TurnIndex + 1) % len(combat.Participants)
-
-	event := &PlayerFled{
+	events := make([]any, 0, 8)
+	events = append(events, PlayerFled{
 		CombatID:    combat.ID,
 		PlayerID:    participant.ID,
 		PlayerName:  participant.Name,
 		Damage:      damage,
-		RemainingHP: participant.Stats.HP,
+		RemainingHP: remainingHP,
 		Recipients:  w.getCombatRecipientsLocked(combat),
+	})
+
+	turnEvent, err := w.skipRemainingCombatActionsLocked(combat)
+	if err != nil {
+		return nil, 0, 0, nil, err
+	}
+	if turnEvent != nil {
+		events = append(events, *turnEvent)
 	}
 
-	return cloneCombat(combat), event, nil
+	progressionEvents, err := w.resolveCombatProgressionLocked(combat)
+	if err != nil {
+		return nil, 0, 0, nil, err
+	}
+	events = append(events, progressionEvents...)
+
+	return cloneCombat(combat), damage, remainingHP, events, nil
 }

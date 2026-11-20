@@ -19,7 +19,7 @@ func cleanupPlayer(
 	eventPublisher events.Publisher,
 ) {
 	if authenticated {
-		playerLeft, uniqueItemsReturned, turnEvent, combatsToEnd, statsEvent, err :=
+		playerLeft, uniqueItemsReturned, combatEvents, statsEvent, err :=
 			gameWorld.RemovePlayer(session.PlayerName)
 
 		if err != nil {
@@ -48,27 +48,11 @@ func cleanupPlayer(
 					eventPublisher.Publish(*statsEvent)
 				}
 
-				// Notify players about the updated combat turn.
-				if turnEvent != nil {
-					eventPublisher.Publish(*turnEvent)
-				}
-			}
-
-			// End combats that no longer have active players.
-			for _, combatID := range combatsToEnd {
-				_, event, err := gameWorld.EndCombat(combatID)
-				if err != nil {
-					log.Printf(
-						"Failed to end combat %q after player %q disconnected: %v",
-						combatID,
-						session.PlayerName,
-						err,
-					)
-					continue
-				}
-
-				if event != nil && eventPublisher != nil {
-					eventPublisher.Publish(*event)
+				// Publish all combat turn changes, NPC actions, and combat end events.
+				for _, combatEvent := range combatEvents {
+					if combatEvent != nil {
+						eventPublisher.Publish(combatEvent)
+					}
 				}
 			}
 		}
