@@ -1,9 +1,18 @@
 package ui
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 )
+
+type attackResponsePayload struct {
+	CombatID   string `json:"combat_id"`
+	AttackerHP int    `json:"attacker_hp"`
+	TargetHP   int    `json:"target_hp"`
+	Damage     int    `json:"damage"`
+	Status     string `json:"status"`
+}
 
 func parsePayloadFields(payload string) map[string]string {
 	fields := make(map[string]string)
@@ -16,6 +25,25 @@ func parsePayloadFields(payload string) map[string]string {
 	}
 
 	return fields
+}
+
+func handleAttackResponse(model *Model, payload string) error {
+	var data attackResponsePayload
+	if err := json.Unmarshal([]byte(payload), &data); err != nil {
+		return handleCombatActionResponse(model, payload)
+	}
+
+	if data.CombatID != "" {
+		model.world.Combat.ID = data.CombatID
+		model.world.Combat.Active = data.Status != "ended"
+	}
+
+	// Only apply response HPs if EVT COMBAT STARTED hasn't already populated the combat state.
+	if len(model.world.Combat.Participants) == 0 {
+		model.setCombatPlayerHealth(data.AttackerHP)
+	}
+
+	return nil
 }
 
 func handleCombatActionResponse(model *Model, payload string) error {

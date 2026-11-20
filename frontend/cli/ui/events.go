@@ -131,14 +131,25 @@ func (m *Model) appendCombatLog(message string) {
 	}
 }
 
-// combatEventParticipant mirrors world.CombatParticipantInfo from EVT COMBAT STARTED.
+// combatEventParticipant mirrors world.CombatParticipantInfo from EVT COMBAT STARTED and COMBAT JOIN.
 type combatEventParticipant struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	IsPlayer bool   `json:"is_player"`
-	HP       int    `json:"hp"`
-	MaxHP    int    `json:"max_hp"`
-	Alive    bool   `json:"alive"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	IsPlayer  bool   `json:"is_player"`
+	HP        *int   `json:"hp"`
+	CurrentHP *int   `json:"current_hp"`
+	MaxHP     int    `json:"max_hp"`
+	Alive     bool   `json:"alive"`
+}
+
+func (p combatEventParticipant) resolvedHP() int {
+	if p.HP != nil {
+		return *p.HP
+	}
+	if p.CurrentHP != nil {
+		return *p.CurrentHP
+	}
+	return 0
 }
 
 func parseKeyValuesOrdered(text string, keys ...string) map[string]string {
@@ -197,20 +208,23 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 		participants := make([]CombatParticipantState, 0, len(list))
 
 		for _, p := range list {
+			hp := p.resolvedHP()
 			participants = append(participants, CombatParticipantState{
 				ID:        p.ID,
 				Name:      p.Name,
 				IsPlayer:  p.IsPlayer,
 				Connected: true,
-				HP:        p.HP,
+				HP:        hp,
 				MaxHP:     p.MaxHP,
 				Alive:     p.Alive,
 			})
 
 			if p.IsPlayer && (strings.EqualFold(p.ID, m.player.Username) || strings.EqualFold(p.Name, m.player.Username)) {
 				isParticipant = true
-				m.player.Status.HP = p.HP
-				m.player.Status.MaxHP = p.MaxHP
+				m.player.Status.HP = hp
+				if p.MaxHP > 0 {
+					m.player.Status.MaxHP = p.MaxHP
+				}
 			}
 		}
 
@@ -320,27 +334,44 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 			return nil
 		}
 
-		fields := parseKeyValuesOrdered(body, "player", "combat")
+		fields := parseKeyValuesOrdered(body, "player", "combat", "hp", "max_hp")
 		player := fields["player"]
 		if player == "" {
 			return nil
 		}
 
+		hp, hasHP := strconv.Atoi(fields["hp"])
+		maxHP, hasMaxHP := strconv.Atoi(fields["max_hp"])
+
 		exists := false
-		for _, p := range m.world.Combat.Participants {
+		for i := range m.world.Combat.Participants {
+			p := &m.world.Combat.Participants[i]
 			if p.IsPlayer && (strings.EqualFold(p.Name, player) || strings.EqualFold(p.ID, player)) {
 				exists = true
+				if hasHP == nil {
+					p.HP = hp
+				}
+				if hasMaxHP == nil && maxHP > 0 {
+					p.MaxHP = maxHP
+				}
 				break
 			}
 		}
 		if !exists {
-			m.world.Combat.Participants = append(m.world.Combat.Participants, CombatParticipantState{
+			participant := CombatParticipantState{
 				ID:        player,
 				Name:      player,
 				IsPlayer:  true,
 				Connected: true,
 				Alive:     true,
-			})
+			}
+			if hasHP == nil {
+				participant.HP = hp
+			}
+			if hasMaxHP == nil && maxHP > 0 {
+				participant.MaxHP = maxHP
+			}
+			m.world.Combat.Participants = append(m.world.Combat.Participants, participant)
 		}
 
 		m.appendCombatLog(fmt.Sprintf("%s joined the combat (enters next round).", player))
@@ -391,26 +422,6 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 	return nil
 }
 
-func (m *Model) updateCombatParticipantHP(targetName string, hp int) {
-	if hp < 0 {
-		hp = 0
-	}
-
-	if strings.EqualFold(targetName, m.player.Username) {
-		m.setCombatPlayerHealth(hp)
-		return
-	}
-
-	for i := range m.world.Combat.Participants {
-		p := &m.world.Combat.Participants[i]
-		if strings.EqualFold(p.Name, targetName) || strings.EqualFold(p.ID, targetName) {
-			p.HP = hp
-			p.Alive = hp > 0
-			break
-		}
-	}
-}
-
 func (m *Model) handleRespawnEvent(payload string) tea.Cmd {
 	fields := parseKeyValuesOrdered(payload, "player", "room", "hp", "max_hp", "combat")
 	player := fields["player"]
@@ -432,4 +443,24 @@ func (m *Model) handleRespawnEvent(payload string) tea.Cmd {
 
 	m.ui.PendingRefresh = RefreshRoom
 	return sendCommand(m.client, "LOOK")
+}
+
+func (m *Model) updateCombatParticipantHP(targetName string, hp int) {
+	if hp < 0 {
+		hp = 0
+	}
+
+	if strings.EqualFold(targetName, m.player.Username) {
+		m.setCombatPlayerHealth(hp)
+		return
+	}
+
+	for i := range m.world.Combat.Participants {
+		p := &m.world.Combat.Participants[i]
+		if strings.EqualFold(p.Name, targetName) || strings.EqualFold(p.ID, targetName) {
+			p.HP = hp
+			p.Alive = hp > 0
+			break
+		}
+	}
 }

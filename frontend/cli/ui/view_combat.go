@@ -128,7 +128,9 @@ func (m Model) renderCombatParticipant(participant CombatParticipantState, width
 		if id == "" {
 			id = participant.Name
 		}
-		if participant.IsPlayer && m.player.Username != "" {
+		if participant.IsPlayer &&
+			(strings.EqualFold(participant.ID, m.player.Username) ||
+				strings.EqualFold(participant.Name, m.player.Username)) {
 			id = m.player.Username
 		}
 
@@ -258,54 +260,54 @@ func styleCombatEvent(entry string, currentTurn string) string {
 }
 
 func (m *Model) syncCombatHealthBars() bool {
-    if m.ui.healthBars == nil {
-        m.ui.healthBars = make(
-            map[string]animations.HealthBarAnimation,
-        )
-    }
+	if m.ui.healthBars == nil {
+		m.ui.healthBars = make(
+			map[string]animations.HealthBarAnimation,
+		)
+	}
 
-    animating := false
+	animating := false
 
-    // Sincronizar vida del jugador.
-    if m.player.Username != "" && m.player.Status.MaxHP > 0 {
-        id := m.player.Username
+	// Sincronizar vida del jugador.
+	if m.player.Username != "" && m.player.Status.MaxHP > 0 {
+		id := m.player.Username
 
-        bar := m.ui.healthBars[id]
+		bar := m.ui.healthBars[id]
 
-        if bar.SetTarget(
-            m.player.Status.HP,
-            m.player.Status.MaxHP,
-        ) {
-            animating = true
-        }
+		if bar.SetTarget(
+			m.player.Status.HP,
+			m.player.Status.MaxHP,
+		) {
+			animating = true
+		}
 
-        m.ui.healthBars[id] = bar
-    }
+		m.ui.healthBars[id] = bar
+	}
 
-    // Sincronizar participantes del combate.
-    for _, participant := range m.world.Combat.Participants {
-        id := participant.ID
-        if id == "" {
-            id = participant.Name
-        }
+	// Sincronizar participantes del combate.
+	for _, participant := range m.world.Combat.Participants {
+		id := participant.ID
+		if id == "" {
+			id = participant.Name
+		}
+		if participant.IsPlayer &&
+			(strings.EqualFold(participant.ID, m.player.Username) ||
+				strings.EqualFold(participant.Name, m.player.Username)) {
+			id = m.player.Username
+		}
 
-        if id == "" || participant.MaxHP <= 0 {
-            continue
-        }
+		if id == "" || participant.MaxHP <= 0 {
+			continue
+		}
 
-        // Evitar duplicar la barra del jugador.
-        if participant.IsPlayer && m.player.Username != "" {
-            id = m.player.Username
-        }
+		bar := m.ui.healthBars[id]
 
-        bar := m.ui.healthBars[id]
+		if bar.SetTarget(participant.HP, participant.MaxHP) {
+			animating = true
+		}
 
-        if bar.SetTarget(participant.HP, participant.MaxHP) {
-            animating = true
-        }
+		m.ui.healthBars[id] = bar
+	}
 
-        m.ui.healthBars[id] = bar
-    }
-
-    return animating
+	return animating
 }

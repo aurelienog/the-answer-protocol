@@ -47,18 +47,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m = updated
 
-		var batch []tea.Cmd
-		if cmd != nil {
-			batch = append(batch, cmd)
-		}
-		if m.client != nil {
-			batch = append(batch, waitForServerEvent(m.client))
-		}
 		if m.syncCombatHealthBars() {
-			batch = append(batch, healthBarTick())
+			cmd = tea.Batch(cmd, healthBarTick())
 		}
 
-		return refreshResult(m, tea.Batch(batch...))
+		return refreshResult(m, cmd)
 
 	case clientDoneMsg:
 		m.communication.StatusMessage = "Connection to server closed"
