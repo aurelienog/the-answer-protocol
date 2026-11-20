@@ -29,7 +29,7 @@ func (m Model) renderCombat() string {
 		"",
 		m.renderCombatParticipants(combat.Participants, width),
 		"",
-		renderCombatTurn(combat),
+		m.renderCombatTurn(),
 		"",
 		renderCombatLog(
 			combat.Log,
@@ -106,8 +106,16 @@ func (m Model) renderCombatParticipant(participant CombatParticipantState, width
 		stateStyle = layout.WarningStyle
 	}
 
+	turnMarker := "  "
+	if m.world.Combat.Active &&
+		(strings.EqualFold(m.world.Combat.CurrentTurn, participant.Name) ||
+			strings.EqualFold(m.world.Combat.CurrentTurn, participant.ID)) {
+		turnMarker = layout.WarningStyle.Render("▶ ")
+	}
+
 	header := fmt.Sprintf(
-		"%s  %s  %s",
+		"%s%s  %s  %s",
+		turnMarker,
 		nameStyle.Render(name),
 		layout.MutedStyle.Render(participantType),
 		stateStyle.Render(state),
@@ -151,7 +159,8 @@ func (m Model) renderCombatParticipant(participant CombatParticipantState, width
 	)
 }
 
-func renderCombatTurn(combat CombatState) string {
+func (m Model) renderCombatTurn() string {
+	combat := m.world.Combat
 	if !combat.Active {
 		return layout.MutedStyle.Render("Combat has ended")
 	}
@@ -160,10 +169,18 @@ func renderCombatTurn(combat CombatState) string {
 		return layout.StatusStyle.Render("Waiting for turn information")
 	}
 
+	if strings.EqualFold(combat.CurrentTurn, m.player.Username) {
+		return fmt.Sprintf(
+			"%s  %s",
+			layout.TitleStyle.Render("CURRENT TURN"),
+			layout.SuccessStyle.Render("⚔ YOUR TURN ("+combat.CurrentTurn+")"),
+		)
+	}
+
 	return fmt.Sprintf(
 		"%s  %s",
 		layout.TitleStyle.Render("CURRENT TURN"),
-		layout.InfoStyle.Render("⚔ "+combat.CurrentTurn),
+		layout.WarningStyle.Render("⏳ "+combat.CurrentTurn),
 	)
 }
 

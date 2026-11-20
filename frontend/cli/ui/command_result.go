@@ -27,7 +27,7 @@ var commandHandlers = map[string]commandHandler{
 	"INVENTORY":     handleInventoryResponse,
 	"TAKE":          handleTakeResponse,
 	"DROP":          handleDropResponse,
-	"ATTACK":        handleCombatActionResponse,
+	"ATTACK":        handleAttackResponse,
 	"COMBAT ATTACK": handleCombatActionResponse,
 	"COMBAT DEFEND": handleCombatActionResponse,
 	"COMBAT USE":    handleCombatUseResponse,
@@ -179,8 +179,8 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 
 	// Combat responses: UI messages, view transition, and background refreshes.
 	switch command {
-	case "ATTACK", "COMBAT ATTACK":
-		m.communication.StatusMessage = "Attack executed."
+	case "ATTACK", "COMBAT ATTACK", "COMBAT JOIN":
+		m.communication.StatusMessage = "Combat active."
 		if m.navigation.CurrentView != ViewCombat {
 			return m, m.startViewTransition(ViewCombat)
 		}

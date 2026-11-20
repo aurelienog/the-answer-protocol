@@ -31,12 +31,8 @@ func (h *HealthBarAnimation) SetTarget(current, maximum int) bool {
 		return false
 	}
 
-	if h.Target == float64(current) {
-		return false
-	}
-
 	h.Target = float64(current)
-	return true
+	return h.Animating()
 }
 
 // Tick avanza la animación.

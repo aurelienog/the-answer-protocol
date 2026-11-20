@@ -43,6 +43,7 @@ const (
     RefreshRoom
     RefreshQuests
     RefreshGroup
+    RefreshStatus
 )
 
 type ApplicationState struct {

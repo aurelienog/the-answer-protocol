@@ -1,429 +1,435 @@
 package ui
 
 import (
-    "encoding/json"
-    "strings"
-    "strconv"
-    "fmt"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 
-    tea "github.com/charmbracelet/bubbletea"
-    "the-answer-protocol/internal/protocol"
+	tea "github.com/charmbracelet/bubbletea"
+	"the-answer-protocol/internal/protocol"
 )
 
 const maxEventLogEntries = 100
 
 func (m Model) handleServerEvent(
-    msg serverEventMsg,
+	msg serverEventMsg,
 ) (tea.Model, tea.Cmd) {
-    event := msg.event.Message
+	event := msg.event.Message
 
-    var cmd tea.Cmd
+	var cmd tea.Cmd
 
-    if event.Kind == protocol.KindEVT && isChatEvent(event.Data) {
-        chatMessage, ok := parseChatMessage(event.EventType, event.Data)
-        if ok {
-            m.communication.ChatLog = append(
-                m.communication.ChatLog,
-                chatMessage,
-            )
+	if event.Kind == protocol.KindEVT && isChatEvent(event.Data) {
+		chatMessage, ok := parseChatMessage(event.EventType, event.Data)
+		if ok {
+			m.communication.ChatLog = append(
+				m.communication.ChatLog,
+				chatMessage,
+			)
 
-            if len(m.communication.ChatLog) > maxEventLogEntries {
-                m.communication.ChatLog = m.communication.ChatLog[
-                    len(m.communication.ChatLog)-maxEventLogEntries:
-                ]
-            }
-        }
-    } else {
-        m.appendEventLog(msg.event.Raw)
+			if len(m.communication.ChatLog) > maxEventLogEntries {
+				m.communication.ChatLog = m.communication.ChatLog[len(m.communication.ChatLog)-maxEventLogEntries:]
+			}
+		}
+	} else {
+		m.appendEventLog(msg.event.Raw)
 
-        if event.Kind == protocol.KindEVT {
-            switch event.EventType {
-            case "COMBAT":
-                m.handleCombatEvent(event.Data)
-            
-                if m.world.Combat.Active &&
-                    m.navigation.CurrentView != ViewCombat {
-                    cmd = m.startViewTransition(ViewCombat)
-                }
+		if event.Kind == protocol.KindEVT {
+			switch event.EventType {
+			case "COMBAT":
+				combatCmd := m.handleCombatEvent(event.Data)
+				if m.world.Combat.Active && m.navigation.CurrentView != ViewCombat {
+					cmd = tea.Batch(combatCmd, m.startViewTransition(ViewCombat))
+				} else {
+					cmd = combatCmd
+				}
 
-            case "GROUP":
-                cmd = m.handleGroupEvent(event.Data)
-            }
-        }
-    }
+			case "RESPAWN":
+				cmd = m.handleRespawnEvent(event.Data)
 
-    return m, tea.Batch(
-        cmd,
-        waitForServerEvent(m.client),
-    )
+			case "GROUP":
+				cmd = m.handleGroupEvent(event.Data)
+			}
+		}
+	}
+
+	return m, tea.Batch(
+		cmd,
+		waitForServerEvent(m.client),
+	)
 }
 
 func isChatEvent(data string) bool {
-    return strings.HasPrefix(data, "CHAT player=")
+	return strings.HasPrefix(data, "CHAT player=")
 }
 
 func formatChatMessage(scope, data string) string {
-    data = strings.TrimPrefix(data, "CHAT player=")
+	data = strings.TrimPrefix(data, "CHAT player=")
 
-    parts := strings.SplitN(data, " message=", 2)
-    if len(parts) != 2 {
-        return data
-    }
+	parts := strings.SplitN(data, " message=", 2)
+	if len(parts) != 2 {
+		return data
+	}
 
-    return "[" + scope + "] " + parts[0] + ": " + parts[1]
+	return "[" + scope + "] " + parts[0] + ": " + parts[1]
 }
 
 func parseChatMessage(scope, data string) (ChatMessage, bool) {
-    data = strings.TrimPrefix(data, "CHAT player=")
+	data = strings.TrimPrefix(data, "CHAT player=")
 
-    parts := strings.SplitN(data, " message=", 2)
-    if len(parts) != 2 {
-        return ChatMessage{}, false
-    }
+	parts := strings.SplitN(data, " message=", 2)
+	if len(parts) != 2 {
+		return ChatMessage{}, false
+	}
 
-    return ChatMessage{
-        Scope:      scope,
-        PlayerName: parts[0],
-        Message:    parts[1],
-    }, true
-}
-
-func (m *Model) handleCombatEvent(data string) {
-    if strings.HasPrefix(data, "STARTED ") {
-        m.handleCombatStartedEvent(strings.TrimPrefix(data, "STARTED "))
-        return
-    }
-
-    parts := strings.Fields(data)
-    if len(parts) == 0 {
-        return
-    }
-
-    fields := parseCombatFields(parts[1:])
-
-    switch parts[0] {
-    case "TURN":
-        if !m.world.Combat.Active {
-            return
-        }
-
-        m.world.Combat.CurrentTurn = fields["participant"]
-
-        if round, err := strconv.Atoi(fields["round"]); err == nil {
-            m.world.Combat.Round = round
-        }
-
-        if actions, err := strconv.Atoi(fields["actions"]); err == nil {
-            m.world.Combat.AvailableActions = actions
-        }
-
-        m.appendCombatLog("Turn: " + m.world.Combat.CurrentTurn)
-
-    case "ATTACK":
-        if !m.world.Combat.Active {
-            return
-        }
-
-        fields := parseCombatFields(parts[1:])
-
-        attacker := fields["attacker"]
-        target := fields["target"]
-        attackerType := fields["attacker_type"]
-
-        attackerIsPlayer := attackerType == "PLAYER"
-
-        m.ensureCombatParticipant(attacker, attackerIsPlayer)
-        m.ensureCombatParticipant(target, !attackerIsPlayer)
-
-        m.appendCombatLog(
-            attacker + " attacks " + target + ".",
-        )
-
-    case "DAMAGE":
-        if !m.world.Combat.Active {
-            return
-        }
-
-        fields := parseCombatFields(parts[1:])
-
-        attacker := fields["attacker"]
-        target := fields["target"]
-
-        amount, _ := strconv.Atoi(fields["amount"])
-        remainingHP, _ := strconv.Atoi(fields["remaining_hp"])
-        m.appendEventLog(
-            fmt.Sprintf(
-                "DEBUG DAMAGE: target=%s remainingHP=%d",
-                target,
-                remainingHP,
-            ),
-        )
-        targetIsPlayer := false
-
-        for _, existing := range m.world.Combat.Participants {
-            if existing.ID == target || existing.Name == target {
-                targetIsPlayer = existing.IsPlayer
-                break
-            }
-        }
-
-        participant := m.ensureCombatParticipant(target, targetIsPlayer)
-
-        if participant != nil {
-            participant.HP = remainingHP
-
-            if remainingHP <= 0 {
-                participant.Alive = false
-            }
-        }
-
-        m.appendCombatLog(
-            attacker + " deals " +
-                strconv.Itoa(amount) + " damage to " + target + ".",
-        )
-
-    case "PLAYER_JOINED":
-        if !m.world.Combat.Active {
-            return
-        }
-
-        fields := parseCombatFields(parts[1:])
-        player := fields["player"]
-
-        if player == "" {
-            return
-        }
-
-        m.ensureCombatParticipant(player, true)
-        m.appendCombatLog(player + " joined the combat.")
-
-    case "PLAYER_FLED":
-        if !m.world.Combat.Active {
-            return
-        }
-
-        fields := parseCombatFields(parts[1:])
-
-        player := fields["player"]
-        remainingHP, _ := strconv.Atoi(fields["remaining_hp"])
-
-        participant := m.ensureCombatParticipant(player, true)
-
-        if participant != nil {
-            participant.HP = remainingHP
-            participant.Escaped = true
-        }
-
-        m.appendCombatLog(player + " fled from combat.")
-
-    case "PLAYER_DIED", "NPC_DIED":
-        if !m.world.Combat.Active {
-            return
-        }
-
-        fields := parseCombatFields(parts[1:])
-
-        name := fields["participant"]
-        isPlayer := parts[0] == "PLAYER_DIED"
-
-        participant := m.ensureCombatParticipant(name, isPlayer)
-
-        if participant != nil {
-            participant.Alive = false
-            participant.HP = 0
-        }
-
-        m.appendCombatLog(name + " was defeated.")
-
-    case "ENDED":
-        header, rewardsJSON, hasRewards := strings.Cut(
-            data,
-            " rewards=",
-        )
-
-        headerParts := strings.Fields(header)
-        fields := parseCombatFields(headerParts[1:])
-
-        combatID := fields["combat"]
-
-        if combatID == "" || combatID != m.world.Combat.ID {
-            return
-        }
-
-        m.world.Combat.Active = false
-        m.world.Combat.AvailableActions = 0
-        m.world.Combat.CurrentTurn = ""
-
-        m.appendCombatLog("Combat ended.")
-
-        if !hasRewards {
-            return
-        }
-
-        var rewards []struct {
-            Items []struct {
-                Name string `json:"name"`
-            } `json:"Items"`
-        }
-
-        if err := json.Unmarshal([]byte(rewardsJSON), &rewards); err != nil {
-            m.appendCombatLog("Unable to read combat rewards.")
-            return
-        }
-
-        for _, reward := range rewards {
-            for _, item := range reward.Items {
-                message := "Reward received: " + item.Name
-                m.appendCombatLog(message)
-                m.appendEventLog(message)
-            }
-        }
-    }
+	return ChatMessage{
+		Scope:      scope,
+		PlayerName: parts[0],
+		Message:    parts[1],
+	}, true
 }
 
 func (m *Model) appendEventLog(message string) {
-    m.communication.EventLog = append(
-        m.communication.EventLog,
-        message,
-    )
+	m.communication.EventLog = append(
+		m.communication.EventLog,
+		message,
+	)
 
-    if len(m.communication.EventLog) > maxEventLogEntries {
-        m.communication.EventLog = m.communication.EventLog[
-            len(m.communication.EventLog)-maxEventLogEntries:
-        ]
-    }
+	if len(m.communication.EventLog) > maxEventLogEntries {
+		m.communication.EventLog = m.communication.EventLog[len(m.communication.EventLog)-maxEventLogEntries:]
+	}
 }
 
 func (m *Model) handleGroupEvent(data string) tea.Cmd {
-    if m.navigation.CurrentView != ViewGroup {
-        return nil
-    }
+	if m.navigation.CurrentView != ViewGroup {
+		return nil
+	}
 
-    parts := strings.Fields(data)
-    if len(parts) == 0 {
-        return nil
-    }
+	parts := strings.Fields(data)
+	if len(parts) == 0 {
+		return nil
+	}
 
-    switch parts[0] {
-    case "JOIN", "LEAVE":
-        // Refresh group information when another member joins or leaves.
-        m.ui.PendingRefresh = RefreshGroup
-        return sendCommand(m.client, "GROUP INFO")
+	switch parts[0] {
+	case "JOIN", "LEAVE":
+		m.ui.PendingRefresh = RefreshGroup
+		return sendCommand(m.client, "GROUP INFO")
 
-    default:
-        return nil
-    }
-}
-
-func parseCombatFields(parts []string) map[string]string {
-    fields := make(map[string]string)
-    currentKey := ""
-
-    for _, part := range parts {
-        key, value, ok := strings.Cut(part, "=")
-
-        if ok {
-            currentKey = key
-            fields[currentKey] = value
-            continue
-        }
-
-        if currentKey != "" {
-            fields[currentKey] += " " + part
-        }
-    }
-
-    return fields
-}
-
-func (m *Model) ensureCombatParticipant(
-    name string,
-    isPlayer bool,
-) *CombatParticipantState {
-    if name == "" {
-        return nil
-    }
-
-    for i := range m.world.Combat.Participants {
-        participant := &m.world.Combat.Participants[i]
-
-        if participant.ID == name || participant.Name == name {
-            return participant
-        }
-    }
-
-    m.world.Combat.Participants = append(
-        m.world.Combat.Participants,
-        CombatParticipantState{
-            ID:        name,
-            Name:      name,
-            IsPlayer:  isPlayer,
-            Alive:     true,
-            Connected: true,
-        },
-    )
-
-    return &m.world.Combat.Participants[len(m.world.Combat.Participants)-1]
+	default:
+		return nil
+	}
 }
 
 func (m *Model) appendCombatLog(message string) {
-    m.world.Combat.Log = append(
-        m.world.Combat.Log,
-        message,
-    )
+	m.world.Combat.Log = append(
+		m.world.Combat.Log,
+		message,
+	)
 
-    if len(m.world.Combat.Log) > maxEventLogEntries {
-        m.world.Combat.Log = m.world.Combat.Log[
-            len(m.world.Combat.Log)-maxEventLogEntries:
-        ]
-    }
+	if len(m.world.Combat.Log) > maxEventLogEntries {
+		m.world.Combat.Log = m.world.Combat.Log[len(m.world.Combat.Log)-maxEventLogEntries:]
+	}
 }
 
-func (m *Model) handleCombatStartedEvent(data string) {
-    header, participantsJSON, ok := strings.Cut(data, " participants=")
-    if !ok {
-        return
-    }
+// combatEventParticipant mirrors world.CombatParticipantInfo from EVT COMBAT STARTED.
+type combatEventParticipant struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	IsPlayer bool   `json:"is_player"`
+	HP       int    `json:"hp"`
+	MaxHP    int    `json:"max_hp"`
+	Alive    bool   `json:"alive"`
+}
 
-    fields := parseCombatFields(strings.Fields(header))
-    combatID := fields["combat"]
+func parseKeyValuesOrdered(text string, keys ...string) map[string]string {
+	result := make(map[string]string, len(keys))
+	for i, key := range keys {
+		prefix := key + "="
+		start := strings.Index(text, prefix)
+		if start == -1 {
+			continue
+		}
+		start += len(prefix)
+		end := len(text)
+		for _, nextKey := range keys[i+1:] {
+			if idx := strings.Index(text[start:], " "+nextKey+"="); idx != -1 {
+				end = start + idx
+				break
+			}
+		}
+		result[key] = strings.TrimSpace(text[start:end])
+	}
+	return result
+}
 
-    if combatID == "" {
-        return
-    }
+func (m *Model) handleCombatEvent(payload string) tea.Cmd {
+	parts := strings.SplitN(strings.TrimSpace(payload), " ", 2)
+	if len(parts) == 0 {
+		return nil
+	}
 
-    var participants []CombatParticipantState
+	subType := strings.ToUpper(parts[0])
+	body := ""
+	if len(parts) > 1 {
+		body = parts[1]
+	}
 
-    if err := json.Unmarshal([]byte(participantsJSON), &participants); err != nil {
-        m.appendEventLog("Unable to read combat participants.")
-        return
-    }
+	switch subType {
+	case "STARTED":
+		header, participantsJSON, ok := strings.Cut(body, " participants=")
+		if !ok {
+			return nil
+		}
 
-    isParticipant := false
+		headerFields := parsePayloadFields(header)
+		combatID := headerFields["combat"]
+		if combatID == "" {
+			return nil
+		}
 
-    for i := range participants {
-        participant := &participants[i]
+		var list []combatEventParticipant
+		if err := json.Unmarshal([]byte(strings.TrimSpace(participantsJSON)), &list); err != nil {
+			m.appendEventLog("Unable to read combat participants.")
+			return nil
+		}
 
-        if participant.IsPlayer {
-            participant.Connected = true
+		isParticipant := false
+		participants := make([]CombatParticipantState, 0, len(list))
 
-            if participant.ID == m.player.Username ||
-                participant.Name == m.player.Username {
-                isParticipant = true
-            }
-        }
-    }
+		for _, p := range list {
+			participants = append(participants, CombatParticipantState{
+				ID:        p.ID,
+				Name:      p.Name,
+				IsPlayer:  p.IsPlayer,
+				Connected: true,
+				HP:        p.HP,
+				MaxHP:     p.MaxHP,
+				Alive:     p.Alive,
+			})
 
-    // Ignore combat events if the local player is not a participant.
-    if !isParticipant {
-        return
-    }
+			if p.IsPlayer && (strings.EqualFold(p.ID, m.player.Username) || strings.EqualFold(p.Name, m.player.Username)) {
+				isParticipant = true
+				m.player.Status.HP = p.HP
+				m.player.Status.MaxHP = p.MaxHP
+			}
+		}
 
-    m.world.Combat = CombatState{
-        ID:           combatID,
-        Active:       true,
-        Round:        1,
-        Participants: participants,
-        Log:          []string{"Combat started."},
-    }
+		if !isParticipant {
+			return nil
+		}
+
+		m.world.Combat = CombatState{
+			ID:           combatID,
+			Round:        1,
+			Active:       true,
+			Participants: participants,
+			Log:          []string{"Combat started (" + combatID + ")"},
+		}
+
+	case "TURN":
+		if !m.world.Combat.Active {
+			return nil
+		}
+
+		fields := parseKeyValuesOrdered(body, "participant_type", "participant", "round", "actions")
+		if round, err := strconv.Atoi(fields["round"]); err == nil && round > 0 {
+			m.world.Combat.Round = round
+		}
+		if actions, err := strconv.Atoi(fields["actions"]); err == nil {
+			m.world.Combat.AvailableActions = actions
+		}
+
+		participant := fields["participant"]
+		m.world.Combat.CurrentTurn = participant
+		m.appendCombatLog(fmt.Sprintf("Turn: %s (actions: %d)", participant, m.world.Combat.AvailableActions))
+
+	case "ATTACK":
+		if !m.world.Combat.Active {
+			return nil
+		}
+
+		fields := parseKeyValuesOrdered(body, "attacker_type", "attacker", "target")
+		m.appendCombatLog(fmt.Sprintf("%s attacks %s.", fields["attacker"], fields["target"]))
+
+	case "DAMAGE":
+		if !m.world.Combat.Active {
+			return nil
+		}
+
+		fields := parseKeyValuesOrdered(body, "attacker", "target", "amount", "remaining_hp", "hp")
+		attacker := fields["attacker"]
+		target := fields["target"]
+		amount, _ := strconv.Atoi(fields["amount"])
+
+		hpStr := fields["remaining_hp"]
+		if hpStr == "" {
+			hpStr = fields["hp"]
+		}
+
+		if remainingHP, err := strconv.Atoi(hpStr); err == nil {
+			m.updateCombatParticipantHP(target, remainingHP)
+		}
+
+		m.appendCombatLog(fmt.Sprintf("%s deals %d damage to %s.", attacker, amount, target))
+
+	case "PLAYER_DIED", "NPC_DIED":
+		if !m.world.Combat.Active {
+			return nil
+		}
+
+		fields := parseKeyValuesOrdered(body, "participant", "killer")
+		participant := fields["participant"]
+		killer := fields["killer"]
+
+		m.updateCombatParticipantHP(participant, 0)
+		if killer != "" {
+			m.appendCombatLog(fmt.Sprintf("%s was defeated by %s.", participant, killer))
+		} else {
+			m.appendCombatLog(fmt.Sprintf("%s was defeated.", participant))
+		}
+
+	case "PLAYER_FLED":
+		if !m.world.Combat.Active {
+			return nil
+		}
+
+		fields := parseKeyValuesOrdered(body, "player", "damage", "remaining_hp")
+		player := fields["player"]
+		damage, _ := strconv.Atoi(fields["damage"])
+		remainingHP, hasRemaining := strconv.Atoi(fields["remaining_hp"])
+
+		for i := range m.world.Combat.Participants {
+			p := &m.world.Combat.Participants[i]
+			if p.IsPlayer && (strings.EqualFold(p.Name, player) || strings.EqualFold(p.ID, player)) {
+				p.Escaped = true
+				if hasRemaining == nil {
+					p.HP = remainingHP
+				}
+				break
+			}
+		}
+
+		if strings.EqualFold(player, m.player.Username) && hasRemaining == nil {
+			m.setCombatPlayerHealth(remainingHP)
+		}
+
+		m.appendCombatLog(fmt.Sprintf("%s fled from combat (-%d HP).", player, damage))
+
+	case "PLAYER_JOINED":
+		if !m.world.Combat.Active {
+			return nil
+		}
+
+		fields := parseKeyValuesOrdered(body, "player", "combat")
+		player := fields["player"]
+		if player == "" {
+			return nil
+		}
+
+		exists := false
+		for _, p := range m.world.Combat.Participants {
+			if p.IsPlayer && (strings.EqualFold(p.Name, player) || strings.EqualFold(p.ID, player)) {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			m.world.Combat.Participants = append(m.world.Combat.Participants, CombatParticipantState{
+				ID:        player,
+				Name:      player,
+				IsPlayer:  true,
+				Connected: true,
+				Alive:     true,
+			})
+		}
+
+		m.appendCombatLog(fmt.Sprintf("%s joined the combat (enters next round).", player))
+
+	case "HELP_REQUESTED":
+		fields := parseKeyValuesOrdered(body, "player", "combat", "room")
+		player := fields["player"]
+		combatID := fields["combat"]
+		room := fields["room"]
+		m.appendCombatLog(fmt.Sprintf("%s requested combat assistance (%s) in %s.", player, combatID, room))
+
+	case "ENDED":
+		header, rewardsJSON, hasRewards := strings.Cut(body, " rewards=")
+		headerFields := parsePayloadFields(header)
+		combatID := headerFields["combat"]
+
+		if combatID != "" && m.world.Combat.ID != "" && combatID != m.world.Combat.ID {
+			return nil
+		}
+
+		m.world.Combat.Active = false
+		m.world.Combat.AvailableActions = 0
+		m.world.Combat.CurrentTurn = ""
+		m.appendCombatLog("Combat ended.")
+
+		if hasRewards {
+			var rewards []struct {
+				Items []struct {
+					Name string `json:"name"`
+				} `json:"Items"`
+			}
+
+			if err := json.Unmarshal([]byte(rewardsJSON), &rewards); err == nil {
+				for _, reward := range rewards {
+					for _, item := range reward.Items {
+						message := "Reward received: " + item.Name
+						m.appendCombatLog(message)
+						m.appendEventLog(message)
+					}
+				}
+			}
+		}
+
+		m.ui.PendingRefresh = RefreshStatus
+		return sendCommand(m.client, "STATUS")
+	}
+
+	return nil
+}
+
+func (m *Model) updateCombatParticipantHP(targetName string, hp int) {
+	if hp < 0 {
+		hp = 0
+	}
+
+	if strings.EqualFold(targetName, m.player.Username) {
+		m.setCombatPlayerHealth(hp)
+		return
+	}
+
+	for i := range m.world.Combat.Participants {
+		p := &m.world.Combat.Participants[i]
+		if strings.EqualFold(p.Name, targetName) || strings.EqualFold(p.ID, targetName) {
+			p.HP = hp
+			p.Alive = hp > 0
+			break
+		}
+	}
+}
+
+func (m *Model) handleRespawnEvent(payload string) tea.Cmd {
+	fields := parseKeyValuesOrdered(payload, "player", "room", "hp", "max_hp", "combat")
+	player := fields["player"]
+	room := fields["room"]
+
+	if player != "" && !strings.EqualFold(player, m.player.Username) {
+		return nil
+	}
+
+	if maxHP, err := strconv.Atoi(fields["max_hp"]); err == nil && maxHP > 0 {
+		m.player.Status.MaxHP = maxHP
+	}
+	if hp, err := strconv.Atoi(fields["hp"]); err == nil {
+		m.setCombatPlayerHealth(hp)
+	}
+
+	m.communication.StatusMessage = "You respawned in " + room
+	m.appendCombatLog("You respawned in " + room + ".")
+
+	m.ui.PendingRefresh = RefreshRoom
+	return sendCommand(m.client, "LOOK")
 }
