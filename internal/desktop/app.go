@@ -20,6 +20,7 @@ type ServerEvent struct {
 
 type App struct {
 	mu          sync.Mutex
+	writeMu     sync.Mutex
 	conn        net.Conn
 	playerName  string
 	subMu       sync.Mutex
@@ -55,6 +56,7 @@ func (a *App) emit(evType, rawLine string) {
 // closeExisting closes the old TCP connection before a new login,
 // so that the server releases the nickname in its Registry.
 func (a *App) closeExisting() {
+	a.writeMu.Lock()
 	a.mu.Lock()
 	oldConn := a.conn
 	a.conn = nil
@@ -65,8 +67,11 @@ func (a *App) closeExisting() {
 		_ = oldConn.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
 		_, _ = fmt.Fprintln(oldConn, "QUIT")
 		_ = oldConn.Close()
-		time.Sleep(80 * time.Millisecond) // We give the server time to remove the session from the Registry.
+		a.writeMu.Unlock()
+		time.Sleep(80 * time.Millisecond) // Give the server time to remove the session from the Registry.
+		return
 	}
+	a.writeMu.Unlock()
 }
 
 // HandleSession checks whether an active connection already exists (saves the day when pressing F5!)
@@ -209,6 +214,15 @@ func (a *App) HandleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cmd := strings.TrimSpace(req.Command)
+	if cmd == "" {
+		writeJSON(w, map[string]string{"status": "ERR", "error": "Empty command"})
+		return
+	}
+
+	a.writeMu.Lock()
+	defer a.writeMu.Unlock()
+
 	a.mu.Lock()
 	conn := a.conn
 	a.mu.Unlock()
@@ -218,7 +232,6 @@ func (a *App) HandleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := strings.TrimSpace(req.Command)
 	_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	if _, err := fmt.Fprintf(conn, "%s\n", cmd); err != nil {
 		writeJSON(w, map[string]string{"status": "ERR", "error": "ERR 901 SEND_FAILED"})

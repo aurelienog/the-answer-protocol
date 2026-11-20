@@ -628,17 +628,43 @@ const App = {
             const rest = parts.slice(3).join(' ');
 
             if (sub === 'STARTED') {
-                const partMatch = rest.match(/participants=([^\s]+)/);
-                if (partMatch) {
-                    const pList = partMatch[1].split(',').filter(Boolean);
-                    CombatModal.setInitialParticipants(pList);
-                    if (pList[0]) {
-                        sessionStorage.setItem('tap_combat_turn_owner', pList[0]);
+                const pIdx = rest.indexOf('participants=');
+                let playerNames = [];
+                let enemyInfo = null;
+
+                if (pIdx !== -1) {
+                    const rawParts = rest.slice(pIdx + 'participants='.length).trim();
+                    if (rawParts.startsWith('[')) {
+                        try {
+                            const parsed = JSON.parse(rawParts);
+                            if (Array.isArray(parsed)) {
+                                playerNames = parsed.filter(p => p.is_player).map(p => p.name || p.id);
+                                const npc = parsed.find(p => !p.is_player);
+                                if (npc) {
+                                    enemyInfo = { id: npc.id, name: npc.name, hp: npc.hp, maxHp: npc.max_hp };
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse combat participants JSON:', e);
+                        }
+                    } else {
+                        playerNames = rawParts.split(/\s+/)[0].split(',').filter(Boolean);
                     }
                 }
-                if (!GameState.inCombat) {
-                    const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || GameState.npcsInRoom[0] || 'dire_wolf';
-                    CombatModal.open(enemyInRoom, GameState.hp, undefined);
+
+                if (playerNames.length > 0) {
+                    CombatModal.setInitialParticipants(playerNames);
+                    sessionStorage.setItem('tap_combat_turn_owner', playerNames[0]);
+                }
+
+                const amIParticipant = playerNames.length === 0 ||
+                    playerNames.some(p => p.toLowerCase() === GameState.playerName.toLowerCase());
+                if (amIParticipant && !GameState.inCombat) {
+                    const enemyId = (enemyInfo && enemyInfo.id) ||
+                        GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) ||
+                        GameState.npcsInRoom[0] ||
+                        'dire_wolf';
+                    CombatModal.open(enemyId, GameState.hp, enemyInfo ? enemyInfo.hp : undefined);
                 }
                 return;
             }
@@ -646,9 +672,11 @@ const App = {
             if (sub === 'TURN') {
                 const roundMatch = rest.match(/round=(\d+)/);
                 const partMatch = rest.match(/participant=(.+?)\s+round=/);
+                const actionsMatch = rest.match(/actions=(\d+)/);
                 const roundNum = roundMatch ? parseInt(roundMatch[1], 10) : undefined;
                 const who = partMatch ? partMatch[1].trim() : GameState.playerName;
-                CombatModal.queueTurnBanner(who, roundNum);
+                const actions = actionsMatch ? parseInt(actionsMatch[1], 10) : 1;
+                CombatModal.queueTurnBanner(who, roundNum, actions);
                 return;
             }
 
@@ -713,10 +741,44 @@ const App = {
                 return;
             }
 
+            if (sub === 'ENDED') {
+                GameState.activeHelpCombatId = null;
+                GameState.activeHelpPlayer = null;
+
+                const rewardNames = [];
+                const rewIdx = rest.indexOf('rewards=');
+                if (rewIdx !== -1) {
+                    try {
+                        const rewardsArr = JSON.parse(rest.slice(rewIdx + 'rewards='.length).trim());
+                        if (Array.isArray(rewardsArr)) {
+                            rewardsArr.forEach(r => {
+                                (r.Items || r.items || []).forEach(it => {
+                                    if (it && (it.name || it.id)) {
+                                        rewardNames.push(it.name || GameState.getItemMeta(it.id).name);
+                                    }
+                                });
+                            });
+                        }
+                    } catch (_) {}
+                }
+
+                if (rewardNames.length > 0) {
+                    UI.addChatLine('COMBAT', '🎁 Loot Received', `Obtained: ${rewardNames.join(', ')}!`, 'chat-sys');
+                    this.sendCommand('INVENTORY');
+                }
+
+                CombatModal.handleCombatEnded(rewardNames);
+                return;
+            }
+
             if (sub === 'NPC_DIED') {
-                UI.addChatLine('COMBAT', '🏆 Victory!', `${CombatModal.enemyName} defeated! Rewards added to your bag!`, 'chat-sys');
+                const loot = CombatModal.pendingCombatRewards || [];
+                const lootMsg = loot.length > 0
+                    ? `${CombatModal.enemyName} defeated! Obtained: ${loot.join(', ')}.`
+                    : `${CombatModal.enemyName} defeated! Rewards claimed!`;
+                UI.addChatLine('COMBAT', '🏆 Victory!', lootMsg, 'chat-sys');
                 if (GameState.inCombat) {
-                    CombatModal.showOutcome(true, `${CombatModal.enemyName} defeated! Rewards claimed!`);
+                    CombatModal.showOutcome(true, lootMsg);
                 }
                 this.sendCommand('INVENTORY');
                 GameState.activeHelpCombatId = null;

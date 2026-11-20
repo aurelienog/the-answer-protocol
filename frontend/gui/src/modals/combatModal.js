@@ -13,6 +13,8 @@ const CombatModal = {
     actedInRound: {},
     soleSurvivor: false,
     outcomeShown: false,
+    pendingCombatRewards: [],
+    endedFallbackTimer: null,
 
     animQueue: [],
     isPlayingAnim: false,
@@ -181,7 +183,7 @@ const CombatModal = {
         const helpBtn = document.getElementById('btn-combat-help');
         if (helpBtn) {
             helpBtn.addEventListener('click', () => {
-                if (this.isPlayingAnim || this.isFallen) return;
+                if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
                 App.sendCommand('COMBAT HELP');
             });
         }
@@ -236,12 +238,10 @@ const CombatModal = {
             this.isMyTurn = true;
         }
         const lockTurnActions = this.isPlayingAnim || !this.isMyTurn || this.isFallen;
-        ['btn-combat-strike', 'btn-combat-defend', 'btn-combat-heal', 'btn-combat-flee'].forEach(id => {
+        ['btn-combat-strike', 'btn-combat-defend', 'btn-combat-heal', 'btn-combat-help', 'btn-combat-flee'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.disabled = lockTurnActions;
         });
-        const helpBtn = document.getElementById('btn-combat-help');
-        if (helpBtn) helpBtn.disabled = this.isPlayingAnim || this.isFallen;
     },
 
     setButtonsDisabled(disabled) {
@@ -258,6 +258,10 @@ const CombatModal = {
         UI.activeModalId = 'combat';
         GameState.inCombat = true;
         this.outcomeShown = false;
+
+        if (this.endedFallbackTimer) clearTimeout(this.endedFallbackTimer);
+        this.endedFallbackTimer = null;
+        this.pendingCombatRewards = [];
 
         if (isJoiningMidCombat) {
             this.roundKnown = false;
@@ -472,7 +476,7 @@ const CombatModal = {
         }, timing.totalMs);
     },
 
-    queueTurnBanner(participantName, roundNum) {
+    queueTurnBanner(participantName, roundNum, actions = 1) {
         this.turnEventCounter = (this.turnEventCounter || 0) + 1;
         const cleanOwner = (participantName || '').trim();
         if (roundNum !== undefined && roundNum > 0) {
@@ -483,6 +487,9 @@ const CombatModal = {
             this.roundKnown = true;
             sessionStorage.setItem('tap_combat_round', String(roundNum));
         }
+        if (cleanOwner) {
+            delete this.actedInRound[cleanOwner.toLowerCase()];
+        }
         this.activeTurnOwner = cleanOwner;
         sessionStorage.setItem('tap_combat_turn_owner', cleanOwner);
         sessionStorage.setItem('tap_combat_deadline', String(Date.now() + 30000));
@@ -490,7 +497,7 @@ const CombatModal = {
         this.enqueueAnim(() => {
             this.activeTurnOwner = cleanOwner;
             this.updateBannerFromOwner();
-            this.startTurnTimer(roundNum, false);
+            this.startTurnTimer(roundNum, true);
             this.syncActionButtonsState();
         }, 250);
     },
@@ -587,6 +594,22 @@ const CombatModal = {
         }
     },
 
+    handleCombatEnded(rewardNames = []) {
+        this.pendingCombatRewards = rewardNames;
+        if (this.endedFallbackTimer) clearTimeout(this.endedFallbackTimer);
+
+        // Wait briefly so DAMAGE and NPC_DIED/PLAYER_DIED (sent right after ENDED)
+        // get queued first, then guarantee the outcome banner is shown (e.g. defeat or spectator).
+        this.endedFallbackTimer = setTimeout(() => {
+            if (!GameState.inCombat || this.outcomeShown) return;
+            const isVictory = this.enemyHp <= 0 || rewardNames.length > 0;
+            const subtitle = isVictory
+                ? (rewardNames.length > 0 ? `Rewards: ${rewardNames.join(', ')}` : `${this.enemyName} defeated!`)
+                : 'Your party was defeated! Respawned at Central Harbor Square.';
+            this.showOutcome(isVictory, subtitle);
+        }, 180);
+    },
+
     showOutcome(victory, subtitle) {
         if (this.deathCheckTimer) clearTimeout(this.deathCheckTimer);
         if (this.outcomeShown) return;
@@ -633,6 +656,10 @@ const CombatModal = {
 
         if (this.timerInterval) clearInterval(this.timerInterval);
         if (this.deathCheckTimer) clearTimeout(this.deathCheckTimer);
+
+        if (this.endedFallbackTimer) clearTimeout(this.endedFallbackTimer);
+        this.endedFallbackTimer = null;
+        this.pendingCombatRewards = [];
 
         GameState.inCombat = false;
         this.outcomeShown = false;

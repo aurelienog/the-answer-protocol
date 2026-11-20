@@ -142,6 +142,16 @@ const UI = {
         });
     },
 
+    escapeHtml(str) {
+        const value = (str === null || str === undefined) ? '' : String(str);
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
     closeAllModals() {
         document.querySelectorAll('.rpg-modal').forEach(m => m.classList.add('hidden'));
         document.querySelectorAll('.right-action-bar .action-btn').forEach(b => b.classList.remove('active'));

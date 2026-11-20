@@ -85,6 +85,7 @@ const PlayersDockView = {
             return;
         }
 
+        const safeGroupName = UI.escapeHtml(grp.name);
         gCount.textContent = grp.members.length;
         gBody.innerHTML = '';
 
@@ -92,11 +93,12 @@ const PlayersDockView = {
             const isMe = member.toLowerCase() === GameState.playerName.toLowerCase();
             const iconSrc = idx === 0 ? '/assets/icons/ui/crown.webp' : '/assets/icons/ui/shield.webp';
             const rank = idx === 0 ? 'Leader' : 'Member';
+            const safeMember = UI.escapeHtml(member);
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${iconSrc}" alt="" class="tab-mini-icon"> <strong>${member}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
+                <td><img src="${iconSrc}" alt="" class="tab-mini-icon"> <strong>${safeMember}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
                 <td class="col-wide-only">${rank}</td>
-                <td><span class="badge">${grp.name}</span></td>
+                <td><span class="badge">${safeGroupName}</span></td>
             `;
             gBody.appendChild(tr);
         });

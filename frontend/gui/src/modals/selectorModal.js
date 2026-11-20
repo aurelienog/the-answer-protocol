@@ -97,19 +97,26 @@ const SelectorModal = {
 
             options = GameState.npcsInRoom.map(npcId => {
                 const m = GameState.getNpcMeta(npcId);
+                const hpVal = m.hp !== undefined ? m.hp : 60;
+                const maxHpVal = m.maxHp || 60;
+                const isRespawning = m.hostile && hpVal <= 0;
                 return {
                     value: m.id,
                     icon: m.icon,
                     img: m.img || '',
                     iconImg: m.iconImg || m.img || '',
                     title: m.name,
-                    subtitle: m.hostile
-                        ? `<img src="/assets/icons/ui/skull.webp" alt="" class="tab-mini-icon">Hostile Enemy`
-                        : m.role,
+                    subtitle: isRespawning
+                        ? `<img src="/assets/icons/ui/hourglass.webp" alt="" class="tab-mini-icon">Respawning...`
+                        : (m.hostile
+                            ? `<img src="/assets/icons/ui/skull.webp" alt="" class="tab-mini-icon">Hostile Enemy`
+                            : m.role),
                     hostile: m.hostile,
-                    desc: `Engage ${m.name} in turn-based combat.`,
+                    desc: isRespawning
+                        ? `${m.name} was recently defeated and is recovering.`
+                        : `Engage ${m.name} in turn-based combat.`,
                     stats: [
-                        [`<img src="/assets/icons/ui/heart.webp" alt="" class="ui-ico">Health`, `${m.hp || 60} / ${m.maxHp || 60} HP`],
+                        [`<img src="/assets/icons/ui/heart.webp" alt="" class="ui-ico">Health`, `${hpVal} / ${maxHpVal} HP${isRespawning ? ' (Respawning)' : ''}`],
                         [`<img src="/assets/icons/ui/sword.webp" alt="" class="ui-ico">Attack`, `${m.atk || 10}`],
                         [`<img src="/assets/icons/ui/shield.webp" alt="" class="ui-ico">Defense`, `${m.def !== undefined ? m.def : 5}`],
                         [`<img src="/assets/icons/ui/speed.webp" alt="" class="ui-ico">Speed`, `${m.spd || 10}`],
