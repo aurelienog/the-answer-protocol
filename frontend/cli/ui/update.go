@@ -129,6 +129,17 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.startViewTransition(ViewWorld)
 		}
 
+		// Abrir la vista de combate para cualquier comando combat.
+		if strings.EqualFold(command, "combat") ||
+			strings.HasPrefix(strings.ToLower(command), "combat ") {
+
+			if m.navigation.CurrentView != ViewCombat {
+				m.setView(ViewCombat)
+			}
+
+			return m, sendCommand(m.client, command)
+		}
+
 		return m, sendCommand(m.client, command)
 
 	case "backspace":
