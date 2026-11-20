@@ -394,11 +394,14 @@ func (dispatcher *NotificationDispatcher) handleCombatHelpRequested(
 func (dispatcher *NotificationDispatcher) handleCombatPlayerJoined(
 	event world.CombatPlayerJoined,
 ) {
-	notification := protocol.EVT(
-		"COMBAT",
-		"PLAYER_JOINED player="+event.PlayerName+
-			" combat="+event.CombatID,
-	)
+	data := "PLAYER_JOINED player=" + event.PlayerName +
+		" combat=" + event.CombatID
+	if event.MaxHP > 0 {
+		data += " hp=" + strconv.Itoa(event.HP) +
+			" max_hp=" + strconv.Itoa(event.MaxHP)
+	}
+
+	notification := protocol.EVT("COMBAT", data)
 
 	dispatcher.notifyPlayers(
 		event.Recipients,

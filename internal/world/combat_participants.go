@@ -10,7 +10,7 @@ import (
 func (w *World) JoinCombat(
 	playerName string,
 	combatID string,
-) (*Combat, *CombatPlayerJoined, error) {
+) (*Combat, []any, error) {
 	if w == nil {
 		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
@@ -142,18 +142,45 @@ func (w *World) JoinCombat(
 			IsPlayer:    true,
 			Connected:   true,
 			Stats:       effectiveStats,
-			SpeedPoints: 0, // Joins initiative on the next round via StartCombatRound.
+			SpeedPoints: 0, // Joins initiative on the next round via startCombatRoundLocked.
 			Alive:       true,
 		},
 	)
 
-	event := &CombatPlayerJoined{
-		CombatID:   combat.ID,
-		PlayerName: playerName,
-		Recipients: w.getCombatRecipientsLocked(combat),
+	participantsInfo := make([]CombatParticipantInfo, 0, len(combat.Participants))
+	for _, p := range combat.Participants {
+		participantsInfo = append(participantsInfo, CombatParticipantInfo{
+			ID:       p.ID,
+			Name:     p.Name,
+			IsPlayer: p.IsPlayer,
+			HP:       p.Stats.HP,
+			MaxHP:    p.Stats.MaxHP,
+			Alive:    p.Alive,
+		})
 	}
 
-	return cloneCombat(combat), event, nil
+	events := make([]any, 0, 3)
+	events = append(events,
+		CombatPlayerJoined{
+			CombatID:   combat.ID,
+			PlayerName: playerName,
+			HP:         effectiveStats.HP,
+			MaxHP:      effectiveStats.MaxHP,
+			Recipients: w.getCombatRecipientsLocked(combat),
+		},
+		CombatStarted{
+			CombatID:     combat.ID,
+			RoomID:       combat.RoomID,
+			Participants: participantsInfo,
+			Recipients:   []string{playerName},
+		},
+	)
+
+	if turnEvent := w.buildCombatTurnChangedLocked(combat); turnEvent != nil {
+		events = append(events, *turnEvent)
+	}
+
+	return cloneCombat(combat), events, nil
 }
 
 // playerAlreadyParticipatedInCombatLocked reports whether a player

@@ -272,14 +272,12 @@ func (c *CombatCommand) handleJoin(ctx *Context) (protocol.Message, error) {
 		return protocol.ERR(protocol.CodeInvalidArguments, "INVALID_ARGUMENTS"), nil
 	}
 
-	result, event, err := ctx.World.JoinCombat(ctx.PlayerName, combatID)
+	result, domainEvents, err := ctx.World.JoinCombat(ctx.PlayerName, combatID)
 	if err != nil {
 		return mapCombatError(err), nil
 	}
 
-	if event != nil && ctx.Events != nil {
-		ctx.Events.Publish(*event)
-	}
+	publishDomainEvents(ctx.Events, domainEvents)
 
 	return protocol.OK("combat=" + result.ID), nil
 }

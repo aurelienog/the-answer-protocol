@@ -133,11 +133,10 @@ func (w *World) AttackCombatParticipant(
 		})
 	}
 
-	// If the player still has remaining actions (Speed >= 20), emit updated turn actions.
+	// Emit the active turn state whenever the combat continues (either remaining actions or next participant).
 	if combat.Active &&
 		combat.TurnIndex >= 0 &&
-		combat.TurnIndex < len(combat.Participants) &&
-		combat.Participants[combat.TurnIndex].ID == attackerID {
+		combat.TurnIndex < len(combat.Participants) {
 		if turnEvent := w.buildCombatTurnChangedLocked(combat); turnEvent != nil {
 			events = append(events, *turnEvent)
 		}

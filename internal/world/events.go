@@ -175,6 +175,8 @@ type CombatPlayerJoined struct {
 	CombatID   string
 	PlayerName string
 	Recipients []string
+	HP int
+	MaxHP int
 }
 
 type CombatHelpRequested struct {
