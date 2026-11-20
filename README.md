@@ -241,15 +241,60 @@ Quest progress is tracked per player and driven declaratively by data/world.json
 
 ## World Design
 
-The world is initialized from `data/world.json`, which undergoes strict pre-start validation (rejecting malformed JSON, duplicate keys, missing fields, or broken entity references):
+## World Design
 
-- `Rooms`: Defined by unique ID, name, description, directional exits (`north`, `south`, etc.), item spawn counts, and NPC references.
+The world of **Arvendale** is loaded from `data/world.json`, which undergoes strict pre-start validation (rejecting malformed JSON, duplicate keys, missing fields, or broken entity references).
 
-- `Items & Instances`: Separates immutable Item Definitions (ID, name, description, type: `common`, `quest`, `equipment` or `unique`) from runtime Item Instances. This tracks individual ownership and guarantees that unique items return to their origin room if a player disconnects.
+### World Layout & Room Connections
 
-- `NPCs`: Configured with roles (`merchant`, `quest_giver`, `guard`, etc.), hostility flags, combat stats (`hp`, `max_hp`, `attack`, `defense`, `speed`), loot/respawn timers, and state-dependent dialogue.
+The map consists of **9 interconnected rooms** spanning a coastal city, a harbor district, and a northern forest edge:
 
-- `Groups`: Players may belong to one group at a time, enabling private `GROUP` chat and coordinated exploration.
+```text
+                    [Whispering Forest Edge] (Dire Wolf)
+                               |
+                        [North Town Gate] (North Gate Guard)
+                               |
+[Royal Blacksmith Forge] -- [Market Street] -- [Apothecary Shop]
+   (Master Borin)        (Guide & Advisor)      (Apprentice Elisa)
+                               |                        |
+                    [Central Harbor Square] -- [The Salty Siren Tavern]
+                       (Captain Eliza)                  (Mara)
+                               |
+                        [The Great Pier] ----- [Abandoned Warehouse]
+                         (Dock Warden)           (Shadow Smuggler)
+```
+
+#### NPC Roles & Progression
+
+The world features 10 NPCs divided into friendly town inhabitants and hostile encounters with automatic respawn timers:
+
+- Quest Givers & Social NPCs:
+
+      - **Quest Advisor** (`Market Street`): Offers the introductory scouting quest (quest.explore_arvendale).
+      - **Apprentice Elisa** (`Apothecary Shop`): Offers the forest herb quest (quest.gather_herbs) and a repeatable potion-brewing bounty.
+      - **Captain Eliza** (`Central Harbor Square`): Leads the main two-part harbor conspiracy arc (`quest.expose_smugglers` $\rightarrow$ `quest.investigate_missing_ships`) plus a repeatable smuggler bounty.
+      - **Mara** (`The Salty Siren Tavern`): Tavern keeper offering a repeatable bounty for defeating the Dock Warden.
+      - **Town Guide**, **Master Borin** & **North Gate Guard**: Provide world navigation tips, combat gear hints, and perimeter lore.
+      
+- Hostile Encounters (with loot drops & respawn):
+   - **Dire Wolf** (`Whispering Forest Edge`): Entry-level beast (45 HP, 45s respawn); drops Healing Herbs.
+   - **Shadow Smuggler** (`Abandoned Warehouse`): Mid-tier enemy (75 HP, 60s respawn); drops the Incriminating Letter.
+   - **Dock Warden** (`The Great Pier`): End-game boss (140 HP, 24 ATK, 14 DEF, 90s respawn); drops the `Missing Ships Report` and requires full armor/weapons to defeat.
+
+### Items, Instances & Distribution
+The engine separates immutable **Item Definitions** (17 total) from runtime **Item Instances** to track individual ownership and ensure `unique` items return to the world if a player disconnects:
+
+| Category | Examples & Distribution | Gameplay Effect |
+| --- | --- | --- |
+| **Unique** | `Iron Sword` (+6 ATK) & `Oak Shield` (+4 DEF) in `Royal Blacksmith Forge`; `Purse of Gold Coins`. | Passive combat stat bonuses; return to spawn room on disconnect. |
+| **Equipment** | `Pathfinder Boots` (+2 DEF, +5 SPD), `Alchemist's Iron Gauntlets` (+3 ATK, +3 DEF), `Royal Guard Breastplate` (+6 DEF), `Helm of Arvendale` (+2 ATK, +5 DEF). | Earned exclusively as quest rewards to scale player stats for boss encounters. |
+| **Consumable** | `Healing Elixir` (+40 HP) in `Apothecary Shop`; `Fresh Bread` (+15 HP) & `Harbor Vintage Wine` (+25 HP) in `The Salty Siren Tavern`. | Restores HP during combat (`COMBAT USE <item>`) or exploration. |
+| **Quest** | `Northern Gate Seal` (`North Town Gate`), `Healing Herbs` (`Whispering Forest Edge`), `Incriminating Letter` (`Abandoned Warehouse`), `Missing Ships Report` (`The Great Pier`). | Required objectives for quest completion (can be gathered or looted from enemies). |
+| **Common** | `Hempen Rope` (`Harbor Square`), `Leather Pouch` (`Market Street`), `Brass Lantern` (`The Great Pier`). | Atmospheric world props that can be picked up, dropped, and traded between rooms. |
+
+### Groups
+
+Players may belong to one group at a time (`GROUP CREATE <name>`), enabling private `GROUP` chat, coordinated room exploration, and cooperative combat (`COMBAT HELP` / `COMBAT JOIN`).
 
 ## Server Logging & Abuse Controls
 
@@ -365,6 +410,14 @@ go test -race tests/...
 
 ### AI Usage
 
-- **Documentation & Structuring:** Assisted in organizing, condensing, and proofreading the `README.md` and `CLI_USER_GUIDE.md` against the 42 subject requirements.
+AI tools were used iteratively as a pair-programming collaborator throughout the entire lifecycle of the project, with all architectural decisions, generated code, and behaviors reviewed, tested, and validated by the authors:
 
-- **Testing & Edge-Case Review:** Used to brainstorm protocol edge cases, concurrency race scenarios, and boilerplate unit and integration test structures.
+- **Architecture & System Design:** Explored concurrency models (Reader–Writer–Outbox pattern, `sync.RWMutex` state synchronization, publish-subscribe event bus), protocol framing, and client-server decoupling before writing code.
+
+- **Core Implementation (Server & Clients):** Assisted step-by-step in implementing the TCP server, RFC 42TAP parser, command dispatcher, combat and quest state machines, rate-limiting controls, as well as the Bubble Tea CLI client and desktop GUI client.
+
+- **World Data & GUI Assets:** Helped structure and validate `data/world.json` (room connections, NPC dialogue trees, item definitions, and quest chains) and generated visual assets for the desktop GUI client.
+
+- **Testing & Debugging:** Used to design unit and concurrency test suites (`-race`), identify protocol edge cases, and troubleshoot synchronization issues.
+
+- **Documentation:** Assisted in organizing, condensing, and proofreading `README.md` and `CLI_USER_GUIDE.md` against the 42 subject requirements.
