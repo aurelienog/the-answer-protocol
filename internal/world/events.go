@@ -188,3 +188,11 @@ type PlayerCountChanged struct {
 	Count    int
 	Revision uint64
 }
+
+type PlayerRespawned struct {
+	CombatID   string
+	PlayerName string
+	RoomID     string
+	HP         int
+	MaxHP      int
+}

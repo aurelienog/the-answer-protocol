@@ -99,7 +99,8 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 	
 	case world.CombatEnded:
     	dispatcher.handleCombatEnded(event)
-
+	case world.PlayerRespawned:
+		dispatcher.handlePlayerRespawned(event)
 	}
 }
 
@@ -466,4 +467,23 @@ func (dispatcher *NotificationDispatcher) handleCombatEnded(
             notification,
         )
     }
+}
+
+func (dispatcher *NotificationDispatcher) handlePlayerRespawned(
+	event world.PlayerRespawned,
+) {
+	notification := protocol.EVT(
+		"RESPAWN",
+		"player="+event.PlayerName+
+			" room="+event.RoomID+
+			" hp="+strconv.Itoa(event.HP)+
+			" max_hp="+strconv.Itoa(event.MaxHP)+
+			" combat="+event.CombatID,
+	)
+
+	dispatcher.notifyPlayers(
+		[]string{event.PlayerName},
+		"",
+		notification,
+	)
 }

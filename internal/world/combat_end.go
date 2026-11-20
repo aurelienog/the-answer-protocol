@@ -124,13 +124,15 @@ func (w *World) synchronizeCombatNPCsLocked(combat *Combat) {
 	}
 }
 
-// synchronizeCombatPlayersLocked synchronizes player HP
-// and handles respawn after combat.
+// synchronizeCombatPlayersLocked synchronizes player HP,
+// handles respawn after combat, and returns respawn events.
 // The caller must hold w.mu.Lock().
 func (w *World) synchronizeCombatPlayersLocked(
 	combat *Combat,
 	victory bool,
-) {
+) []PlayerRespawned {
+	respawned := make([]PlayerRespawned, 0)
+
 	for _, participant := range combat.Participants {
 		if !participant.IsPlayer || !participant.Connected {
 			continue
@@ -142,6 +144,13 @@ func (w *World) synchronizeCombatPlayersLocked(
 		if !participant.Alive || participant.Stats.HP <= 0 {
 			player.RoomID = InitialRoomID
 			player.CombatStats.HP = player.CombatStats.MaxHP / 4
+			respawned = append(respawned, PlayerRespawned{
+				CombatID:   combat.ID,
+				PlayerName: participant.ID,
+				RoomID:     player.RoomID,
+				HP:         player.CombatStats.HP,
+				MaxHP:      player.CombatStats.MaxHP,
+			})
 			continue
 		}
 
@@ -160,7 +169,16 @@ func (w *World) synchronizeCombatPlayersLocked(
 		// Surviving players respawn after defeat.
 		player.RoomID = InitialRoomID
 		player.CombatStats.HP = player.CombatStats.MaxHP / 4
+		respawned = append(respawned, PlayerRespawned{
+			CombatID:   combat.ID,
+			PlayerName: participant.ID,
+			RoomID:     player.RoomID,
+			HP:         player.CombatStats.HP,
+			MaxHP:      player.CombatStats.MaxHP,
+		})
 	}
+
+	return respawned
 }
 
 // cleanupDisconnectedCombatPlayersLocked removes disconnected players
