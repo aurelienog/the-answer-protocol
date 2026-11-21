@@ -6,14 +6,14 @@
     flex: 1.25;
     display: grid !important;
     grid-template-columns: repeat(4, 1fr);
-    grid-auto-rows: max-content; /* Рядки підлаштовуються під квадратну висоту слота! */
+    grid-auto-rows: max-content;
     gap: 10px;
     list-style: none;
     align-content: start;
 }
 
 .inv-slot {
-    aspect-ratio: 1 / 1; /* Гарантує ідеальний квадрат за будь-якої висоти вікна! */
+    aspect-ratio: 1 / 1;
     width: 100%;
     background-image: url('/assets/buttons/bg-sq-base.png') !important;
     background-size: cover !important;

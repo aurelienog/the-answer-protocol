@@ -154,6 +154,7 @@
     .compass-dock {
         width: 310px;
         height: 256px;
+        bottom: var(--compass-offset-y-fullscreen);
     }
     .compass-rose-wrap {
         grid-template-columns: 78px 124px 78px;
@@ -174,13 +175,5 @@
     }
     .comp-sq-label {
         font-size: 11.5px;
-    }
-}
-
-@media (min-width: 1480px) {
-    .compass-dock {
-        width: 310px;
-        height: 256px;
-        bottom: var(--compass-offset-y-fullscreen);
     }
 }

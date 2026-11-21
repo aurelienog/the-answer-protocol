@@ -56,12 +56,16 @@ const DialogueModal = {
     // Finds if the player currently has an active quest belonging to this NPC
     findPlayerActiveQuestForNpc(npcId) {
         const wQuests = GameState.worldQuests || {};
+        const npcMeta = GameState.getNpcMeta(npcId);
         for (const q of (GameState.quests || [])) {
             const qId = q.id || q.quest_id;
-            if ((q.status || '').toLowerCase() === 'active' && wQuests[qId] && wQuests[qId].giver_npc_id === npcId) {
+            const isActive = (q.status || '').toLowerCase() === 'active';
+            const matchesByWorld = wQuests[qId] && wQuests[qId].giver_npc_id === npcId;
+            const matchesByName = q.giver_npc_name && npcMeta && q.giver_npc_name.toLowerCase() === npcMeta.name.toLowerCase();
+            if (isActive && (matchesByWorld || matchesByName)) {
                 return {
                     id: qId,
-                    name: q.name || wQuests[qId].name || qId,
+                    name: q.name || (wQuests[qId] && wQuests[qId].name) || qId,
                     def: wQuests[qId]
                 };
             }
@@ -74,16 +78,6 @@ const DialogueModal = {
             };
         }
         return null;
-    },
-
-    // Checks if player holds the required item for a quest in their inventory
-    playerHasRequiredItem(questDef) {
-        if (!questDef || !questDef.required_item_id) return false;
-        const reqId = questDef.required_item_id;
-        const reqQty = questDef.required_item_quantity || 1;
-        const haveQty = (GameState.inventoryCounts && GameState.inventoryCounts[reqId])
-            || (GameState.inventory.includes(reqId) ? 1 : 0);
-        return haveQty >= reqQty;
     },
 
     announceQuestCompletion(questId, questName) {

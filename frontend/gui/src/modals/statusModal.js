@@ -3,14 +3,7 @@
 // ==========================================================================
 
 const StatusModal = {
-    gearBonuses: {
-        "item.iron_sword":        { atk: 6, def: 0, spd: 0 },
-        "item.oak_shield":        { atk: 0, def: 4, spd: 0 },
-        "item.leather_boots":     { atk: 0, def: 2, spd: 5 },
-        "item.iron_gauntlets":    { atk: 3, def: 3, spd: 0 },
-        "item.steel_breastplate": { atk: 0, def: 6, spd: 0 },
-        "item.royal_helmet":      { atk: 2, def: 5, spd: 0 }
-    },
+    gearBonuses: {},
 
     render() {
         const pct = Math.max(0, Math.min(100, Math.round((GameState.hp / GameState.maxHp) * 100)));
@@ -37,7 +30,7 @@ const StatusModal = {
 
         // Miscellaneous world info
         document.getElementById('st-loc-val').textContent = GameState.room.name;
-        document.getElementById('st-gear-val').textContent = `${gearCount} / 6 equipped`;
+        document.getElementById('st-gear-val').textContent = `${gearCount} equipped`;
 
         let totalItems = 0;
         (GameState.inventory || []).forEach(id => {

@@ -31,31 +31,39 @@ const PlayersDockView = {
         const groupMembers = (GameState.currentGroup && GameState.currentGroup.members) || [];
 
         players.forEach(name => {
+            const safeName = UI.escapeHtml(name);
             const isMe = name.toLowerCase() === GameState.playerName.toLowerCase();
             const alreadyInMyGroup = groupMembers.some(m => m.toLowerCase() === name.toLowerCase());
 
             let partyCell = '-';
+            let actionCmd = null;
             const isHelpTarget = !GameState.inCombat &&
                 GameState.activeHelpCombatId &&
                 GameState.activeHelpPlayer &&
                 GameState.activeHelpPlayer.toLowerCase() === name.toLowerCase();
             if (!isMe && isHelpTarget) {
-                partyCell = `<button type="button" class="btn-gold-sm" data-cmd="COMBAT JOIN ${GameState.activeHelpCombatId}"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`;
+                partyCell = `<button type="button" class="btn-gold-sm js-player-act"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`;
+                actionCmd = `COMBAT JOIN ${GameState.activeHelpCombatId}`;
             } else if (isMe) {
                 partyCell = inGroup ? '<span class="badge">In Party</span>' : '-';
             } else if (alreadyInMyGroup) {
                 partyCell = '<span class="badge">Member</span>';
             } else if (inGroup) {
-                partyCell = `<button type="button" class="btn-gold-sm" data-cmd="GROUP INVITE ${name}"><img src="/assets/icons/ui/invite.png" alt="" class="tab-mini-icon">Invite</button>`;
+                partyCell = `<button type="button" class="btn-gold-sm js-player-act"><img src="/assets/icons/ui/invite.png" alt="" class="tab-mini-icon">Invite</button>`;
+                actionCmd = `GROUP INVITE ${name}`;
             }
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="/assets/icons/ui/dot.webp" alt="" class="tab-mini-icon"> <strong>${name}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
+                <td><img src="/assets/icons/ui/dot.webp" alt="" class="tab-mini-icon"> <strong>${safeName}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
                 <td class="col-wide-only">Adventurer</td>
                 <td class="col-wide-only">In Room</td>
                 <td>${partyCell}</td>
             `;
+            if (actionCmd) {
+                const btn = tr.querySelector('.js-player-act');
+                if (btn) btn.dataset.cmd = actionCmd;
+            }
             tbody.appendChild(tr);
 
             if (lPlayers) {
@@ -66,7 +74,7 @@ const PlayersDockView = {
                         <div class="card-thumb">
                             <img src="/assets/icons/ui/player.webp" alt="Player" class="art-img contain" style="padding:5px;">
                         </div>
-                        <div><strong class="card-title">${name} ${isMe ? '(You)' : ''}</strong><span class="card-sub">Adventurer</span></div>
+                        <div><strong class="card-title">${safeName} ${isMe ? '(You)' : ''}</strong><span class="card-sub">Adventurer</span></div>
                     </div>
                     <span class="badge">Online</span>
                 `;

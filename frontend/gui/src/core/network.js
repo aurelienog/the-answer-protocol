@@ -4,13 +4,16 @@
 
 const App = {
     eventSource: null,
+    worldMetaLoaded: false,
 
     async loadWorldMeta() {
+        if (this.worldMetaLoaded) return;
         try {
             const res = await fetch('/api/world');
             if (res.ok) {
                 const worldData = await res.json();
                 GameState.syncWorldDefinition(worldData);
+                this.worldMetaLoaded = true;
             }
         } catch (e) {
             console.warn("Could not pre-load world metadata:", e);
@@ -169,6 +172,8 @@ const App = {
         if (upper.startsWith('GROUP LEAVE'))       verb = 'GROUP_LEAVE';
         if (upper.startsWith('GROUP INFO'))        verb = 'GROUP_INFO';
         if (upper.startsWith('GROUP INVITATIONS')) verb = 'GROUP_INVITATIONS';
+        if (upper.startsWith('COMBAT HELP'))       verb = 'COMBAT_HELP';
+        if (upper.startsWith('COMBAT JOIN'))       verb = 'COMBAT_JOIN';
         GameState.commandQueue.push(verb);
 
         UI.addChatLine('LOG', 'Client →', cmd, '');
@@ -388,21 +393,24 @@ const App = {
             this.sendCommand('LOOK');
             return;
         }
-        if (payload.startsWith('help_requested=')) {
+        if (payload.startsWith('help_requested=') || (lastVerb === 'COMBAT_HELP' && payload.startsWith('combat='))) {
             UI.addChatLine('COMBAT', '📯 Call for Help', 'Your call for help echoed through the room!', 'chat-sys');
             return;
         }
-        if (payload.startsWith('joined=')) {
+        if (payload.startsWith('joined=') || (lastVerb === 'COMBAT_JOIN' && payload.startsWith('combat='))) {
             const caller = GameState.activeHelpPlayer || CombatModal.activeTurnOwner || 'Ally';
             GameState.activeHelpCombatId = null;
-            const thpMatch = payload.match(/target_hp=(\d+)/);
-            const currentEnemyHp = thpMatch ? parseInt(thpMatch[1], 10) : undefined;
-            const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || GameState.npcsInRoom[0] || 'dire_wolf';
-            sessionStorage.setItem('tap_combat_turn_owner', caller);
-            CombatModal.open(enemyInRoom, GameState.hp, currentEnemyHp, false, true);
-            CombatModal.setInitialParticipants([caller]);
-            CombatModal.addJoinedParticipant(GameState.playerName);
-            CombatModal.queueTurnBanner(caller, undefined);
+            GameState.activeHelpPlayer = null;
+            if (!GameState.inCombat) {
+                const thpMatch = payload.match(/target_hp=(\d+)/);
+                const currentEnemyHp = thpMatch ? parseInt(thpMatch[1], 10) : undefined;
+                const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || GameState.npcsInRoom[0] || 'dire_wolf';
+                sessionStorage.setItem('tap_combat_turn_owner', caller);
+                CombatModal.open(enemyInRoom, GameState.hp, currentEnemyHp, false, true);
+                CombatModal.setInitialParticipants([caller]);
+                CombatModal.addJoinedParticipant(GameState.playerName);
+                CombatModal.queueTurnBanner(caller, undefined);
+            }
             UI.addChatLine('COMBAT', '⚔️ Joined Battle', `You joined the battle against ${CombatModal.enemyName}! You will act on the next round!`, 'chat-sys');
             UI.renderRoom();
             return;
@@ -636,6 +644,31 @@ const App = {
             return;
         }
 
+        if (category === 'RESPAWN') {
+            const rest = parts.slice(2).join(' ');
+            const pMatch = rest.match(/player=([^\s]+)/);
+            const rMatch = rest.match(/room=([^\s]+)/);
+            const hpMatch = rest.match(/hp=(\d+)/);
+            const maxHpMatch = rest.match(/max_hp=(\d+)/);
+            const respawnPlayer = pMatch ? pMatch[1] : '';
+
+            if (respawnPlayer && respawnPlayer.toLowerCase() !== GameState.playerName.toLowerCase()) {
+                return;
+            }
+            const respawnRoom = rMatch ? rMatch[1] : 'harbor_square';
+            const newHp = hpMatch ? parseInt(hpMatch[1], 10) : GameState.hp;
+            const newMaxHp = maxHpMatch ? parseInt(maxHpMatch[1], 10) : GameState.maxHp;
+
+            UI.addChatLine('ROOM', '🏥 Respawned', `You respawned in ${respawnRoom} with ${newHp}/${newMaxHp} HP.`, 'chat-sys');
+            if (!GameState.inCombat) {
+                GameState.hp = newHp;
+                GameState.maxHp = newMaxHp;
+                UI.updateHUDStats();
+                this.sendCommand('LOOK');
+            }
+            return;
+        }
+
         if (category === 'COMBAT') {
             const sub = parts[2];
             const rest = parts.slice(3).join(' ');
@@ -673,11 +706,14 @@ const App = {
                 const amIParticipant = playerNames.length === 0 ||
                     playerNames.some(p => p.toLowerCase() === GameState.playerName.toLowerCase());
                 if (amIParticipant && !GameState.inCombat) {
+                    GameState.activeHelpCombatId = null;
+                    GameState.activeHelpPlayer = null;
                     const enemyId = (enemyInfo && enemyInfo.id) ||
                         GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) ||
                         GameState.npcsInRoom[0] ||
                         'dire_wolf';
                     CombatModal.open(enemyId, GameState.hp, enemyInfo ? enemyInfo.hp : undefined);
+                    UI.renderRoom();
                 }
                 return;
             }

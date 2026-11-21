@@ -7,9 +7,6 @@ const StageView = {
         const room = GameState.room;
         const meta = ASSETS.rooms[room.id] || ASSETS.rooms.default;
 
-        const hudRoomEl = document.getElementById('hud-room-name');
-        if (hudRoomEl) hudRoomEl.textContent = room.name;
-
         const stageIconEl = document.getElementById('stage-icon');
         if (meta.iconImg) {
             stageIconEl.innerHTML = `<img src="${meta.iconImg}" alt="${room.name} icon" class="stage-banner-icon-img">`;
@@ -107,8 +104,5 @@ const StageView = {
                 delete btn.dataset.cmd;
             }
         });
-
-        const aidSlot = document.getElementById('compass-aid-slot');
-        if (aidSlot) aidSlot.innerHTML = '';
     }
 };

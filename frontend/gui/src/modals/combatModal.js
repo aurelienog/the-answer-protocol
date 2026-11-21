@@ -622,15 +622,24 @@ const CombatModal = {
 
     handleCombatEnded(rewardNames = []) {
         this.pendingCombatRewards = rewardNames;
+
+        // If NPC_DIED already triggered showOutcome before ENDED arrived,
+        // enrich the victory banner subtitle with the actual reward items.
+        if (this.outcomeShown && rewardNames.length > 0) {
+            const subEl = document.getElementById('combat-outcome-sub');
+            if (subEl) {
+                subEl.textContent = `${this.enemyName} defeated! Obtained: ${rewardNames.join(', ')}.`;
+            }
+            return;
+        }
+
         if (this.endedFallbackTimer) clearTimeout(this.endedFallbackTimer);
 
-        // Wait briefly so DAMAGE and NPC_DIED/PLAYER_DIED (sent right after ENDED)
-        // get queued first, then guarantee the outcome banner is shown (e.g. defeat or spectator).
         this.endedFallbackTimer = setTimeout(() => {
             if (!GameState.inCombat || this.outcomeShown) return;
             const isVictory = this.enemyHp <= 0 || rewardNames.length > 0;
             const subtitle = isVictory
-                ? (rewardNames.length > 0 ? `Rewards: ${rewardNames.join(', ')}` : `${this.enemyName} defeated!`)
+                ? (rewardNames.length > 0 ? `Obtained: ${rewardNames.join(', ')}.` : `${this.enemyName} defeated!`)
                 : 'Your party was defeated! Respawned at Central Harbor Square.';
             this.showOutcome(isVictory, subtitle);
         }, 180);
