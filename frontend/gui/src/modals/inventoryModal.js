@@ -17,7 +17,8 @@ const InventoryModal = {
             this.updateInspector(GameState.selectedInventoryItem);
         }
 
-        for (let i = 0; i < 16; i++) {
+        const totalSlots = Math.max(16, Math.ceil(GameState.inventory.length / 4) * 4);
+        for (let i = 0; i < totalSlots; i++) {
             const itemId = GameState.inventory[i];
             const slot = document.createElement('li');
             slot.className = 'inv-slot' + (itemId ? ' filled' : '');

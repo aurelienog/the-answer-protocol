@@ -252,7 +252,7 @@ body,
         padding: 14px 24px 16px 24px;
     }
     .preview-artwork {
-        height: 120px;
+        height: auto;
     }
     .preview-artwork.tall {
         height: auto;
@@ -524,8 +524,8 @@ body,
     }
     .inventory-grid {
         flex: none;
-        min-height: 172px;
-        max-height: 182px;
+        min-height: 180px;
+        max-height: 230px;
         gap: 8px;
     }
 

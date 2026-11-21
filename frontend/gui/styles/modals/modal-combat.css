@@ -47,9 +47,9 @@
     /* 🔧 1. A Left-Wing Fighter — A Hero */
     --hero-combat-w: 350px;
     --hero-combat-h: 92px;
-    --hero-combat-avatar-size: 65px;
+    --hero-combat-avatar-size: 69px;
     --hero-combat-avatar-radius: 50%;
-    --hero-combat-avatar-left: 46px;
+    --hero-combat-avatar-left: 44px;
     --hero-combat-avatar-y: -5px;
     --hero-combat-name-left: 135px;
     --hero-combat-name-y: 24px;
@@ -63,9 +63,9 @@
     /* 🔧 2. A RIGHTEOUS FIGHTER IS AN ENEMY */
     --enemy-combat-w: 350px;
     --enemy-combat-h: 92px;
-    --enemy-combat-avatar-size: 65px;
+    --enemy-combat-avatar-size: 69px;
     --enemy-combat-avatar-radius: 50%;
-    --enemy-combat-avatar-right: 46px;
+    --enemy-combat-avatar-right: 44px;
     --enemy-combat-avatar-y: -3px;
     --enemy-combat-name-right: 140px;
     --enemy-combat-name-y: 24px;

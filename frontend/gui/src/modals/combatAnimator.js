@@ -232,8 +232,7 @@ const CombatAnimator = {
     },
 
     triggerAction(slotName, stateName) {
-        const slot = this.slots[slotName];
-        const key = (slot && slot.actorKey) || (slotName === 'hero' ? GameState.gender : CombatModal.enemyId);
+        const key = slotName === 'hero' ? GameState.gender : CombatModal.enemyId;
         if (!key) return false;
         return this.playState(slotName, key, stateName);
     },
@@ -265,10 +264,15 @@ const CombatAnimator = {
 
     stopSlot(slotName) {
         const slot = this.slots[slotName];
-        if (slot && slot.timer) {
+        if (!slot) return;
+        if (slot.timer) {
             clearInterval(slot.timer);
             slot.timer = null;
         }
+        slot.actorKey = null;
+        slot.state = 'idle';
+        slot.seqIndex = 0;
+        slot.sequence = [];
     },
 
     stopAll() {
