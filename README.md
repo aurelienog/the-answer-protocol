@@ -32,9 +32,10 @@ Built upon RFC 42TAP, the project provides a shared-world environment where mult
 
 ### Quick Start
 
-1. **Install dependencies and compile all binaries** (`bin/tap-server`, `bin/tap-cli`, `bin/tap-desktop`):
+1. **Install Go dependencies and compile all binaries** (`bin/tap-server`, `bin/tap-cli`, `bin/tap-desktop`):
    ```bash
    make install
+   make
    ```
 2. **Start the TCP server:**
    ```bash
@@ -45,12 +46,13 @@ Built upon RFC 42TAP, the project provides a shared-world environment where mult
    make run-client      # Terminal TUI client
    make run-client-gui  # Desktop GUI client
    ```
-4. **Remove compiled binaries:**
+4. **Lint or clean compiled binaries:**
    ```bash
+   make lint
    make clean
    ```
 
-Once connected, authenticate with a username (`CONNECT <username>`) and interact with the world (`LOOK`, `MOVE <dir>`, `TAKE <item>`, `TALK <npc>`, `ATTACK <npc>`, `CHAT GLOBAL <msg>`, `QUIT`). For detailed CLI controls and local commands, see [CLI_USER_GUIDE.md](CLI_USER_GUIDE.md).
+Once connected, authenticate with a username (`CONNECT <username>`) and interact with the world (`LOOK`, `MOVE <dir>`, `TAKE <item>`, `TALK <npc>`, `ATTACK <npc>`, `CHAT GLOBAL <msg>`, `QUIT`). For detailed client controls, see [CLI_USER_GUIDE.md](CLI_USER_GUIDE.md) and [GUI_USER_GUIDE.md](GUI_USER_GUIDE.md).
 
 ## Architecture
 
@@ -179,7 +181,17 @@ To synchronize request/response cycles without request IDs, `RequestManager` enf
 | `commands` | Parses user input and distinguishes between local UI commands and remote TAP protocol requests. |
 | `ui` | Implements the Bubble Tea state loop, responsive layout management, and modular views (world, room, inventory, character, quests, party, combat). |
 
+**Command Interface Choice:** The CLI client adopts the direct RFC 42TAP command syntax (forwarding player input directly as TAP protocol commands) while adding a single local view shortcut (`MAP`) and interactive keyboard navigation (`Tab` for chat filters, `<` to toggle panel focus, arrow keys to scroll). This keeps the CLI transparent for protocol inspection and interchangeable with any RFC 42TAP server.
+
 #### GUI
+
+The Desktop GUI client (`cmd/desktop`, `internal/desktop`, `frontend/gui`) uses a two-tier **Go HTTP/SSE bridge + zero-dependency modular Web UI** architecture:
+
+- **Go Bridge (`cmd/desktop`, `internal/desktop`):** Spawns a local HTTP server (`127.0.0.1:0`), opens a dedicated native browser window in `--app` mode (Chrome / Chromium / Brave / Firefox fallback), serializes outgoing TCP writes (`writeMu`), and streams real-time `OK`/`ERR`/`EVT` protocol lines to the frontend via Server-Sent Events (`/api/stream`). It also exposes `/api/session` for seamless browser refresh recovery, `/api/config` for CLI host/port defaults, and `/api/world` for dynamic world metadata synchronization.
+- **Modular Frontend (`frontend/gui`):** Built with pure HTML5, modular CSS3 (ornate frame layers + responsive breakpoints for 2K, desktop, split-screen multi-client testing, and mobile), and ES6 JavaScript split across `core/` (`assets`, `state`, `audio`, `network`), `hud/` (`topHudView`, `chatView`, `playersDockView`, `stageView`), and `modals/` (`look`, `selector`, `dialogue`, `inventory`, `status`, `quests`, `group`, `combatModal`, `combatAnimator`).
+- **Cross-Server Interoperability:** `network.js` supports both TAP's enriched JSON payloads and baseline RFC 42TAP formats (string arrays for `LOOK`/`INVENTORY`, plain text `TALK`, space-delimited chat events).
+
+For full architectural details and user instructions, see [docs/gui-architecture.md](docs/gui-architecture.md) and [GUI_USER_GUIDE.md](GUI_USER_GUIDE.md).
 
 ## Protocol Implementation
 
@@ -194,6 +206,7 @@ Communication uses UTF-8, `\n`-terminated lines over TCP with three message pref
 | `MOVE` | `MOVE <direction>`| Moves the player through an available exit.| `OK room=<room_id>`|
 | `TAKE` | `TAKE <item>` | Takes an item from the current room. | `OK taken=<item_id>` |
 | `DROP` | `DROP <item>` | Drops an item from the player's inventory. | `OK dropped=<item_id>` |
+| `USE` | `USE <item>` | Consumes an eligible healing item from inventory outside combat. | `OK used=<item_id> changes=hp=<amount>` |
 | `INVENTORY` | `INVENTORY` | Lists inventory quantities grouped by item ID as JSON. | `OK [{"id":"item_id","quantity":1}]` |
 | `TALK` | `TALK <npc>` | Starts a conversation with an NPC and retrieves dialogue and quest information. | `OK <JSON>` |
 | `QUEST` | `QUEST <npc>` | Accepts an available quest offered by the specified NPC. | `OK <JSON>` |
@@ -214,7 +227,12 @@ The following response shapes and command semantics intentionally extend or diff
 |`LOOK` & `INVENTORY`|Lists raw item/NPC objects or individual item instances.|`LOOK` returns item definitions, room item counts ({"item.herbs": 2}), and NPC details. `INVENTORY` aggregates quantities by item ID ([{"id":"item.herbs","quantity":2}]) while tracking unique instances internally, reducing payload bloat for UI rendering.|
 |`TALK` & `QUEST`|`TALK` returns plain text; quest acceptance/completion flow is open.|`TALK` returns structured JSON (NPC stats, dialogue, quest status). `QUEST <npc>` accepts available quests immediately, and talking to the giver again auto-completes the quest once requirements are met—eliminating redundant turn-in commands.|
 |`GROUP CREATE`|Syntax written as `GROUP CREATE` without arguments.|Requires `GROUP CREATE <name>` (spaces allowed) so parties have human-readable identifiers in invites and UI views.|
+| `GROUP JOIN` & `GROUP` extensions | `GROUP JOIN <leader-name>`; no `INFO`/`INVITATIONS` subcommands. | Uses `GROUP JOIN <group-name>` to match named parties, and adds `GROUP INFO` and `GROUP INVITATIONS` so clients can render party members and pending invites. |
+| `CHAT` & `GROUP` Events | `EVT <SCOPE> CHAT <username> <message>` and `EVT GROUP <TYPE> <name>`. | Uses explicit `key=value` fields (`EVT <SCOPE> CHAT player=<name> message=<msg>`, `EVT GROUP INVITE player=<inviter> group=<name>`) so multi-word group names and messages parse unambiguously. |
+| `ATTACK`, `COMBAT` & `USE` | `ATTACK <npc>` immediately deals damage in one response; combat actions are left open by RFC Section 6.1. | `ATTACK <npc>` initializes a turn-based encounter (`damage: 0`) and emits `EVT COMBAT STARTED` (JSON participants) and `EVT COMBAT TURN`. Combat turns use `COMBAT <ATTACK\|DEFEND\|USE\|HELP\|JOIN\|FLEE>`, while out-of-combat healing uses `USE <item>`. |
+| Additional World Events | Only presence, chat, group, and stats events are defined. | Emits `EVT COMBAT <STARTED\|TURN\|ATTACK\|DAMAGE\|PLAYER_JOINED\|PLAYER_FLED\|HELP_REQUESTED\|NPC_DIED\|PLAYER_DIED\|ENDED>`, `EVT ITEM_DROPPED`, `EVT UNIQUE_ITEMS_RETURNED`, and `EVT ITEM_USED` for real-time client synchronization. |
 |Error Codes|Representative `4xx` (non-fatal) and `9xx` (fatal) codes.|Extended with granular `4xx` codes (`401`–`422`, e.g., `412 ITEM_CANNOT_BE_DROPPED`, `415 NPC_RESPAWNING`) and `429 RATE_LIMITED` so clients can handle gameplay restrictions cleanly without dropping the session.|
+
 
 ## Combat System
 
@@ -239,7 +257,6 @@ Quest progress is tracked per player and driven declaratively by data/world.json
 
 - Progression & Validation: Talking to an NPC (`TALK <npc>`) reveals available quests and triggers state-specific dialogue (`default`, `available`, `active`, `completed`, `locked`). Running `QUEST <npc>` moves an `available` quest to `active`. When the player holds the required item quantities and speaks to the giver again, the server validates inventory counts, optionally consumes the required items, grants item rewards, and unlocks the next quest in the chain. `QUESTS` lists all active and completed quests.
 
-## World Design
 
 ## World Design
 
@@ -323,7 +340,7 @@ Rejected connections are closed, and expired per-IP and rate-limit records are p
 ## Group Contributions
 
 - **`oshtohri`:**
-  - **Desktop GUI Client (`frontend/gui`):** Designed and implemented the graphical desktop client interface and state integration.
+  - **Desktop GUI Client (`cmd/desktop`, `internal/desktop`, `frontend/gui`):** Designed and implemented the Go HTTP/SSE desktop bridge, modular web interface, responsive multi-screen layouts, animated turn-based combat arena, background music/audio manager, and GUI documentation (`GUI_USER_GUIDE.md`, `docs/gui-architecture.md`).
   - **World Design & Data (`data/world.json`):** Created the game world layout, room interconnections, NPC definitions and dialogue trees, item distributions, and quest chains.
 - **`aunoguei`:**
   - **TCP Server & Core Engine (`cmd/server`, `internal/`):** Implemented the protocol parser, command dispatcher, session management, concurrency model, combat/quest logic, event bus, and abuse/rate-limiting controls.
@@ -334,17 +351,24 @@ Rejected connections are closed, and expired per-IP and rate-limit records are p
 The project uses a Makefile to manage builds and execution across all three binaries:
 
 ```bash
-# Build all binaries into bin/ (tap-server, tap-cli, tap-desktop)
-make build        # or `make install` to tidy modules and build
+# Install / tidy Go dependencies
+make install
 
-# Run the server (accepts optional flags such as -addr or abuse limits)
-make run-server   # or `./bin/tap-server -addr :4242`
+# Build all binaries into bin/ (tap-server, tap-cli, tap-desktop)
+make              # or `make build` / `make re`
+
+# Run the server (accepts PORT= and optional flags such as -port, -world, or abuse limits)
+make run-server   # or `./bin/tap-server -port 8090`
 
 # Run the Terminal UI client
-make run-client   # or `./bin/tap-cli`
+make run-client   # or `./bin/tap-cli -host 127.0.0.1 -port 8090`
 
 # Run the Desktop GUI client
-make run-client-gui # or `./bin/tap-desktop`
+make run-client-gui # or `./bin/tap-desktop -host 127.0.0.1 -port 8090`
+
+# Run static analysis and tests
+make lint
+make test
 
 # Remove compiled binaries
 make clean
