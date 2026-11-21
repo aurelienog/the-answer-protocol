@@ -230,6 +230,14 @@ const App = {
         }
         if (raw.includes('GROUP_ALREADY_EXISTS'))    return ['👥 Name Taken', 'A party with that name already exists. Choose another name!'];
         if (raw.includes('RATE_LIMITED'))            return ['⏳ Slow Down', 'You are performing actions too quickly! Wait a moment.'];
+        if (raw.includes('COMMAND_FAILED')) {
+            if (failedVerb === 'GROUP_INVITE') {
+                return ['👥 Already Invited', 'You have already invited this player (or the player is not online).'];
+            }
+            if (failedVerb === 'GROUP_JOIN') {
+                return ['👥 Cannot Join Party', 'Party not found or you do not have a pending invitation to join it.'];
+            }
+        }
         return ['⚠️ Notice', raw.replace(/^ERR\s+\d+\s+/, '').replace(/_/g, ' ')];
     },
 
@@ -306,6 +314,11 @@ const App = {
         if (lastVerb === 'GROUP_LEAVE') {
             GroupModal.renderCurrentGroup(null);
             UI.addChatLine('ROOM', '👥 Group', 'You left the group.', 'chat-sys');
+            return;
+        }
+        if (lastVerb === 'GROUP_INVITE') {
+            UI.addChatLine('ROOM', '👥 Group', 'Party invitation sent!', 'chat-sys');
+            this.sendCommand('GROUP INFO');
             return;
         }
 

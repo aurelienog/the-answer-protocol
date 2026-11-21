@@ -41,7 +41,7 @@
 /* ==================== 1. TOP COMBAT HUD (Separate Hero & Enemy Controls!) ==================== */
 :root {
     /* 🔧 CENTRAL ROUNDS FRAME */
-    --turn-banner-w: 320px;
+    --turn-banner-w: 350px;
     --turn-banner-h: 110px;
 
     /* 🔧 1. A Left-Wing Fighter — A Hero */

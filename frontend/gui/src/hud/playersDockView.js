@@ -35,7 +35,11 @@ const PlayersDockView = {
             const alreadyInMyGroup = groupMembers.some(m => m.toLowerCase() === name.toLowerCase());
 
             let partyCell = '-';
-            if (!isMe && GameState.activeHelpCombatId && GameState.activeHelpPlayer === name) {
+            const isHelpTarget = !GameState.inCombat &&
+                GameState.activeHelpCombatId &&
+                GameState.activeHelpPlayer &&
+                GameState.activeHelpPlayer.toLowerCase() === name.toLowerCase();
+            if (!isMe && isHelpTarget) {
                 partyCell = `<button type="button" class="btn-gold-sm" data-cmd="COMBAT JOIN ${GameState.activeHelpCombatId}"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`;
             } else if (isMe) {
                 partyCell = inGroup ? '<span class="badge">In Party</span>' : '-';

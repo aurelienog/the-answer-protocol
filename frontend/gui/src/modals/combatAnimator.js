@@ -169,6 +169,10 @@ const CombatAnimator = {
     },
 
     playState(slotName, actorKey, stateName = 'idle') {
+        if (slotName === 'hero' && typeof CombatModal !== 'undefined' && CombatModal.isFallen && stateName !== 'death') {
+            return false;
+        }
+
         const group = slotName === 'hero' ? this.CONFIG.heroes : this.CONFIG.enemies;
         const actorCfg = group[actorKey];
         if (!actorCfg || !actorCfg.enabled) return false;

@@ -264,3 +264,20 @@
     overflow-y: visible !important;
     padding-right: 0 !important;
 }
+
+/* ==================== GROUP MODAL UNIFIED RIGHT-PANEL SCROLL ==================== */
+#modal-group .split-right-list {
+    overflow-y: auto !important;
+}
+
+#modal-group .group-form-block,
+#modal-group .sapphire-divider {
+    flex-shrink: 0;
+}
+
+#group-invitations-list {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow-y: visible;
+    padding-right: 0;
+}

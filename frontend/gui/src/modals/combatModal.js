@@ -406,42 +406,55 @@ const CombatModal = {
     },
 
     playHitEffect(mode, damageAmount, remainingHp, customBannerText = '', allyTargetName = '', attackerName = '') {
-        if ((mode === 'enemy_hit' || mode === true) && attackerName) {
+        const isEnemyHit = (mode === 'enemy_hit' || mode === true);
+        if (isEnemyHit && attackerName) {
             this.advanceWithinCurrentRound(attackerName);
         }
 
-        const isHeroAttacking = (mode === 'enemy_hit' || mode === true);
-        const attackerSlot = isHeroAttacking ? 'hero' : 'enemy';
-        const defenderSlot = isHeroAttacking ? 'enemy' : 'hero';
+        const isMyAttack = isEnemyHit && (
+            !attackerName ||
+            attackerName.toLowerCase() === GameState.playerName.toLowerCase()
+        );
 
-        const timing = (typeof CombatAnimator !== 'undefined')
-            ? CombatAnimator.getStepTiming(attackerSlot, 'attack')
-            : { totalMs: 1350, impactDelayMs: 0, hasFrames: false };
+        let timing;
+        if (isMyAttack) {
+            timing = (typeof CombatAnimator !== 'undefined')
+                ? CombatAnimator.getStepTiming('hero', 'attack')
+                : { totalMs: 1350, impactDelayMs: 0, hasFrames: false };
+        } else if (isEnemyHit) {
+            // An ally struck the enemy — do not play the local hero's attack animation.
+            timing = { totalMs: 1100, impactDelayMs: 150, hasFrames: false };
+        } else {
+            timing = (typeof CombatAnimator !== 'undefined')
+                ? CombatAnimator.getStepTiming('enemy', 'attack')
+                : { totalMs: 1350, impactDelayMs: 0, hasFrames: false };
+        }
 
         this.enqueueAnim(() => {
             const heroBox = document.getElementById('fighter-hero-box');
             const enemyBox = document.getElementById('fighter-enemy-box');
             const turnText = document.getElementById('combat-turn-text');
 
-            // 1. Start the attacker's sprite animation immediately!
-            if (typeof CombatAnimator !== 'undefined') {
-                CombatAnimator.triggerAction(attackerSlot, 'attack');
-            }
-
-            if (isHeroAttacking) {
+            if (isEnemyHit) {
                 if (turnText) {
                     const label = (customBannerText || 'STRIKE').replace('⚔️', '').trim();
                     turnText.innerHTML = `${label} <img src="/assets/icons/ui/sword.webp" alt="" class="ui-ico">`;
                 }
-                if (!timing.hasFrames) {
-                    this.triggerAnim(heroBox, 'lunge-right');
+
+                // Animate the local hero only when the local player is actually attacking.
+                if (isMyAttack && !this.isFallen) {
+                    if (typeof CombatAnimator !== 'undefined') {
+                        CombatAnimator.triggerAction('hero', 'attack');
+                    }
+                    if (!timing.hasFrames) {
+                        this.triggerAnim(heroBox, 'lunge-right');
+                    }
                 }
 
-                // 2. Apply impact (shake + floating damage + HP bar update) at impactDelayMs!
                 setTimeout(() => {
                     if (remainingHp !== undefined) this.enemyHp = remainingHp;
                     if (typeof CombatAnimator !== 'undefined') {
-                        CombatAnimator.triggerAction(defenderSlot, remainingHp === 0 ? 'death' : 'hit');
+                        CombatAnimator.triggerAction('enemy', remainingHp === 0 ? 'death' : 'hit');
                     }
                     this.triggerAnim(enemyBox, 'hit-shake');
                     this.showFloatingDmg('dmg-on-enemy', `-${damageAmount}`, '#ff4d4d');
@@ -449,7 +462,12 @@ const CombatModal = {
                 }, timing.impactDelayMs || 0);
 
             } else if (mode === 'me_hit' || mode === false) {
-                if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()} ATTACKS YOU!`;
+                if (turnText) {
+                    turnText.innerHTML = `${UI.escapeHtml(this.enemyName.toUpperCase())} <img src="/assets/icons/command/attack.png" alt="attacks" class="ui-ico">`;
+                }
+                if (typeof CombatAnimator !== 'undefined') {
+                    CombatAnimator.triggerAction('enemy', 'attack');
+                }
                 if (!timing.hasFrames) {
                     this.triggerAnim(enemyBox, 'lunge-left');
                 }
@@ -457,7 +475,7 @@ const CombatModal = {
                 setTimeout(() => {
                     if (remainingHp !== undefined) GameState.hp = remainingHp;
                     if (typeof CombatAnimator !== 'undefined') {
-                        CombatAnimator.triggerAction(defenderSlot, remainingHp === 0 ? 'death' : 'hit');
+                        CombatAnimator.triggerAction('hero', remainingHp === 0 ? 'death' : 'hit');
                     }
                     this.triggerAnim(heroBox, 'hit-shake');
                     this.showFloatingDmg('dmg-on-hero', `-${damageAmount}`, '#ff4d4d');
@@ -465,8 +483,15 @@ const CombatModal = {
                 }, timing.impactDelayMs || 0);
 
             } else if (mode === 'ally_hit') {
-                if (turnText) turnText.textContent = `${this.enemyName.toUpperCase()} HITS ${allyTargetName.toUpperCase()}!`;
-                this.triggerAnim(enemyBox, 'lunge-left');
+                if (turnText) {
+                    turnText.innerHTML = `${UI.escapeHtml(this.enemyName.toUpperCase())} <img src="/assets/icons/command/attack.png" alt="attacks" class="ui-ico"> ${UI.escapeHtml(allyTargetName.toUpperCase())}`;
+                }
+                if (typeof CombatAnimator !== 'undefined') {
+                    CombatAnimator.triggerAction('enemy', 'attack');
+                }
+                if (!timing.hasFrames) {
+                    this.triggerAnim(enemyBox, 'lunge-left');
+                }
 
                 setTimeout(() => {
                     this.showFloatingDmg('dmg-on-hero', `${allyTargetName}: -${damageAmount} HP`, '#63b3ed');
