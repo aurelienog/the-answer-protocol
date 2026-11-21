@@ -89,7 +89,7 @@ const StageView = {
             const targetId = exits[dir];
             if (targetId) {
                 const tMeta = ASSETS.rooms[targetId] || ASSETS.rooms.default;
-                const shortLabel = shortRoomNames[targetId] || targetId.split('_')[0];
+                const shortLabel = shortRoomNames[targetId] || targetId.replace(/^[^.]+\./, '').split('_')[0];
                 const capLabel = shortLabel.charAt(0).toUpperCase() + shortLabel.slice(1);
                 const pinIcon = tMeta.iconImg
                     ? `<img src="${tMeta.iconImg}" alt="" class="comp-sq-icon">`

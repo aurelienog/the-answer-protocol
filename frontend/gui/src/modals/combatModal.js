@@ -348,6 +348,7 @@ const CombatModal = {
         enemySprite.style.display = 'block';
         enemyFallback.style.display = 'none';
         enemySprite.src = (ASSETS.combat && ASSETS.combat.enemies && ASSETS.combat.enemies[this.enemyId])
+            || (ASSETS.combat && ASSETS.combat.enemies && ASSETS.combat.enemies.default)
             || `/assets/combat/${this.enemyId}.webp`;
 
         document.getElementById('combat-outcome-banner').classList.add('hidden');

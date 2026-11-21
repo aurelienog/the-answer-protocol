@@ -13,7 +13,8 @@ const ASSETS = {
         enemies: {
             "dire_wolf":   "/assets/combat/dire_wolf.webp",
             "smuggler":    "/assets/combat/smuggler.webp",
-            "dock_warden": "/assets/combat/dock_warden.webp"
+            "dock_warden": "/assets/combat/dock_warden.webp",
+            "default":     "/assets/combat/unknown_enemy.webp"
         },
         backgrounds: {
             "docks":       "/assets/combat/bg_docks.webp",
@@ -21,7 +22,8 @@ const ASSETS = {
             "warehouse":   "/assets/combat/bg_warehouse.webp",
             "dock_warden": "/assets/combat/bg_docks.webp",
             "dire_wolf":   "/assets/combat/bg_forest_edge.webp",
-            "smuggler":    "/assets/combat/bg_warehouse.webp"
+            "smuggler":    "/assets/combat/bg_warehouse.webp",
+            "default":     "/assets/rooms/unknown_room.webp"
         }
     },
 
@@ -104,10 +106,10 @@ const ASSETS = {
         },
         "default": {
             icon:    "🏰",
-            img:     "/assets/rooms/harbor_square.webp",
-            cardImg: "/assets/rooms/cards/harbor_square.webp",
-            iconImg: "/assets/rooms/icons/harbor_square.png",
-            region:  "Kingdom of Arvendale"
+            img:     "/assets/rooms/unknown_room.webp",
+            cardImg: "/assets/rooms/unknown_room.webp",
+            iconImg: "/assets/rooms/icons/unknown_room.webp",
+            region:  "Unknown Region · Kingdom of Arvendale"
         }
     },
 
@@ -200,8 +202,8 @@ const ASSETS = {
         "default": {
             name:    "Item",
             icon:    "🎒",
-            img:     "/assets/ui/card/look-items.webp",
-            iconImg: "/assets/icons/command/inventory.png",
+            img:     "/assets/items/card/unknown_item.webp",
+            iconImg: "/assets/items/icons/unknown_item.webp",
             type:    "common",
             stats:   "Utility",
             desc:    "An interactive object discovered in the world."
@@ -219,6 +221,6 @@ const ASSETS = {
         "smuggler":      { id: "smuggler",      icon: "🗡️", img: "/assets/avatars/smuggler.webp",      iconImg: "/assets/avatars/icons/smuggler.jpeg",      role: "Shadow Smuggler" },
         "gate_guard":    { id: "gate_guard",    icon: "🛡️", img: "/assets/avatars/gate_guard.webp",    iconImg: "/assets/avatars/icons/gate_guard.jpeg",    role: "North Gate Guard" },
         "dire_wolf":     { id: "dire_wolf",     icon: "🐺", img: "/assets/avatars/dire_wolf.webp",     iconImg: "/assets/avatars/icons/dire_wolf.jpeg",     role: "Forest Beast" },
-        "default":       { id: "default",       name: "Citizen", icon: "🗣️", img: "/assets/ui/card/look-npcs.webp", iconImg: "", role: "Townsperson", hostile: false }
+        "default":       { id: "default",       name: "Unknown Character", icon: "🗣️", img: "/assets/avatars/unknown_npc.webp", iconImg: "/assets/avatars/icons/unknown_npc.webp", role: "Stranger", hostile: false }
     }
 };
