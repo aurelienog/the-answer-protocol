@@ -32,14 +32,23 @@
     overflow: hidden;
     z-index: 1;
 
+    /* Default (base) state */
     --btn-bg: url('/assets/buttons/bg-base.png');
-    --btn-hover-bg: url('/assets/buttons/bg-gold.png');
     --btn-edge-h: url('/assets/buttons/edge-h-base.png');
     --btn-edge-v: url('/assets/buttons/edge-v-base.png');
     --btn-c-tl: url('/assets/buttons/corner-base-tl.png');
     --btn-c-tr: url('/assets/buttons/corner-base-tr.png');
     --btn-c-bl: url('/assets/buttons/corner-base-bl.png');
     --btn-c-br: url('/assets/buttons/corner-base-br.png');
+
+    /* Default hover state (gold) */
+    --btn-hover-bg: url('/assets/buttons/bg-gold.png');
+    --btn-hover-edge-h: url('/assets/buttons/edge-h-gold.png');
+    --btn-hover-edge-v: url('/assets/buttons/edge-v-gold.png');
+    --btn-hover-c-tl: url('/assets/buttons/corner-gold-tl.png');
+    --btn-hover-c-tr: url('/assets/buttons/corner-gold-tr.png');
+    --btn-hover-c-bl: url('/assets/buttons/corner-gold-bl.png');
+    --btn-hover-c-br: url('/assets/buttons/corner-gold-br.png');
 
     background: transparent !important;
     background-image: var(--btn-bg) !important;
@@ -154,6 +163,12 @@
     font-size: var(--btn-font-connect) !important;
     letter-spacing: 3px;
     --btn-hover-bg: url('/assets/buttons/bg-blue.png');
+    --btn-hover-edge-h: url('/assets/buttons/edge-h-blue.png');
+    --btn-hover-edge-v: url('/assets/buttons/edge-v-blue.png');
+    --btn-hover-c-tl: url('/assets/buttons/corner-blue-tl.png');
+    --btn-hover-c-tr: url('/assets/buttons/corner-blue-tr.png');
+    --btn-hover-c-bl: url('/assets/buttons/corner-blue-bl.png');
+    --btn-hover-c-br: url('/assets/buttons/corner-blue-br.png');
 }
 
 .btn-gold-sm {
@@ -172,6 +187,11 @@
     --btn-c-bl: url('/assets/buttons/corner-blue-bl.png') !important;
     --btn-c-br: url('/assets/buttons/corner-blue-br.png') !important;
     color: #ffffff !important;
+    text-shadow:
+        0 1px 2px #000000,
+        0 2px 6px rgba(0, 0, 0, 0.98),
+        0 0 8px rgba(0, 0, 0, 0.92),
+        1px 1px 0 rgba(0, 0, 0, 0.85) !important;
     box-shadow: 0 0 12px rgba(30, 98, 208, 0.55) !important;
 }
 
@@ -181,11 +201,18 @@
     transition: none !important;
 }
 
+/* Red button variants (hover bg + red corners & edges) */
 .btn-modal-danger,
 #btn-drop-selected,
 .btn-attack-mode,
 [data-cmd="GROUP LEAVE"] {
     --btn-hover-bg: url('/assets/buttons/bg-red.png');
+    --btn-hover-edge-h: url('/assets/buttons/edge-h-red.png');
+    --btn-hover-edge-v: url('/assets/buttons/edge-v-red.png');
+    --btn-hover-c-tl: url('/assets/buttons/corner-red-tl.png');
+    --btn-hover-c-tr: url('/assets/buttons/corner-red-tr.png');
+    --btn-hover-c-bl: url('/assets/buttons/corner-red-bl.png');
+    --btn-hover-c-br: url('/assets/buttons/corner-red-br.png');
 }
 
 .right-action-bar .action-btn {
@@ -195,6 +222,12 @@
 
 .right-action-bar .action-btn.active {
     --btn-bg: url('/assets/buttons/bg-sq-gold.png') !important;
+    --btn-edge-h: url('/assets/buttons/edge-h-gold.png') !important;
+    --btn-edge-v: url('/assets/buttons/edge-v-gold.png') !important;
+    --btn-c-tl: url('/assets/buttons/corner-gold-tl.png') !important;
+    --btn-c-tr: url('/assets/buttons/corner-gold-tr.png') !important;
+    --btn-c-bl: url('/assets/buttons/corner-gold-bl.png') !important;
+    --btn-c-br: url('/assets/buttons/corner-gold-br.png') !important;
 }
 .right-action-bar .action-btn.active::before {
     opacity: 0 !important;
@@ -204,6 +237,24 @@
 .right-action-bar .action-btn[data-open-window="attack"],
 .right-action-bar .action-btn[data-open-window="quit"] {
     --btn-hover-bg: url('/assets/buttons/bg-sq-red.png');
+    --btn-hover-edge-h: url('/assets/buttons/edge-h-red.png');
+    --btn-hover-edge-v: url('/assets/buttons/edge-v-red.png');
+    --btn-hover-c-tl: url('/assets/buttons/corner-red-tl.png');
+    --btn-hover-c-tr: url('/assets/buttons/corner-red-tr.png');
+    --btn-hover-c-bl: url('/assets/buttons/corner-red-bl.png');
+    --btn-hover-c-br: url('/assets/buttons/corner-red-br.png');
+}
+
+.right-action-bar .action-btn[data-open-window="attack"].active,
+.right-action-bar .action-btn[data-open-window="quit"].active {
+    --btn-bg: url('/assets/buttons/bg-sq-red.png') !important;
+    --btn-edge-h: url('/assets/buttons/edge-h-red.png') !important;
+    --btn-edge-v: url('/assets/buttons/edge-v-red.png') !important;
+    --btn-c-tl: url('/assets/buttons/corner-red-tl.png') !important;
+    --btn-c-tr: url('/assets/buttons/corner-red-tr.png') !important;
+    --btn-c-bl: url('/assets/buttons/corner-red-bl.png') !important;
+    --btn-c-br: url('/assets/buttons/corner-red-br.png') !important;
+    box-shadow: 0 0 14px rgba(220, 38, 38, 0.65) !important;
 }
 
 /* Smoothly fade-in ::before ONLY on hover of non-active tabs/buttons! */
@@ -220,7 +271,26 @@
     opacity: 1;
 }
 
-/* Unified light text + glow on hover/active */
+/* Switch corners & edges to the button's hover variant automatically */
+.btn-modal-primary:hover:not(:disabled),
+.btn-modal-secondary:hover:not(:disabled),
+.btn-modal-danger:hover:not(:disabled),
+.btn-primary-connect:hover:not(:disabled),
+.btn-gold-sm:hover:not(:disabled),
+.tab-btn:not(.active):hover,
+.chat-tab:not(.active):hover,
+.action-btn:not(.active):hover,
+.gender-option input[type="radio"]:checked + .gender-btn,
+.gender-btn:hover {
+    --btn-edge-h: var(--btn-hover-edge-h);
+    --btn-edge-v: var(--btn-hover-edge-v);
+    --btn-c-tl: var(--btn-hover-c-tl);
+    --btn-c-tr: var(--btn-hover-c-tr);
+    --btn-c-bl: var(--btn-hover-c-bl);
+    --btn-c-br: var(--btn-hover-c-br);
+}
+
+/* Unified crisp light text + strong dark contour shadow on hover/active */
 .btn-modal-primary:hover:not(:disabled),
 .btn-modal-secondary:hover:not(:disabled),
 .btn-modal-danger:hover:not(:disabled),
@@ -233,9 +303,32 @@
 .gender-option input[type="radio"]:checked + .gender-btn,
 .gender-btn:hover {
     color: #ffffff !important;
-    text-shadow: 0 2px 4px #000000, 0 0 6px rgba(0, 0, 0, 0.95) !important;
+    text-shadow:
+        0 1px 2px #000000,
+        0 2px 6px rgba(0, 0, 0, 0.98),
+        0 0 8px rgba(0, 0, 0, 0.95),
+        1px 1px 0 rgba(0, 0, 0, 0.85),
+        -1px -1px 0 rgba(0, 0, 0, 0.65) !important;
     filter: brightness(1.12);
     box-shadow: 0 0 14px rgba(212, 163, 70, 0.55) !important;
+}
+
+/* Stronger dark halo shadow for icons inside hovered/active buttons */
+.btn-modal-primary:hover:not(:disabled) img,
+.btn-modal-secondary:hover:not(:disabled) img,
+.btn-modal-danger:hover:not(:disabled) img,
+.btn-gold-sm:hover:not(:disabled) img,
+.tab-btn:hover img,
+.tab-btn.active img,
+.chat-tab:hover img,
+.chat-tab.active img,
+.action-btn:hover img,
+.action-btn.active img,
+.icon-btn:hover img {
+    filter:
+        drop-shadow(0 0 2px rgba(0, 0, 0, 0.98))
+        drop-shadow(0 2px 5px rgba(0, 0, 0, 0.95))
+        drop-shadow(0 0 8px rgba(0, 0, 0, 0.85)) !important;
 }
 
 .btn-primary-connect:hover:not(:disabled) {
@@ -271,9 +364,21 @@
 .btn-send:hover,
 .icon-btn:hover {
     background-image: url('/assets/buttons/bg-sq-gold.png') !important;
+    color: #ffffff !important;
+    text-shadow:
+        0 1px 2px #000000,
+        0 2px 6px rgba(0, 0, 0, 0.98),
+        0 0 8px rgba(0, 0, 0, 0.95) !important;
     filter: brightness(1.15);
     transform: translateY(-1px);
     box-shadow: 0 0 12px rgba(212, 163, 70, 0.55);
+}
+
+.close-btn:hover::before,
+.btn-send:hover::before {
+    filter:
+        drop-shadow(0 0 2px rgba(0, 0, 0, 0.98))
+        drop-shadow(0 2px 4px rgba(0, 0, 0, 0.95));
 }
 
 .close-btn:hover,
