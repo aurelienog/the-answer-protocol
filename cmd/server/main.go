@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net"
 	"time"
 
@@ -10,11 +10,13 @@ import (
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/config"
 	"the-answer-protocol/internal/events"
+	"the-answer-protocol/internal/logger"
 	"the-answer-protocol/internal/server"
 	"the-answer-protocol/internal/world"
 )
 
 func main() {
+	log := logger.New()
 	cfg := config.LoadConfig()
 	guard := abuse.NewAbuseGuard(abuse.Config{
 		MaxConnections:                cfg.MaxConnections,
@@ -28,9 +30,14 @@ func main() {
 
 	gameWorld, err := world.Load(cfg.WorldPath)
 	if err != nil {
-		log.Fatalf("Failed to load world: %v", err)
+		log.Error("world.load_failed",
+			slog.String("error", err.Error()),
+		)
+		return
 	}
-	log.Printf("World loaded: %d rooms", gameWorld.RoomCount())
+	log.Info("world.loaded",
+		slog.Int("rooms", gameWorld.RoomCount()),
+	)
 
 	registry := server.NewRegistry()
 	eventBus := events.NewBus()
@@ -49,28 +56,43 @@ func main() {
 
 	listener, err := net.Listen("tcp", cfg.ServerAddr())
 	if err != nil {
-		log.Fatal("Error listening: ", err)
+		log.Error("server.listen_failed",
+			slog.String("address", cfg.ServerAddr()),
+			slog.String("error", err.Error()),
+		)
+		return
 	}
 	defer listener.Close()
 
-	log.Printf("TAP server listening on port %s", cfg.ServerPort)
+	log.Info("server.listening",
+		slog.String("address", cfg.ServerAddr()),
+	)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Error accepting connection: %v", err)
+			log.Error("connection.accept_failed",
+				slog.String("error", err.Error()),
+			)
 			continue
 		}
 
 		lease, rejection := guard.AcquireConnection(conn.RemoteAddr())
 		if rejection != "" {
-			log.Printf("Connection rejected from %s: %s", conn.RemoteAddr(), rejection)
+			log.Warn("connection.rejected",
+				slog.String("remote_addr", conn.RemoteAddr().String()),
+				slog.String("reason", string(rejection)),
+			)
 			_ = conn.Close()
 			continue
 		}
+		log.Info("connection.accepted",
+			slog.String("remote_addr", conn.RemoteAddr().String()),
+		)
 
 		go func(conn net.Conn, lease *abuse.ConnectionLease) {
 			server.HandleAdmittedConnection(
+				log,
 				conn,
 				dispatcher,
 				registry,

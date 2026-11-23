@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 	"time"
+	"log/slog"
 
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
@@ -23,6 +24,7 @@ const (
 // HandleAdmittedConnection handles a connection whose capacity has already
 // been reserved by the accept loop.
 func HandleAdmittedConnection(
+	log *slog.Logger,
 	conn net.Conn,
 	dispatcher *commands.Dispatcher,
 	registry *Registry,
@@ -36,11 +38,12 @@ func HandleAdmittedConnection(
 		return
 	}
 
-	handler := newConnectionHandler(conn, dispatcher, registry, gameWorld, eventPublisher, lease, idleTimeout)
+	handler := newConnectionHandler(log, conn, dispatcher, registry, gameWorld, eventPublisher, lease, idleTimeout)
 	handler.run()
 }
 
 type connectionHandler struct {
+	log            *slog.Logger
 	conn           net.Conn
 	dispatcher     *commands.Dispatcher
 	registry       *Registry
@@ -66,6 +69,7 @@ type connectionHandler struct {
 }
 
 func newConnectionHandler(
+	log *slog.Logger,
 	conn net.Conn,
 	dispatcher *commands.Dispatcher,
 	registry *Registry,
@@ -76,6 +80,7 @@ func newConnectionHandler(
 ) *connectionHandler {
 	sessionID := conn.RemoteAddr().String()
 	return &connectionHandler{
+		log: 			log,
 		conn:           conn,
 		dispatcher:     dispatcher,
 		registry:       registry,
