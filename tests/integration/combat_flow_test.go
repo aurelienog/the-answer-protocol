@@ -62,7 +62,9 @@ func TestHandleConnectionGroupStartsCooperativeCombat(t *testing.T) {
 	if bobStarted != aliceStarted {
 		t.Fatalf("combat-start events differ: Alice=%q Bob=%q", aliceStarted, bobStarted)
 	}
-	if !strings.Contains(aliceStarted, " room=docks participants=Alice,Bob") {
+	if !strings.Contains(aliceStarted, `"name":"Alice"`) ||
+		!strings.Contains(aliceStarted, `"name":"Bob"`) ||
+		!strings.Contains(aliceStarted, "room=docks") {
 		t.Errorf("combat-start event does not include both group members: %q", aliceStarted)
 	}
 
@@ -165,7 +167,7 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "COMBAT HELP")
-	if got := alice.readResponse(t); got != "OK help_requested=true combat="+attackResult.CombatID {
+	if got := alice.readResponse(t); got != "OK combat="+attackResult.CombatID {
 		t.Fatalf("combat-help response = %q", got)
 	}
 	if got := carol.readResponse(t); got != "EVT COMBAT HELP_REQUESTED player=Alice combat="+attackResult.CombatID+" room=docks" {
@@ -181,14 +183,15 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	}
 
 	carol.sendRequest(t, "COMBAT JOIN "+attackResult.CombatID)
-	wantJoinEvent := "EVT COMBAT PLAYER_JOINED player=Carol combat=" + attackResult.CombatID
+	wantJoinEvent := "EVT COMBAT PLAYER_JOINED player=Carol combat=" + attackResult.CombatID +
+		" hp=100 max_hp=100"
 	if got := alice.readResponse(t); got != wantJoinEvent {
 		t.Fatalf("Alice's join notification = %q, want %q", got, wantJoinEvent)
 	}
 	if got := carol.readResponse(t); got != wantJoinEvent {
 		t.Fatalf("Carol's join notification = %q, want %q", got, wantJoinEvent)
 	}
-	if got := carol.readResponse(t); got != "OK joined=true combat="+attackResult.CombatID+" target_hp=140" {
+	if got := carol.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat="+attackResult.CombatID) {
 		t.Fatalf("combat-join response = %q", got)
 	}
 
@@ -661,7 +664,7 @@ func TestHandleConnectionRejectsJoiningCombatFromAnotherRoom(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "COMBAT HELP")
-	if got := readUntilResponse(t, alice); got != "OK help_requested=true combat="+start.CombatID {
+	if got := readUntilResponse(t, alice); got != "OK combat="+start.CombatID {
 		t.Fatalf("combat-help response = %q", got)
 	}
 

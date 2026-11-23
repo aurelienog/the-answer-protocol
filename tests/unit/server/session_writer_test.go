@@ -1,16 +1,36 @@
 package server_test
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/server"
 )
+
+type synchronizedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (b *synchronizedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.b.Write(p)
+}
+
+func (b *synchronizedBuffer) Len() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.b.Len()
+}
 
 func TestWritePumpDeliversResponsesAndEventsInOrder(t *testing.T) {
 	serverConn, clientConn := net.Pipe()
@@ -23,7 +43,7 @@ func TestWritePumpDeliversResponsesAndEventsInOrder(t *testing.T) {
 		Outbox:     make(chan string, 2),
 	}
 	done := make(chan struct{})
-	go server.WritePump(session, done)
+	go server.WritePump(session, done, slog.Default())
 
 	if err := server.SendMessage(session, protocol.OK("connected")); err != nil {
 		t.Fatalf("SendMessage(response) returned an error: %v", err)
@@ -64,7 +84,7 @@ func TestWritePumpClosesConnectionAfterWriteFailure(t *testing.T) {
 		t.Fatalf("Enqueue() returned an error: %v", err)
 	}
 
-	go server.WritePump(session, done)
+	go server.WritePump(session, done, slog.Default())
 
 	select {
 	case <-done:
@@ -92,7 +112,7 @@ func TestSessionEnqueueReportsFullOutbox(t *testing.T) {
 }
 
 func TestRegistryQueueReportsFullOutbox(t *testing.T) {
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	session := newRegistryTestSession("session-1", "Alice")
 	if err := registry.Add(session); err != nil {
 		t.Fatalf("Add(session) returned an error: %v", err)
@@ -111,7 +131,7 @@ func TestRegistryQueueReportsFullOutbox(t *testing.T) {
 }
 
 func TestRegistryBroadcastSkipsFullOutboxWithoutBlockingOtherSessions(t *testing.T) {
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	fullSession := newRegistryTestSession("session-full", "Alice")
 	availableSession := newRegistryTestSession("session-available", "Bob")
 
@@ -140,6 +160,47 @@ func TestRegistryBroadcastSkipsFullOutboxWithoutBlockingOtherSessions(t *testing
 
 	if got := len(fullSession.Outbox); got != cap(fullSession.Outbox) {
 		t.Errorf("full outbox length = %d, want %d", got, cap(fullSession.Outbox))
+	}
+}
+
+func TestJSONLoggerConcurrentComponents(t *testing.T) {
+	output := &synchronizedBuffer{}
+	logger := slog.New(slog.NewJSONHandler(output, nil))
+	registry := server.NewRegistry(logger)
+
+	const workers = 64
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+
+			session := &server.Session{
+				ID:         fmt.Sprintf("session-%d", i),
+				PlayerName: fmt.Sprintf("Player%d", i),
+				Outbox:     make(chan string, 32),
+			}
+			if err := registry.Add(session); err != nil {
+				t.Errorf("Add(session-%d): %v", i, err)
+				return
+			}
+			if err := registry.Queue(session.ID, protocol.OK("ok")); err != nil {
+				t.Errorf("Queue(session-%d): %v", i, err)
+			}
+			registry.Broadcast(protocol.EVT("STATS", "players=64"))
+			logger.Info("race_test.message",
+				slog.Int("worker", i),
+			)
+		}(i)
+	}
+
+	close(start)
+	wg.Wait()
+
+	if got := output.Len(); got == 0 {
+		t.Fatal("concurrent JSON logger produced no output")
 	}
 }
 

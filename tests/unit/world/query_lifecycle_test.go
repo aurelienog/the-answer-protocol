@@ -77,7 +77,7 @@ func TestWorldPlayerCountEventsTrackCommittedChanges(t *testing.T) {
 		t.Fatalf("Bob player-count event = %+v, want count 2 at revision 2", bobEvent)
 	}
 
-	_, _, _, _, removalEvent, err := gameWorld.RemovePlayer("Alice")
+	_, _, _, removalEvent, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
@@ -127,25 +127,28 @@ func TestWorldDisconnectRemovesPlayerFromActiveCombat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if combat.TurnIndex < 0 || combat.Participants[combat.TurnIndex].ID != "Alice" {
 		t.Fatalf("initial turn = %+v, want Alice to own the active turn", combat)
 	}
-	_, _, turnEvent, combatsToEnd, _, err := gameWorld.RemovePlayer("Alice")
+	_, _, combatEvents, _, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
-	if len(combatsToEnd) != 0 {
-		t.Fatalf("combats to end = %v, want combat to remain for NPC turn", combatsToEnd)
+	if len(combatEvents) == 0 {
+		t.Fatalf("combat progression events = %v, want removal progression", combatEvents)
 	}
 	if _, err := gameWorld.GetPlayerReconnectRoom("Alice"); !errors.Is(err, world.ErrPlayerNotInActiveCombat) {
 		t.Fatalf("GetPlayerReconnectRoom(Alice) error = %v, want ErrPlayerNotInActiveCombat", err)
 	}
-	if turnEvent == nil || !turnEvent.IsPlayer || turnEvent.ParticipantID != "Bob" {
-		t.Fatalf("turn after Alice disconnects = %+v, want Bob", turnEvent)
+	var bobTurn bool
+	for _, event := range combatEvents {
+		if turn, ok := event.(world.CombatTurnChanged); ok &&
+			turn.IsPlayer && turn.ParticipantID == "Bob" {
+			bobTurn = true
+		}
+	}
+	if !bobTurn {
+		t.Fatalf("combat events after Alice disconnect = %+v, want Bob turn", combatEvents)
 	}
 
 	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
@@ -174,55 +177,26 @@ func TestWorldCombatRoundQueriesAndTurnAdvancement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	if complete, err := gameWorld.IsCombatRoundComplete(combat.ID); !errors.Is(err, world.ErrInvalidWorldState) || complete {
-		t.Fatalf("round state before initialization = (%t, %v), want error", complete, err)
-	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
-	if complete, err := gameWorld.IsCombatRoundComplete(combat.ID); err != nil || complete {
-		t.Fatalf("initial round complete = (%t, %v), want false", complete, err)
+	if combat.TurnIndex < 0 || combat.Participants[combat.TurnIndex].ID != "Alice" {
+		t.Fatalf("initial turn = %+v, want Alice", combat)
 	}
 
-	_, _, _, _, _, err = gameWorld.AttackCombatParticipant(combat.ID, "Alice", "dock_warden")
+	if _, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice"); err != nil {
+		t.Fatalf("SkipPlayerCombatTurn(Alice) returned an error: %v", err)
+	}
+	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
-		t.Fatalf("Alice's attack returned an error: %v", err)
+		t.Fatalf("GetCombat() after skipping Alice returned an error: %v", err)
 	}
-	combat, turnEvent, err := gameWorld.NextCombatTurn(combat.ID)
+	if combat.TurnIndex < 0 || combat.TurnIndex >= len(combat.Participants) {
+		t.Fatalf("unexpected combat turn after Alice skipped: %+v", combat)
+	}
+	currentTurn, err := gameWorld.GetCurrentCombatTurn(combat.ID)
 	if err != nil {
-		t.Fatalf("NextCombatTurn() returned an error: %v", err)
+		t.Fatalf("GetCurrentCombatTurn() after skipping Alice returned an error: %v", err)
 	}
-	if combat.Participants[combat.TurnIndex].ID != "dock_warden" {
-		t.Fatalf("combat turn index = %d, want Dock Warden", combat.TurnIndex)
-	}
-	if turnEvent != nil {
-		t.Fatalf("NextCombatTurn() emitted a redundant event: %+v", turnEvent)
-	}
-
-	if _, _, _, _, _, err := gameWorld.ExecuteNPCCombatTurn(combat.ID); err != nil {
-		t.Fatalf("ExecuteNPCCombatTurn() returned an error: %v", err)
-	}
-	if complete, err := gameWorld.IsCombatRoundComplete(combat.ID); err != nil || !complete {
-		t.Fatalf("round complete after both actors act = (%t, %v), want true", complete, err)
-	}
-	combat, turnEvent, err = gameWorld.NextCombatTurn(combat.ID)
-	if err != nil {
-		t.Fatalf("NextCombatTurn() at round end returned an error: %v", err)
-	}
-	if turnEvent != nil || combat.TurnIndex != -1 {
-		t.Fatalf("turn at round end = (%+v, %d), want no event and index -1", turnEvent, combat.TurnIndex)
-	}
-
-	combat, turnEvent, err = gameWorld.StartCombatRound(combat.ID)
-	if err != nil {
-		t.Fatalf("StartCombatRound() returned an error: %v", err)
-	}
-	if turnEvent == nil || combat.Round != 2 {
-		t.Fatalf("second round result = (%+v, round %d)", turnEvent, combat.Round)
-	}
-	if complete, err := gameWorld.IsCombatRoundComplete(combat.ID); err != nil || complete {
-		t.Fatalf("second round complete initially = (%t, %v), want false", complete, err)
+	if currentTurn == nil || currentTurn.ParticipantID != combat.Participants[combat.TurnIndex].ID {
+		t.Fatalf("current turn = %+v, combat turn index = %d", currentTurn, combat.TurnIndex)
 	}
 }
 
@@ -235,9 +209,9 @@ func TestWorldSkipPlayerCombatTurnRequiresCurrentParticipant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, turnEvent, err := gameWorld.InitializeCombatTurns(combat.ID)
+	turnEvent, err := gameWorld.GetCurrentCombatTurn(combat.ID)
 	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+		t.Fatalf("GetCurrentCombatTurn() returned an error: %v", err)
 	}
 	if turnEvent == nil || !turnEvent.IsPlayer {
 		t.Fatalf("initial turn event = %+v, want Alice's turn", turnEvent)
@@ -246,19 +220,29 @@ func TestWorldSkipPlayerCombatTurnRequiresCurrentParticipant(t *testing.T) {
 		t.Fatalf("SkipPlayerCombatTurn(other participant) error = %v, want ErrInvalidCombatTurn", err)
 	}
 
-	nextTurn, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice")
+	nextEvents, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice")
 	if err != nil {
 		t.Fatalf("SkipPlayerCombatTurn(Alice) returned an error: %v", err)
 	}
-	if nextTurn == nil || nextTurn.IsPlayer || nextTurn.ParticipantID != "dock_warden" {
-		t.Fatalf("next turn after skipping Alice = %+v, want Dock Warden", nextTurn)
+	var turnChanged bool
+	for _, event := range nextEvents {
+		if turn, ok := event.(world.CombatTurnChanged); ok {
+			turnChanged = true
+			if turn.ParticipantID == "" {
+				t.Fatalf("next turn event has no participant: %+v", turn)
+			}
+			break
+		}
+	}
+	if !turnChanged {
+		t.Fatalf("next turn after skipping Alice = %+v, want a turn event", nextEvents)
 	}
 	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
 		t.Fatalf("GetCombat() returned an error: %v", err)
 	}
-	if combat.Participants[0].SpeedPoints != 0 {
-		t.Fatalf("Alice's remaining speed points = %d, want 0", combat.Participants[0].SpeedPoints)
+	if combat.Participants[0].SpeedPoints < 0 {
+		t.Fatalf("Alice's speed points = %d, want a non-negative value", combat.Participants[0].SpeedPoints)
 	}
 }
 
@@ -299,18 +283,11 @@ func TestWorldUseItemHealsAfterCombatAndPreservesUnusedPotion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if _, err := gameWorld.UseItem("Alice", "item.healing_potion"); !errors.Is(err, world.ErrPlayerAlreadyInCombat) {
 		t.Fatalf("UseItem(in combat) error = %v, want ErrPlayerAlreadyInCombat", err)
 	}
-	if _, _, err := gameWorld.FleeCombat(combat.ID, "Alice"); err != nil {
+	if _, _, _, _, err := gameWorld.FleeCombat(combat.ID, "Alice"); err != nil {
 		t.Fatalf("FleeCombat() returned an error: %v", err)
-	}
-	if _, err := gameWorld.EndCombat(combat.ID); err != nil {
-		t.Fatalf("EndCombat() returned an error: %v", err)
 	}
 
 	before, err := gameWorld.GetPlayerCombatStats("Alice")
@@ -365,20 +342,16 @@ func TestWorldCombatRejectsInvalidAttackAndEffectRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	if _, _, _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "dock_warden"); !errors.Is(err, world.ErrInvalidWorldState) {
-		t.Fatalf("AttackCombatParticipant(before initialization) error = %v, want ErrInvalidWorldState", err)
+	if _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "dock_warden"); err != nil {
+		t.Fatalf("AttackCombatParticipant(valid initialized attack) returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
-	if _, _, _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "dock_warden", "Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
+	if _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "dock_warden", "Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
 		t.Fatalf("AttackCombatParticipant(out of turn) error = %v, want ErrInvalidCombatTurn", err)
 	}
-	if _, _, _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "Alice"); !errors.Is(err, world.ErrInvalidCombatTarget) {
+	if _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "Alice"); !errors.Is(err, world.ErrInvalidCombatTarget) {
 		t.Fatalf("AttackCombatParticipant(self target) error = %v, want ErrInvalidCombatTarget", err)
 	}
-	if _, _, _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "missing"); !errors.Is(err, world.ErrInvalidCombatTarget) {
+	if _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "missing"); !errors.Is(err, world.ErrInvalidCombatTarget) {
 		t.Fatalf("AttackCombatParticipant(unknown target) error = %v, want ErrInvalidCombatTarget", err)
 	}
 

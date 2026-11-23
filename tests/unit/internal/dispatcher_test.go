@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"log/slog"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/protocol"
 )
@@ -31,7 +32,7 @@ func (command *mockCommand) Execute(
 }
 
 func TestDispatcherRejectsNilContext(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	command := &mockCommand{
 		name: "LOOK",
 		execute: func(*commands.Context) (protocol.Message, error) {
@@ -51,7 +52,7 @@ func TestDispatcherRejectsNilContext(t *testing.T) {
 }
 
 func TestDispatcherReturnsProtocolErrorForUnknownCommand(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	ctx := &commands.Context{}
 	command := &mockCommand{
 		name: "LOOK",
@@ -91,7 +92,7 @@ func TestDispatcherReturnsProtocolErrorForUnknownCommand(t *testing.T) {
 }
 
 func TestDispatcherPassesParsedArgumentsToCommand(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	expectedMessage := protocol.OK("received")
 
 	command := &mockCommand{
@@ -136,7 +137,7 @@ func TestDispatcherPassesParsedArgumentsToCommand(t *testing.T) {
 }
 
 func TestDispatcherPropagatesCommandError(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	expectedError := errors.New("command execution failed")
 	expectedMessage := protocol.ERR(protocol.CodeCommandFailed, "COMMAND_FAILED")
 
@@ -163,7 +164,7 @@ func TestDispatcherPropagatesCommandError(t *testing.T) {
 }
 
 func TestDispatcherMatchesCommandNamesCaseInsensitively(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	expectedMessage := protocol.OK("matched")
 	command := &mockCommand{
 		name: "  LoOk  ",
@@ -188,7 +189,7 @@ func TestDispatcherMatchesCommandNamesCaseInsensitively(t *testing.T) {
 }
 
 func TestDispatcherRejectsMalformedRequest(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	command := &mockCommand{
 		name: "LOOK",
 		execute: func(*commands.Context) (protocol.Message, error) {
@@ -211,7 +212,7 @@ func TestDispatcherRejectsMalformedRequest(t *testing.T) {
 }
 
 func TestDispatcherPreservesRawTextAndParsedArguments(t *testing.T) {
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 
 	command := &mockCommand{
 		name: "CHAT",

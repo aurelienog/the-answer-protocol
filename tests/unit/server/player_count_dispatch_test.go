@@ -4,12 +4,13 @@ import (
 	"sync"
 	"testing"
 
+	"log/slog"
 	"the-answer-protocol/internal/server"
 	"the-answer-protocol/internal/world"
 )
 
 func TestNotificationDispatcherBroadcastsOnlyNewestPlayerCount(t *testing.T) {
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	sessions := map[string]*server.Session{
 		"Alice": newRegistryTestSession("session-alice", "Alice"),
 		"Bob":   newRegistryTestSession("session-bob", "Bob"),
@@ -21,7 +22,7 @@ func TestNotificationDispatcherBroadcastsOnlyNewestPlayerCount(t *testing.T) {
 		}
 	}
 
-	dispatcher := server.NewNotificationDispatcher(registry)
+	dispatcher := server.NewNotificationDispatcher(registry, slog.Default())
 	dispatcher.Handle(world.PlayerCountChanged{Count: 2, Revision: 2})
 	dispatcher.Handle(world.PlayerCountChanged{Count: 1, Revision: 1})
 
@@ -37,7 +38,7 @@ func TestNotificationDispatcherBroadcastsOnlyNewestPlayerCount(t *testing.T) {
 }
 
 func TestNotificationDispatcherSerializesConcurrentPlayerCountChanges(t *testing.T) {
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	session := &server.Session{
 		ID:         "session-alice",
 		PlayerName: "Alice",
@@ -47,7 +48,7 @@ func TestNotificationDispatcherSerializesConcurrentPlayerCountChanges(t *testing
 		t.Fatalf("register Alice: %v", err)
 	}
 
-	dispatcher := server.NewNotificationDispatcher(registry)
+	dispatcher := server.NewNotificationDispatcher(registry, slog.Default())
 	const revisions = 64
 	var waitGroup sync.WaitGroup
 	for revision := 1; revision <= revisions; revision++ {

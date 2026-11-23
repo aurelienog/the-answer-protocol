@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
@@ -64,10 +65,10 @@ func startTestConnection(
 
 	serverConn, clientConn := net.Pipe()
 
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	gameWorld := createTestWorld(t)
 	eventBus := events.NewBus()
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 
 	handlerDone := make(chan struct{})
@@ -88,6 +89,7 @@ func startTestConnection(
 			eventBus,
 			lease,
 			0,
+			slog.Default(),
 		)
 	}()
 

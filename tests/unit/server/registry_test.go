@@ -7,11 +7,12 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"log/slog"
 	"the-answer-protocol/internal/server"
 )
 
 func TestRegistryNamesAreUniqueIgnoringCase(t *testing.T) {
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 
 	first := newRegistryTestSession("session-1", "Alice")
 	if err := registry.Add(first); err != nil {
@@ -33,7 +34,7 @@ func TestRegistryNamesAreUniqueIgnoringCase(t *testing.T) {
 }
 
 func TestRegistryRemoveReleasesPlayerName(t *testing.T) {
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	first := newRegistryTestSession("session-1", "Alice")
 
 	if err := registry.Add(first); err != nil {
@@ -59,7 +60,7 @@ func TestRegistryRemoveReleasesPlayerName(t *testing.T) {
 func TestRegistryConcurrentAddsAllowOnlyOneMatchingName(t *testing.T) {
 	const contenders = 32
 
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	start := make(chan struct{})
 	var waitGroup sync.WaitGroup
 	var successes int32

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
@@ -77,12 +78,12 @@ func newConnectionTestEnvWithWorld(t *testing.T, gameWorld *world.World) *connec
 	t.Helper()
 
 	client, serverConn := net.Pipe()
-	registry := server.NewRegistry()
-	dispatcher := commands.NewDispatcher()
+	registry := server.NewRegistry(slog.Default())
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 
 	eventBus := events.NewBus()
-	notificationDispatcher := server.NewNotificationDispatcher(registry)
+	notificationDispatcher := server.NewNotificationDispatcher(registry, slog.Default())
 	eventBus.Subscribe(notificationDispatcher.Handle)
 
 	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
@@ -98,6 +99,7 @@ func newConnectionTestEnvWithWorld(t *testing.T, gameWorld *world.World) *connec
 		eventBus,
 		lease,
 		0,
+		slog.Default(),
 	)
 
 	t.Cleanup(func() {
@@ -238,6 +240,7 @@ func newSharedConnectionTestEnv(
 		eventBus,
 		lease,
 		0,
+		slog.Default(),
 	)
 
 	t.Cleanup(func() {

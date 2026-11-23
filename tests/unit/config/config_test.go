@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/config"
 )
 
@@ -48,7 +49,7 @@ func TestLoadConfigReadsEnvironmentAndFlags(t *testing.T) {
 		"-combat-turn-timeout=15s",
 	}
 
-	cfg := config.LoadConfig()
+	cfg := config.LoadConfig(slog.Default())
 	if cfg.ServerHost != "flag.example" || cfg.ServerPort != "8200" ||
 		cfg.WorldPath != "/tmp/test-world.json" || cfg.MaxConnections != 80 ||
 		cfg.MaxConnectionsPerIP != 4 || cfg.MaxConnectionAttemptsPerIP != 10 ||

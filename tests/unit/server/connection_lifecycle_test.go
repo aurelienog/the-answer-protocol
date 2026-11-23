@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/server"
@@ -34,9 +35,9 @@ func TestHandleConnectionClosesUnauthenticatedSessionOnTimeout(t *testing.T) {
 		t.Fatalf("load world: %v", err)
 	}
 
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 
 	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
 	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
@@ -51,6 +52,7 @@ func TestHandleConnectionClosesUnauthenticatedSessionOnTimeout(t *testing.T) {
 		nil,
 		lease,
 		0,
+		slog.Default(),
 	)
 
 	if err := client.SetDeadline(time.Now().Add(35 * time.Second)); err != nil {

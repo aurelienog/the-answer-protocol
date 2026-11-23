@@ -16,10 +16,6 @@ func TestJoinedPlayerGetsNextRoundAfterOriginalPlayerDies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if current := combat.Participants[combat.TurnIndex].ID; current != "Alice" {
 		t.Fatalf("initial turn = %q, want Alice", current)
 	}
@@ -39,15 +35,12 @@ func TestJoinedPlayerGetsNextRoundAfterOriginalPlayerDies(t *testing.T) {
 	if _, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice"); err != nil {
 		t.Fatalf("SkipPlayerCombatTurn(Alice) returned an error: %v", err)
 	}
-	combat, _, _, _, death, err := gameWorld.ExecuteNPCCombatTurn(combat.ID)
+	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
-		t.Fatalf("ExecuteNPCCombatTurn() returned an error: %v", err)
+		t.Fatalf("GetCombat() after NPC progression returned an error: %v", err)
 	}
-	if death == nil || death.ParticipantID != "Alice" {
-		t.Fatalf("NPC death event = %+v, want Alice", death)
-	}
-	if !combat.Active || combat.Round != 1 {
-		t.Fatalf("combat after Alice's death = %+v, want active round 1", combat)
+	if !combat.Active || combat.Round != 2 {
+		t.Fatalf("combat after Alice's death = %+v, want active round 2", combat)
 	}
 	if _, err := gameWorld.GetActiveCombatForPlayer("Alice"); err != nil {
 		t.Fatalf("dead Alice's active combat lookup returned an error: %v", err)
@@ -58,23 +51,12 @@ func TestJoinedPlayerGetsNextRoundAfterOriginalPlayerDies(t *testing.T) {
 	if _, _, err := gameWorld.RequestCombatHelp("Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
 		t.Fatalf("RequestCombatHelp(Alice) after death returned %v, want ErrInvalidCombatTurn", err)
 	}
-	if _, err := gameWorld.EndCombat(combat.ID); !errors.Is(err, world.ErrInvalidWorldState) {
-		t.Fatalf("EndCombat() while Bob is alive returned %v, want ErrInvalidWorldState", err)
-	}
 	assertPlayerRemainsDeadInRoom(t, gameWorld, "Alice", "docks")
 
-	combat, _, err = gameWorld.StartCombatRound(combat.ID)
-	if err != nil {
-		t.Fatalf("StartCombatRound() returned an error: %v", err)
-	}
-	if combat.Round != 2 {
-		t.Fatalf("combat round = %d, want 2", combat.Round)
-	}
-
 	// The NPC acts first on the tie; Bob must then get his first action.
-	combat, _, _, _, _, err = gameWorld.ExecuteNPCCombatTurn(combat.ID)
+	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
-		t.Fatalf("ExecuteNPCCombatTurn() in round 2 returned an error: %v", err)
+		t.Fatalf("GetCombat() in round 2 returned an error: %v", err)
 	}
 	if current := combat.Participants[combat.TurnIndex]; current.ID != "Bob" {
 		t.Fatalf("round 2 turn = %q, want Bob", current.ID)
@@ -83,12 +65,9 @@ func TestJoinedPlayerGetsNextRoundAfterOriginalPlayerDies(t *testing.T) {
 		t.Fatal("Bob has no available actions in round 2")
 	}
 
-	if _, _, err := gameWorld.FleeCombat(combat.ID, "Bob"); err != nil {
-		t.Fatalf("FleeCombat(Bob) returned an error: %v", err)
-	}
-	combat, err = gameWorld.EndCombat(combat.ID)
+	combat, _, _, _, err = gameWorld.FleeCombat(combat.ID, "Bob")
 	if err != nil {
-		t.Fatalf("EndCombat() after Bob fled returned an error: %v", err)
+		t.Fatalf("FleeCombat(Bob) returned an error: %v", err)
 	}
 	if combat.Active {
 		t.Fatal("combat remains active after Bob fled")
@@ -103,10 +82,6 @@ func TestGroupMemberJoiningMidCombatGetsNextRound(t *testing.T) {
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
-	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
 	}
 
 	if _, err := gameWorld.CreateGroup("Alice", "Rangers"); err != nil {
@@ -129,18 +104,14 @@ func TestGroupMemberJoiningMidCombatGetsNextRound(t *testing.T) {
 	if _, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice"); err != nil {
 		t.Fatalf("SkipPlayerCombatTurn(Alice) returned an error: %v", err)
 	}
-	combat, _, _, _, _, err = gameWorld.ExecuteNPCCombatTurn(combat.ID)
+	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
-		t.Fatalf("ExecuteNPCCombatTurn() returned an error: %v", err)
+		t.Fatalf("GetCombat() after round 1 actions returned an error: %v", err)
 	}
-	if combat.TurnIndex != -1 {
-		t.Fatalf("turn index after round 1 actions = %d, want -1", combat.TurnIndex)
+	if combat.TurnIndex < 0 {
+		t.Fatalf("turn index after round 1 actions = %d, want an active round 2 turn", combat.TurnIndex)
 	}
 
-	combat, _, err = gameWorld.StartCombatRound(combat.ID)
-	if err != nil {
-		t.Fatalf("StartCombatRound() returned an error: %v", err)
-	}
 	if combat.Round != 2 {
 		t.Fatalf("combat round = %d, want 2", combat.Round)
 	}
@@ -155,13 +126,6 @@ func TestGroupMemberJoiningMidCombatGetsNextRound(t *testing.T) {
 	}
 	if combat, err = gameWorld.GetCombat(combat.ID); err != nil {
 		t.Fatalf("GetCombat() after Alice's turn returned an error: %v", err)
-	}
-	if current := combat.Participants[combat.TurnIndex]; current.IsPlayer {
-		t.Fatalf("turn after Alice in round 2 = %q, want NPC", current.ID)
-	}
-	combat, _, _, _, _, err = gameWorld.ExecuteNPCCombatTurn(combat.ID)
-	if err != nil {
-		t.Fatalf("ExecuteNPCCombatTurn() in round 2 returned an error: %v", err)
 	}
 	if current := combat.Participants[combat.TurnIndex]; current.ID != "Bob" {
 		t.Fatalf("turn after Alice in round 2 = %q, want Bob", current.ID)
@@ -180,10 +144,6 @@ func TestNonGroupPlayerWaitsForCombatToEndAfterDeath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if current := combat.Participants[combat.TurnIndex].ID; current != "Alice" {
 		t.Fatalf("initial turn = %q, want Alice", current)
 	}
@@ -199,12 +159,9 @@ func TestNonGroupPlayerWaitsForCombatToEndAfterDeath(t *testing.T) {
 	if _, err := gameWorld.SkipPlayerCombatTurn(combat.ID, "Alice"); err != nil {
 		t.Fatalf("SkipPlayerCombatTurn(Alice) returned an error: %v", err)
 	}
-	combat, _, _, _, death, err := gameWorld.ExecuteNPCCombatTurn(combat.ID)
+	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
-		t.Fatalf("ExecuteNPCCombatTurn() returned an error: %v", err)
-	}
-	if death == nil || death.ParticipantID != "Bob" {
-		t.Fatalf("NPC death event = %+v, want Bob", death)
+		t.Fatalf("GetCombat() after NPC progression returned an error: %v", err)
 	}
 	if !combat.Active {
 		t.Fatal("combat ended while Alice was still alive")
@@ -212,24 +169,14 @@ func TestNonGroupPlayerWaitsForCombatToEndAfterDeath(t *testing.T) {
 	if _, err := gameWorld.GetActiveCombatForPlayer("Bob"); err != nil {
 		t.Fatalf("dead Bob's active combat lookup returned an error: %v", err)
 	}
-	if _, err := gameWorld.EndCombat(combat.ID); !errors.Is(err, world.ErrInvalidWorldState) {
-		t.Fatalf("EndCombat() while Alice is alive returned %v, want ErrInvalidWorldState", err)
-	}
 	assertPlayerRemainsDeadInRoom(t, gameWorld, "Bob", "docks")
 
-	combat, _, err = gameWorld.StartCombatRound(combat.ID)
-	if err != nil {
-		t.Fatalf("StartCombatRound() returned an error: %v", err)
-	}
 	if current := combat.Participants[combat.TurnIndex]; !current.IsPlayer || current.ID != "Alice" {
 		t.Fatalf("round 2 turn = %+v, want Alice", current)
 	}
-	if _, _, err := gameWorld.FleeCombat(combat.ID, "Alice"); err != nil {
-		t.Fatalf("FleeCombat(Alice) returned an error: %v", err)
-	}
-	combat, err = gameWorld.EndCombat(combat.ID)
+	combat, _, _, _, err = gameWorld.FleeCombat(combat.ID, "Alice")
 	if err != nil {
-		t.Fatalf("EndCombat() after Alice fled returned an error: %v", err)
+		t.Fatalf("FleeCombat(Alice) returned an error: %v", err)
 	}
 	if combat.Active {
 		t.Fatal("combat remains active after Alice fled")
@@ -262,10 +209,6 @@ func woundPlayerForCombatDeathTest(
 	if err != nil {
 		t.Fatalf("StartCombat(%s) returned an error: %v", playerName, err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 
 	for actions := 0; actions < 100; actions++ {
 		combat, err = gameWorld.GetCombat(combat.ID)
@@ -274,10 +217,6 @@ func woundPlayerForCombatDeathTest(
 		}
 
 		if combat.TurnIndex == -1 {
-			combat, _, err = gameWorld.StartCombatRound(combat.ID)
-			if err != nil {
-				t.Fatalf("StartCombatRound() returned an error: %v", err)
-			}
 			continue
 		}
 
@@ -288,11 +227,8 @@ func woundPlayerForCombatDeathTest(
 				t.Fatalf("GetPlayerCombatStats(%s) returned an error: %v", playerName, err)
 			}
 			if stats.HP <= 5 {
-				if _, _, err := gameWorld.FleeCombat(combat.ID, playerName); err != nil {
+				if _, _, _, _, err := gameWorld.FleeCombat(combat.ID, playerName); err != nil {
 					t.Fatalf("FleeCombat(%s) returned an error: %v", playerName, err)
-				}
-				if _, err := gameWorld.EndCombat(combat.ID); err != nil {
-					t.Fatalf("EndCombat() after fleeing returned an error: %v", err)
 				}
 				return
 			}
@@ -302,9 +238,6 @@ func woundPlayerForCombatDeathTest(
 			continue
 		}
 
-		if _, _, _, _, _, err := gameWorld.ExecuteNPCCombatTurn(combat.ID); err != nil {
-			t.Fatalf("ExecuteNPCCombatTurn() returned an error: %v", err)
-		}
 	}
 
 	t.Fatalf("could not wound %s enough to test combat death", playerName)

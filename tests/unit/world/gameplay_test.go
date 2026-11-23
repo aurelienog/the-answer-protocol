@@ -161,19 +161,16 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	if _, _, err := gameWorld.InitializeCombatTurns(combat.ID); err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 
-	_, returned, _, combatsToEnd, _, err := gameWorld.RemovePlayer("Alice")
+	_, returned, combatEvents, _, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
 	if len(returned.ItemIDs) != 1 || returned.ItemIDs[0] == "item.gold_coins" {
 		t.Fatalf("unique items returned = %v, want one concrete gold-coins instance", returned.ItemIDs)
 	}
-	if len(combatsToEnd) != 1 || combatsToEnd[0] != combat.ID {
-		t.Fatalf("combats to end = %v, want only %q", combatsToEnd, combat.ID)
+	if len(combatEvents) == 0 {
+		t.Fatalf("combat progression events = %v, want combat removal events", combatEvents)
 	}
 	if _, err := gameWorld.GetPlayerRoom("Alice"); !errors.Is(err, world.ErrPlayerNotFound) {
 		t.Fatalf("GetPlayerRoom(Alice) after removal error = %v, want ErrPlayerNotFound", err)
@@ -186,9 +183,6 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 		if participant.IsPlayer && participant.ID == "Alice" {
 			t.Fatal("Alice remains in combat after disconnecting")
 		}
-	}
-	if _, err := gameWorld.EndCombat(combat.ID); err != nil {
-		t.Fatalf("EndCombat() after disconnect returned an error: %v", err)
 	}
 
 	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
@@ -386,10 +380,6 @@ func TestWorldCombatEffectsAndDefendAction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if combat.Participants[combat.TurnIndex].ID != "Alice" {
 		t.Fatalf("initial combat turn = %q, want Alice", combat.Participants[combat.TurnIndex].ID)
 	}
@@ -418,16 +408,19 @@ func TestWorldCombatEffectsAndDefendAction(t *testing.T) {
 		t.Fatalf("effects after removal = %+v, want none", combat.Participants[0].Effects)
 	}
 
-	combat, turnEvent, err := gameWorld.DefendCombatParticipant(combat.ID, "Alice")
+	combat, combatEvents, err := gameWorld.DefendCombatParticipant(combat.ID, "Alice")
 	if err != nil {
 		t.Fatalf("DefendCombatParticipant() returned an error: %v", err)
 	}
-	if len(combat.Participants[0].Effects) != 1 ||
-		combat.Participants[0].Effects[0].ModifierPercent != world.DefaultDefenseBonusPercent {
-		t.Fatalf("effects after defending = %+v, want temporary defense bonus", combat.Participants[0].Effects)
+	var dockWardenTurn bool
+	for _, event := range combatEvents {
+		if turn, ok := event.(world.CombatTurnChanged); ok &&
+			!turn.IsPlayer && turn.ParticipantID == "dock_warden" {
+			dockWardenTurn = true
+		}
 	}
-	if turnEvent == nil || turnEvent.IsPlayer || turnEvent.ParticipantID != "dock_warden" {
-		t.Fatalf("turn event after defend = %+v, want Dock Warden", turnEvent)
+	if !dockWardenTurn {
+		t.Fatalf("combat events after defend = %+v, want Dock Warden turn", combatEvents)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"log/slog"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/protocol"
@@ -135,9 +136,9 @@ func TestLookCommandReturnsCurrentRoom(t *testing.T) {
 		Room struct {
 			ID string `json:"id"`
 		} `json:"room"`
-		Players []string     `json:"players"`
-		Items   []world.Item `json:"items"`
-		NPCs    []string     `json:"npcs"`
+		Players []string           `json:"players"`
+		Items   []world.Item       `json:"items"`
+		NPCs    []world.NPCSummary `json:"npcs"`
 	}
 
 	if err := json.Unmarshal([]byte(message.Payload), &response); err != nil {
@@ -174,7 +175,9 @@ func TestLookCommandReturnsCurrentRoom(t *testing.T) {
 		t.Errorf("expected item type %q, got %q", world.ItemTypeCommon, item.Type)
 	}
 
-	if len(response.NPCs) != 1 || response.NPCs[0] != "Harbor Guard" {
+	if len(response.NPCs) != 1 ||
+		response.NPCs[0].ID != "guard" ||
+		response.NPCs[0].Name != "Harbor Guard" {
 		t.Errorf("expected Harbor Guard in room NPCs, got %v", response.NPCs)
 	}
 
@@ -202,7 +205,7 @@ func TestCommandsWithoutArgumentsRejectUnexpectedArguments(t *testing.T) {
 	gameWorld := createCommandTestWorld(t)
 	addTestPlayer(t, gameWorld, "Alice")
 
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 
 	for _, command := range []string{"LOOK", "STATUS", "INVENTORY", "QUIT"} {
@@ -226,7 +229,7 @@ func TestCommandsWithoutArgumentsRejectUnexpectedArguments(t *testing.T) {
 func TestCombatJoinReportsUnknownCombatID(t *testing.T) {
 	gameWorld := createCommandTestWorld(t)
 	addTestPlayer(t, gameWorld, "Alice")
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 
 	message, err := dispatcher.Dispatch(

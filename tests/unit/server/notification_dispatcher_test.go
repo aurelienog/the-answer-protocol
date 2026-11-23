@@ -3,6 +3,7 @@ package server_test
 import (
 	"testing"
 
+	"log/slog"
 	"the-answer-protocol/internal/server"
 	"the-answer-protocol/internal/world"
 )
@@ -148,14 +149,17 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 		{
 			name: "combat started",
 			event: world.CombatStarted{
-				CombatID:     "combat-1",
-				RoomID:       "docks",
-				Participants: []string{"Alice", "dock_warden"},
-				Recipients:   []string{"Alice", "Bob"},
+				CombatID: "combat-1",
+				RoomID:   "docks",
+				Participants: []world.CombatParticipantInfo{
+					{ID: "Alice", Name: "Alice", IsPlayer: true, HP: 100, MaxHP: 100, Alive: true},
+					{ID: "dock_warden", Name: "Dock Warden", IsPlayer: false, HP: 80, MaxHP: 80, Alive: true},
+				},
+				Recipients: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT COMBAT STARTED combat=combat-1 room=docks participants=Alice,dock_warden\n",
-				"Bob":   "EVT COMBAT STARTED combat=combat-1 room=docks participants=Alice,dock_warden\n",
+				"Alice": "EVT COMBAT STARTED combat=combat-1 room=docks participants=[{\"id\":\"Alice\",\"name\":\"Alice\",\"is_player\":true,\"hp\":100,\"max_hp\":100,\"alive\":true},{\"id\":\"dock_warden\",\"name\":\"Dock Warden\",\"is_player\":false,\"hp\":80,\"max_hp\":80,\"alive\":true}]\n",
+				"Bob":   "EVT COMBAT STARTED combat=combat-1 room=docks participants=[{\"id\":\"Alice\",\"name\":\"Alice\",\"is_player\":true,\"hp\":100,\"max_hp\":100,\"alive\":true},{\"id\":\"dock_warden\",\"name\":\"Dock Warden\",\"is_player\":false,\"hp\":80,\"max_hp\":80,\"alive\":true}]\n",
 			},
 		},
 		{
@@ -287,7 +291,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := server.NewRegistry()
+			registry := server.NewRegistry(slog.Default())
 			sessions := map[string]*server.Session{
 				"Alice": newRegistryTestSession("session-alice", "Alice"),
 				"Bob":   newRegistryTestSession("session-bob", "Bob"),
@@ -299,7 +303,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				}
 			}
 
-			dispatcher := server.NewNotificationDispatcher(registry)
+			dispatcher := server.NewNotificationDispatcher(registry, slog.Default())
 			dispatcher.Handle(tt.event)
 
 			for name, session := range sessions {

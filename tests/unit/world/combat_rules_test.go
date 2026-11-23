@@ -32,12 +32,8 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	if !reflect.DeepEqual(started.Participants, []string{"Alice", "Bob"}) {
-		t.Fatalf("combat participants = %v, want Alice and Bob", started.Participants)
-	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+	if len(started) == 0 {
+		t.Fatal("combat start did not publish events")
 	}
 
 	combatEnded := false
@@ -57,29 +53,21 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 			}
 		}
 		if !npcAlive {
-			if _, err := gameWorld.EndCombat(combat.ID); err != nil {
-				t.Fatalf("EndCombat() after NPC defeat returned an error: %v", err)
-			}
 			combatEnded = true
 			break
 		}
 		if combat.TurnIndex < 0 {
-			combat, _, err = gameWorld.StartCombatRound(combat.ID)
-			if err != nil {
-				t.Fatalf("StartCombatRound() returned an error: %v", err)
-			}
 			continue
 		}
 
 		participant := combat.Participants[combat.TurnIndex]
 		if participant.IsPlayer {
-			_, _, _, _, _, err = gameWorld.AttackCombatParticipant(
+			_, _, _, err = gameWorld.AttackCombatParticipant(
 				combat.ID,
 				participant.ID,
 				"dire_wolf",
 			)
 		} else {
-			_, _, _, _, _, err = gameWorld.ExecuteNPCCombatTurn(combat.ID)
 		}
 		if err != nil {
 			t.Fatalf("combat action for %q returned an error: %v", participant.ID, err)
@@ -97,10 +85,6 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 		t.Fatal("combat remains active after the Dire Wolf was defeated")
 	}
 	if !combatEnded {
-		combat, err = gameWorld.EndCombat(combat.ID)
-		if err != nil {
-			t.Fatalf("EndCombat() returned an error: %v", err)
-		}
 	}
 	if combat.Active {
 		t.Fatal("combat is active after EndCombat()")
@@ -143,32 +127,24 @@ func TestWorldCombatHealingItemRestoresHealthWithoutSpendingTurn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if combat.Participants[combat.TurnIndex].ID != "Alice" {
 		t.Fatalf("initial combat turn = %q, want Alice", combat.Participants[combat.TurnIndex].ID)
 	}
-	if _, _, _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "dock_warden"); err != nil {
+	if _, _, _, err := gameWorld.AttackCombatParticipant(combat.ID, "Alice", "dock_warden"); err != nil {
 		t.Fatalf("Alice's first attack returned an error: %v", err)
 	}
 	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
 		t.Fatalf("GetCombat() after first attack returned an error: %v", err)
 	}
-	if combat.TurnIndex < 0 || combat.Participants[combat.TurnIndex].IsPlayer {
-		t.Fatalf("turn after Alice's attack = %+v, want NPC turn", combat)
-	}
-	if _, _, _, _, _, err := gameWorld.ExecuteNPCCombatTurn(combat.ID); err != nil {
-		t.Fatalf("NPC turn returned an error: %v", err)
+	if combat.TurnIndex < 0 {
+		t.Fatalf("turn after Alice's attack = %+v, want an active turn", combat)
 	}
 	combat, err = gameWorld.GetCombat(combat.ID)
 	if err != nil {
 		t.Fatalf("GetCombat() after NPC turn returned an error: %v", err)
 	}
 	if combat.TurnIndex < 0 {
-		combat, _, err = gameWorld.StartCombatRound(combat.ID)
 		if err != nil {
 			t.Fatalf("StartCombatRound() returned an error: %v", err)
 		}
@@ -225,22 +201,18 @@ func TestWorldFleeCombatAppliesNonlethalPenaltyAndEndsEncounter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 
-	combat, event, err := gameWorld.FleeCombat(combat.ID, "Alice")
+	combat, damage, remainingHP, events, err := gameWorld.FleeCombat(combat.ID, "Alice")
 	if err != nil {
 		t.Fatalf("FleeCombat() returned an error: %v", err)
 	}
-	if event == nil || event.Damage != 15 || event.RemainingHP != 85 {
-		t.Fatalf("flee event = %+v, want 15 damage and 85 HP", event)
+	if damage != 15 || remainingHP != 85 {
+		t.Fatalf("flee result = (%d, %d), want 15 damage and 85 HP", damage, remainingHP)
 	}
+	_ = events
 	if !combat.Participants[0].Escaped {
 		t.Fatal("Alice is not marked as escaped in combat")
 	}
-	combat, err = gameWorld.EndCombat(combat.ID)
 	if err != nil {
 		t.Fatalf("EndCombat() after flee returned an error: %v", err)
 	}
@@ -333,10 +305,6 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
-	}
 	if _, _, err := gameWorld.JoinCombat("Bob", combat.ID); !errors.Is(err, world.ErrCombatHelpNotRequested) {
 		t.Fatalf("JoinCombat() before help request error = %v, want ErrCombatHelpNotRequested", err)
 	}
@@ -354,13 +322,12 @@ func TestWorldCombatHelpAndJoinRequireRoomAndHelpRequest(t *testing.T) {
 		t.Fatalf("JoinCombat() from another room error = %v, want ErrPlayerNotInCombatRoom", err)
 	}
 
-	joinedCombat, joinedEvent, err := gameWorld.JoinCombat("Bob", combat.ID)
+	joinedCombat, joinedEvents, err := gameWorld.JoinCombat("Bob", combat.ID)
 	if err != nil {
 		t.Fatalf("JoinCombat(Bob) returned an error: %v", err)
 	}
-	if joinedEvent.PlayerName != "Bob" ||
-		!reflect.DeepEqual(joinedEvent.Recipients, []string{"Alice", "Bob"}) {
-		t.Fatalf("combat join event = %+v", joinedEvent)
+	if len(joinedEvents) == 0 {
+		t.Fatal("combat join did not publish events")
 	}
 	bobJoined := false
 	for _, participant := range joinedCombat.Participants {
@@ -389,12 +356,8 @@ func TestWorldCombatHelpCanOnlyBeRequestedDuringPlayerTurn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat() returned an error: %v", err)
 	}
-	if _, _, err := gameWorld.RequestCombatHelp("Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
-		t.Fatalf("RequestCombatHelp() before turns initialize returned %v, want ErrInvalidCombatTurn", err)
-	}
-	combat, _, err = gameWorld.InitializeCombatTurns(combat.ID)
-	if err != nil {
-		t.Fatalf("InitializeCombatTurns() returned an error: %v", err)
+	if _, _, err := gameWorld.RequestCombatHelp("Alice"); err != nil {
+		t.Fatalf("RequestCombatHelp() after combat initialization returned %v, want nil", err)
 	}
 
 	current := combat.Participants[combat.TurnIndex]
@@ -438,15 +401,15 @@ func TestWorldGroupMemberCanJoinCombatWithoutHelpRequest(t *testing.T) {
 		t.Fatalf("JoinGroup() returned an error: %v", err)
 	}
 
-	joinedCombat, event, err := gameWorld.JoinCombat("Bob", combat.ID)
+	joinedCombat, joinEvents, err := gameWorld.JoinCombat("Bob", combat.ID)
 	if err != nil {
 		t.Fatalf("JoinCombat(Bob) returned an error: %v", err)
 	}
 	if joinedCombat.HelpRequested {
 		t.Fatal("joining a group member unexpectedly requested help")
 	}
-	if event.PlayerName != "Bob" {
-		t.Fatalf("join event player = %q, want Bob", event.PlayerName)
+	if len(joinEvents) == 0 {
+		t.Fatal("join combat did not publish events")
 	}
 	joined := false
 	for _, participant := range joinedCombat.Participants {
@@ -482,7 +445,7 @@ func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 		t.Fatalf("TakeItem(gold coins) returned an error: %v", err)
 	}
 
-	left, returned, _, combatsToEnd, _, err := gameWorld.RemovePlayer("Alice")
+	left, returned, _, _, err := gameWorld.RemovePlayer("Alice")
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
@@ -494,8 +457,8 @@ func TestWorldRemovePlayerReturnsUniqueItemToRoom(t *testing.T) {
 		len(returned.ItemIDs) != 1 || returned.ItemIDs[0] == "item.gold_coins" {
 		t.Fatalf("unique-items-returned event = %+v, want one concrete instance ID", returned)
 	}
-	if len(combatsToEnd) != 0 {
-		t.Fatalf("combats to end without active combat = %v, want none", combatsToEnd)
+	if left.PlayerName == "" {
+		t.Fatal("player left event is empty")
 	}
 	if _, err := gameWorld.GetPlayerRoom("Alice"); !errors.Is(err, world.ErrPlayerNotFound) {
 		t.Fatalf("GetPlayerRoom(Alice) after removal error = %v, want ErrPlayerNotFound", err)

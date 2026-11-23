@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/server"
@@ -25,9 +26,9 @@ func TestCombatTurnTimeoutContinuesAfterPlayerJoinsMidRound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat(): %v", err)
 	}
-	combat, turn, err := gameWorld.InitializeCombatTurns(combat.ID)
+	turn, err := gameWorld.GetCurrentCombatTurn(combat.ID)
 	if err != nil {
-		t.Fatalf("InitializeCombatTurns(): %v", err)
+		t.Fatalf("GetCurrentCombatTurn(): %v", err)
 	}
 	if turn == nil || !turn.IsPlayer || turn.ParticipantID != "Alice" {
 		t.Fatalf("initial combat turn = %+v, want Alice's turn", turn)
@@ -42,7 +43,7 @@ func TestCombatTurnTimeoutContinuesAfterPlayerJoinsMidRound(t *testing.T) {
 	eventBus := events.NewBus()
 	manager := server.NewCombatTurnTimeoutManager(
 		100*time.Millisecond,
-		commands.NewCombatTurnTimeoutHandler(gameWorld, eventBus),
+		commands.NewCombatTurnTimeoutHandler(gameWorld, eventBus, slog.Default()),
 	)
 	defer manager.Stop()
 	eventBus.Subscribe(manager.Handle)

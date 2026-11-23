@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
@@ -31,11 +32,11 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 		t.Fatalf("load world: %v", err)
 	}
 
-	registry := server.NewRegistry()
-	dispatcher := commands.NewDispatcher()
+	registry := server.NewRegistry(slog.Default())
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 	eventBus := events.NewBus()
-	eventBus.Subscribe(server.NewNotificationDispatcher(registry).Handle)
+	eventBus.Subscribe(server.NewNotificationDispatcher(registry, slog.Default()).Handle)
 
 	config := abuse.DefaultConfig()
 	config.MaxConnections = concurrentClientCount
@@ -96,6 +97,7 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 			eventBus,
 			lease,
 			0,
+			slog.Default(),
 		)
 	}
 

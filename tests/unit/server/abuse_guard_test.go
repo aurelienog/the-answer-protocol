@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"log/slog"
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/server"
@@ -22,12 +23,13 @@ func TestHandleAdmittedConnectionRequiresLease(t *testing.T) {
 
 	server.HandleAdmittedConnection(
 		serverConn,
-		commands.NewDispatcher(),
-		server.NewRegistry(),
+		commands.NewDispatcher(slog.Default()),
+		server.NewRegistry(slog.Default()),
 		nil,
 		nil,
 		nil,
 		0,
+		slog.Default(),
 	)
 	if _, err := bufio.NewReader(client).ReadString('\n'); !errors.Is(err, io.EOF) {
 		t.Fatalf("read from connection without admission lease returned %v, want EOF", err)
@@ -39,7 +41,7 @@ func TestMalformedFramingReturnsErrorAndKeepsConnectionOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 	client, serverConn := net.Pipe()
 	defer client.Close()
@@ -53,11 +55,12 @@ func TestMalformedFramingReturnsErrorAndKeepsConnectionOpen(t *testing.T) {
 	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
-		server.NewRegistry(),
+		server.NewRegistry(slog.Default()),
 		gameWorld,
 		nil,
 		lease,
 		0,
+		slog.Default(),
 	)
 	if err := client.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
@@ -120,7 +123,7 @@ func TestUnterminatedFrameReturnsProtocolErrorBeforeClosing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 	guard := abuse.NewAbuseGuard(abuse.Config{})
 	lease, rejection := guard.AcquireConnection(serverConn.RemoteAddr())
@@ -130,11 +133,12 @@ func TestUnterminatedFrameReturnsProtocolErrorBeforeClosing(t *testing.T) {
 	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
-		server.NewRegistry(),
+		server.NewRegistry(slog.Default()),
 		gameWorld,
 		nil,
 		lease,
 		0,
+		slog.Default(),
 	)
 
 	reader := bufio.NewReader(tcpClient)
@@ -166,9 +170,9 @@ func TestAdmissionRejectsWhenUnauthenticatedCapacityIsFull(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	guard := abuse.NewAbuseGuard(abuse.Config{MaxUnauthenticatedConnections: 1})
 
 	firstClient, firstServer := net.Pipe()
@@ -177,7 +181,7 @@ func TestAdmissionRejectsWhenUnauthenticatedCapacityIsFull(t *testing.T) {
 	if rejection != "" {
 		t.Fatalf("admit first connection: %v", rejection)
 	}
-	go server.HandleAdmittedConnection(firstServer, dispatcher, registry, gameWorld, nil, firstLease, 0)
+	go server.HandleAdmittedConnection(firstServer, dispatcher, registry, gameWorld, nil, firstLease, 0, slog.Default())
 	if err := firstClient.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
 		t.Fatalf("set first client deadline: %v", err)
 	}
@@ -212,9 +216,9 @@ func TestAuthenticatedConnectionClosesAfterIdleTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
-	registry := server.NewRegistry()
+	registry := server.NewRegistry(slog.Default())
 	guard := abuse.NewAbuseGuard(abuse.Config{MaxConnections: 1})
 
 	client, serverConn := net.Pipe()
@@ -231,6 +235,7 @@ func TestAuthenticatedConnectionClosesAfterIdleTimeout(t *testing.T) {
 		nil,
 		lease,
 		25*time.Millisecond,
+		slog.Default(),
 	)
 	if err := client.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
@@ -268,7 +273,7 @@ func TestAuthenticatedConnectionActivityResetsIdleTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 	client, serverConn := net.Pipe()
 	defer client.Close()
@@ -281,11 +286,12 @@ func TestAuthenticatedConnectionActivityResetsIdleTimeout(t *testing.T) {
 	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
-		server.NewRegistry(),
+		server.NewRegistry(slog.Default()),
 		gameWorld,
 		nil,
 		lease,
 		400*time.Millisecond,
+		slog.Default(),
 	)
 	if err := client.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
@@ -321,7 +327,7 @@ func TestAdmittedConnectionRateLimitsChatAndKeepsSessionOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 	client, serverConn := net.Pipe()
 	defer client.Close()
@@ -334,11 +340,12 @@ func TestAdmittedConnectionRateLimitsChatAndKeepsSessionOpen(t *testing.T) {
 	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
-		server.NewRegistry(),
+		server.NewRegistry(slog.Default()),
 		gameWorld,
 		nil,
 		lease,
 		0,
+		slog.Default(),
 	)
 	if err := client.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
@@ -382,7 +389,7 @@ func TestAdmittedConnectionRateLimitsGeneralCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load world: %v", err)
 	}
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 	client, serverConn := net.Pipe()
 	defer client.Close()
@@ -395,11 +402,12 @@ func TestAdmittedConnectionRateLimitsGeneralCommands(t *testing.T) {
 	go server.HandleAdmittedConnection(
 		serverConn,
 		dispatcher,
-		server.NewRegistry(),
+		server.NewRegistry(slog.Default()),
 		gameWorld,
 		nil,
 		lease,
 		0,
+		slog.Default(),
 	)
 	if err := client.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
 		t.Fatalf("set client deadline: %v", err)
@@ -443,9 +451,9 @@ func TestCombatTurnTimeoutSkipsPlayerTurnAndProcessesNPC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat(): %v", err)
 	}
-	combat, turn, err := gameWorld.InitializeCombatTurns(combat.ID)
+	turn, err := gameWorld.GetCurrentCombatTurn(combat.ID)
 	if err != nil {
-		t.Fatalf("InitializeCombatTurns(): %v", err)
+		t.Fatalf("GetCurrentCombatTurn(): %v", err)
 	}
 	if turn == nil || !turn.IsPlayer {
 		t.Fatalf("initial combat turn = %+v, want Alice's turn", turn)
@@ -453,7 +461,7 @@ func TestCombatTurnTimeoutSkipsPlayerTurnAndProcessesNPC(t *testing.T) {
 
 	manager := server.NewCombatTurnTimeoutManager(
 		10*time.Millisecond,
-		commands.NewCombatTurnTimeoutHandler(gameWorld, nil),
+		commands.NewCombatTurnTimeoutHandler(gameWorld, nil, slog.Default()),
 	)
 	defer manager.Stop()
 	manager.Handle(*turn)
@@ -487,9 +495,9 @@ func TestCombatTurnTimeoutIsCancelledWhenTurnChanges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartCombat(): %v", err)
 	}
-	combat, turn, err := gameWorld.InitializeCombatTurns(combat.ID)
+	turn, err := gameWorld.GetCurrentCombatTurn(combat.ID)
 	if err != nil {
-		t.Fatalf("InitializeCombatTurns(): %v", err)
+		t.Fatalf("GetCurrentCombatTurn(): %v", err)
 	}
 	if turn == nil || !turn.IsPlayer {
 		t.Fatalf("initial combat turn = %+v, want Alice's turn", turn)
@@ -497,7 +505,7 @@ func TestCombatTurnTimeoutIsCancelledWhenTurnChanges(t *testing.T) {
 
 	manager := server.NewCombatTurnTimeoutManager(
 		20*time.Millisecond,
-		commands.NewCombatTurnTimeoutHandler(gameWorld, nil),
+		commands.NewCombatTurnTimeoutHandler(gameWorld, nil, slog.Default()),
 	)
 	defer manager.Stop()
 	manager.Handle(*turn)

@@ -53,7 +53,7 @@ func TestRenderedSectionsUseSameWidth(t *testing.T) {
 	const totalWidth = 100
 
 	header := layout.RenderHeader("adventurer", 10, 10, totalWidth)
-	body := layout.RenderMain("main", "sidebar", 60, 40, 10, true)
+	body := layout.RenderMain("main", "sidebar", 60, 40, 10, true, false)
 	bottom := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		layout.RenderPanel("event log", 50, 12),

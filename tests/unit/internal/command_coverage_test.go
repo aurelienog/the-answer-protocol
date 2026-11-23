@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"log/slog"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
@@ -126,7 +127,7 @@ func TestAttackCommandMapsHostileAndTargetErrors(t *testing.T) {
 
 func TestGroupInviteAndCompleteRejectExtraArguments(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	dispatcher := commands.NewDispatcher()
+	dispatcher := commands.NewDispatcher(slog.Default())
 	commands.RegisterCommands(dispatcher)
 
 	tests := []struct {

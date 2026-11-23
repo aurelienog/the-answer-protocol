@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -66,6 +67,111 @@ func TestClientAuthenticateSendAndReceiveEvent(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for asynchronous event")
+	}
+}
+
+func TestClientConcurrentSendIsSerialized(t *testing.T) {
+	const requestCount = 32
+
+	connection := dialForAuthentication(t, func(conn net.Conn) {
+		if line, err := readTCPLine(conn); err != nil || line != "CONNECT alice" {
+			t.Errorf("authentication request = %q, %v", line, err)
+			return
+		}
+		writeTCPLine(conn, "OK connected")
+
+		for i := 0; i < requestCount; i++ {
+			line, err := readTCPLine(conn)
+			if err != nil {
+				t.Errorf("read request %d: %v", i+1, err)
+				return
+			}
+			if line != "LOOK" {
+				t.Errorf("request %d = %q, want LOOK", i+1, line)
+				return
+			}
+			writeTCPLine(conn, "OK done")
+		}
+	})
+
+	client, err := network.NewClient(context.Background(), connection)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	defer client.Close()
+	if err := client.Authenticate("alice"); err != nil {
+		t.Fatalf("Authenticate() error = %v", err)
+	}
+
+	start := make(chan struct{})
+	results := make(chan error, requestCount)
+	var callers sync.WaitGroup
+	for i := 0; i < requestCount; i++ {
+		callers.Add(1)
+		go func() {
+			defer callers.Done()
+			<-start
+			response, err := client.Send(context.Background(), "LOOK")
+			if err == nil && (response.Kind != protocol.KindOK || response.Payload != "done") {
+				err = errors.New("unexpected serialized response")
+			}
+			results <- err
+		}()
+	}
+	close(start)
+	callers.Wait()
+	close(results)
+
+	for err := range results {
+		if err != nil {
+			t.Errorf("concurrent Send() error = %v", err)
+		}
+	}
+}
+
+func TestClientConcurrentSendAndClose(t *testing.T) {
+	connection := dialForAuthentication(t, func(conn net.Conn) {
+		if line, err := readTCPLine(conn); err != nil || line != "CONNECT alice" {
+			t.Errorf("authentication request = %q, %v", line, err)
+			return
+		}
+		writeTCPLine(conn, "OK connected")
+		_, _ = io.Copy(io.Discard, conn)
+	})
+
+	client, err := network.NewClient(context.Background(), connection)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	if err := client.Authenticate("alice"); err != nil {
+		t.Fatalf("Authenticate() error = %v", err)
+	}
+
+	const callersCount = 32
+	start := make(chan struct{})
+	results := make(chan error, callersCount)
+	var callers sync.WaitGroup
+	for i := 0; i < callersCount; i++ {
+		callers.Add(1)
+		go func() {
+			defer callers.Done()
+			<-start
+			_, err := client.Send(context.Background(), "LOOK")
+			results <- err
+		}()
+	}
+	close(start)
+
+	if err := client.Close(); err != nil {
+		t.Errorf("Close() error = %v", err)
+	}
+	callers.Wait()
+	close(results)
+
+	for err := range results {
+		if err == nil {
+			t.Error("Send() succeeded after concurrent Close")
+		}
 	}
 }
 
