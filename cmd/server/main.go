@@ -82,14 +82,14 @@ func main() {
 		lease, rejection := guard.AcquireConnection(conn.RemoteAddr())
 		if rejection != "" {
 			log.Warn("connection.rejected",
-				slog.String("remote_addr", conn.RemoteAddr().String()),
+				slog.String("remote_ip", abuse.RemoteIP(conn.RemoteAddr())),
 				slog.String("reason", string(rejection)),
 			)
 			_ = conn.Close()
 			continue
 		}
 		log.Info("connection.accepted",
-			slog.String("remote_addr", conn.RemoteAddr().String()),
+			slog.String("remote_ip", abuse.RemoteIP(conn.RemoteAddr())),
 		)
 
 		go func(conn net.Conn, lease *abuse.ConnectionLease) {

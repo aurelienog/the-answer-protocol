@@ -48,6 +48,7 @@ func (d *Dispatcher) Dispatch(
 		d.logger.Warn("command.parse_failed",
 			slog.String("session_id", ctxSessionID(ctx)),
 			slog.String("player", ctxPlayerName(ctx)),
+			slog.String("raw_command", rawInput),
 			slog.String("error", err.Error()),
 		)
 		return protocol.Message{}, err
@@ -60,6 +61,8 @@ func (d *Dispatcher) Dispatch(
 		slog.String("session_id", ctx.SessionID),
 		slog.String("player", ctx.PlayerName),
 		slog.String("command", strings.ToUpper(cmdName)),
+		slog.Any("parameters", request.Args),
+		slog.String("raw_parameters", request.RawArgs),
 	)
 
 	cmd, exists := d.registry[cmdName]

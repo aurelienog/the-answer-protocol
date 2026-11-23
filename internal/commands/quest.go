@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"the-answer-protocol/internal/protocol"
@@ -66,6 +67,13 @@ func (c *QuestCommand) Execute(ctx *Context) (protocol.Message, error) {
 		)
 		if err != nil {
 			return mapQuestError(err)
+		}
+		if ctx.Logger != nil {
+			ctx.Logger.Info("world.quest_accepted",
+				slog.String("player", ctx.PlayerName),
+				slog.String("quest", conversation.Quest.ID),
+				slog.String("quest_name", conversation.Quest.Name),
+			)
 		}
 
 	case world.QuestStatusActive,

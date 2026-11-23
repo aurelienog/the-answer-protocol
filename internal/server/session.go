@@ -13,7 +13,8 @@ var (
 
 // Session represents an active player network pipeline context
 type Session struct {
-	ID         string   // Unique identifier (usually RemoteAddr or custom GUID)
+	ID         string // Unique identifier (usually RemoteAddr or custom GUID)
+	RemoteIP   string
 	Connection net.Conn // The active open TCP socket connection
 	PlayerName string   // Bound player entity name within the game world
 

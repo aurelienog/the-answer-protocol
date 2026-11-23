@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"the-answer-protocol/internal/protocol"
@@ -59,6 +60,25 @@ func (c *CompleteCommand) Execute(ctx *Context) (protocol.Message, error) {
 		default:
 			return protocol.ERR(protocol.CodeCommandFailed, "COMMAND_FAILED"), nil
 		}
+	}
+
+	if ctx.Logger != nil {
+		ctx.Logger.Info("world.quest_completed",
+			slog.String("player", ctx.PlayerName),
+			slog.String("quest", questID),
+		)
+		ctx.Logger.Info("world.quest_progress",
+			slog.String("player", ctx.PlayerName),
+			slog.String("quest", questID),
+			slog.String("status", string(world.QuestStatusCompleted)),
+		)
+	}
+
+	if ctx.Events != nil {
+		ctx.Events.Publish(world.QuestCompleted{
+			PlayerName: ctx.PlayerName,
+			QuestID:    questID,
+		})
 	}
 
 	return protocol.OKJSON(map[string]string{

@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,12 +11,45 @@ import (
 )
 
 func New() *slog.Logger {
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	infoHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level:     slog.LevelInfo,
 		AddSource: true,
 	})
+	errorHandler := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+		Level:     slog.LevelInfo,
+		AddSource: true,
+	})
+	return slog.New(&splitHandler{info: infoHandler, warnAndError: errorHandler})
+}
 
-	return slog.New(handler)
+type splitHandler struct {
+	info         slog.Handler
+	warnAndError slog.Handler
+}
+
+func (h *splitHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.info.Enabled(ctx, level) || h.warnAndError.Enabled(ctx, level)
+}
+
+func (h *splitHandler) Handle(ctx context.Context, record slog.Record) error {
+	if record.Level >= slog.LevelWarn {
+		return h.warnAndError.Handle(ctx, record)
+	}
+	return h.info.Handle(ctx, record)
+}
+
+func (h *splitHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &splitHandler{
+		info:         h.info.WithAttrs(attrs),
+		warnAndError: h.warnAndError.WithAttrs(attrs),
+	}
+}
+
+func (h *splitHandler) WithGroup(name string) slog.Handler {
+	return &splitHandler{
+		info:         h.info.WithGroup(name),
+		warnAndError: h.warnAndError.WithGroup(name),
+	}
 }
 
 // AuditLogger records real world changes published to the event bus.
@@ -36,6 +70,10 @@ func (audit *AuditLogger) Handle(event any) {
 	}
 
 	switch value := event.(type) {
+	case world.NPCRespawned:
+		audit.log.Info("world.npc_respawned", slog.String("npc", value.NPCID), slog.String("npc_name", value.NPCName), slog.String("room", value.RoomID))
+	case world.QuestCompleted:
+		audit.log.Info("world.quest_completed", slog.String("player", value.PlayerName), slog.String("quest", value.QuestID))
 	case world.PlayerMoved:
 		audit.log.Info("world.player_moved", slog.String("player", value.PlayerName), slog.String("from_room", value.PreviousRoomID), slog.String("to_room", value.NewRoomID))
 	case *world.PlayerMoved:

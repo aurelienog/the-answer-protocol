@@ -39,6 +39,10 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 	}
 
 	switch event := event.(type) {
+	case world.NPCRespawned:
+		dispatcher.handleNPCRespawned(event)
+	case world.QuestCompleted:
+		dispatcher.handleQuestCompleted(event)
 
 	case world.PlayerMoved:
 		dispatcher.handlePlayerMoved(event)
@@ -126,6 +130,31 @@ func (dispatcher *NotificationDispatcher) handlePlayerMoved(event world.PlayerMo
 		event.PlayerName,
 		protocol.EVT("ROOM", "PRESENCE ENTER "+event.PlayerName),
 	)
+}
+
+func (dispatcher *NotificationDispatcher) handleNPCRespawned(event world.NPCRespawned) {
+	dispatcher.notifyPlayers(
+		event.RoomPlayers,
+		"",
+		protocol.EVT("NPC_RESPAWN", "npc="+event.NPCID+" name="+event.NPCName+" room="+event.RoomID),
+	)
+}
+
+func (dispatcher *NotificationDispatcher) handleQuestCompleted(event world.QuestCompleted) {
+	session, exists := dispatcher.registry.GetByName(event.PlayerName)
+	if !exists {
+		return
+	}
+	if err := dispatcher.registry.Queue(
+		session.ID,
+		protocol.EVT("QUEST_COMPLETED", "quest="+event.QuestID),
+	); err != nil {
+		dispatcher.log.Error("notification.queue_failed",
+			slog.String("player", event.PlayerName),
+			slog.String("notification", "quest_completed"),
+			slog.String("error", err.Error()),
+		)
+	}
 }
 
 func (dispatcher *NotificationDispatcher) handleItemDropped(event world.ItemDropped) {

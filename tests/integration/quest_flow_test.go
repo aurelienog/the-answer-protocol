@@ -46,6 +46,9 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 	}
 	alice.sendRequest(t, "TALK Quest Advisor")
 	conversationResponse := alice.readResponse(t)
+	if conversationResponse == "EVT QUEST_COMPLETED quest=quest.explore_arvendale" {
+		conversationResponse = alice.readResponse(t)
+	}
 	if !strings.HasPrefix(conversationResponse, "OK ") {
 		t.Fatalf("quest completion conversation = %q, want OK JSON response", conversationResponse)
 	}
@@ -142,6 +145,14 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 
 	alice.sendRequest(t, "TALK Captain Eliza")
 	conversation = readQuestConversation(t, alice)
+	if conversation.QuestStatus != world.QuestStatusCompleted ||
+		conversation.Quest == nil ||
+		conversation.Quest.ID != "quest.expose_smugglers" {
+		t.Fatalf("quest immediately after objective delivery = %+v, want completed quest dialogue", conversation)
+	}
+
+	alice.sendRequest(t, "TALK Captain Eliza")
+	conversation = readQuestConversation(t, alice)
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
 		conversation.Quest == nil ||
 		conversation.Quest.ID != "quest.investigate_missing_ships" {
@@ -212,6 +223,9 @@ func readQuestConversation(t *testing.T, env *connectionTestEnv) struct {
 	t.Helper()
 
 	response := env.readResponse(t)
+	for strings.HasPrefix(response, "EVT QUEST_COMPLETED ") {
+		response = env.readResponse(t)
+	}
 	if !strings.HasPrefix(response, "OK ") {
 		t.Fatalf("quest conversation = %q, want OK JSON response", response)
 	}

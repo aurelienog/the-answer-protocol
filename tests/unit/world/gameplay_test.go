@@ -2,6 +2,7 @@ package internal_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"the-answer-protocol/internal/world"
@@ -333,6 +334,14 @@ func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testi
 	if err != nil {
 		t.Fatalf("TalkToNPC(completed first quest) returned an error: %v", err)
 	}
+	if conversation.QuestStatus != world.QuestStatusCompleted ||
+		conversation.Quest == nil || conversation.Quest.ID != "quest.gather_herbs" {
+		t.Fatalf("completed first quest conversation = %+v, want completed quest dialogue", conversation)
+	}
+	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(after completed first quest) returned an error: %v", err)
+	}
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
 		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
 		t.Fatalf("quest-chain conversation = %+v, want repeatable quest available", conversation)
@@ -364,6 +373,18 @@ func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testi
 	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
 	if err != nil {
 		t.Fatalf("TalkToNPC(completed repeatable quest) returned an error: %v", err)
+	}
+	if conversation.QuestStatus != world.QuestStatusCompleted ||
+		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
+		t.Fatalf("repeatable quest conversation = %+v, want completed state preserved", conversation)
+	}
+	if len(conversation.Dialogue) == 0 ||
+		!strings.Contains(conversation.Dialogue[0], "Thank you for your hard work!") {
+		t.Fatalf("completed repeatable dialogue = %v, want completed quest dialogue", conversation.Dialogue)
+	}
+	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	if err != nil {
+		t.Fatalf("TalkToNPC(next interaction with repeatable quest) returned an error: %v", err)
 	}
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
 		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {

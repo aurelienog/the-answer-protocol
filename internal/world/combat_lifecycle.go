@@ -10,7 +10,7 @@ import (
 func (w *World) StartCombat(
 	playerName string,
 	npcID string,
-	) (*Combat, []any, error) {
+) (*Combat, []any, error) {
 	if w == nil {
 		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
@@ -55,7 +55,7 @@ func (w *World) StartCombat(
 	if err != nil {
 		return nil, nil, err
 	}
-	w.refreshNPCRespawnLocked(resolvedNPCID)
+	respawnEvent, respawned := w.refreshNPCRespawnLocked(resolvedNPCID)
 
 	npcID = resolvedNPCID
 	npc := w.npcs[npcID]
@@ -218,6 +218,9 @@ func (w *World) StartCombat(
 	}
 
 	events := make([]any, 0, 8)
+	if respawned {
+		events = append(events, *respawnEvent)
+	}
 	events = append(events, startedEvent)
 	if turnEvent != nil {
 		events = append(events, *turnEvent)
@@ -271,7 +274,7 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) ([]any, error) 
 				for offset := 0; offset < len(combat.Participants); offset++ {
 					index := (i + offset) % len(combat.Participants)
 					candidate := combat.Participants[index]
-										if !candidate.Alive ||
+					if !candidate.Alive ||
 						candidate.Escaped ||
 						(candidate.IsPlayer && !candidate.Connected) ||
 						AvailableActions(candidate) <= 0 {
@@ -358,4 +361,3 @@ func (w *World) GetCombat(combatID string) (*Combat, error) {
 
 	return cloneCombat(combat), nil
 }
-

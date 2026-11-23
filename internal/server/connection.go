@@ -95,6 +95,7 @@ func newConnectionHandler(
 		idleTimeout:    idleTimeout,
 		session: &Session{
 			ID:         sessionID,
+			RemoteIP:   abuse.RemoteIP(conn.RemoteAddr()),
 			Connection: conn,
 			Outbox:     make(chan string, OutboxSize),
 		},
@@ -108,6 +109,10 @@ func newConnectionHandler(
 
 func (handler *connectionHandler) run() {
 	go WritePump(handler.session, handler.writerDone, handler.log)
+	handler.log.Info("session.connected",
+		slog.String("session_id", handler.sessionID),
+		slog.String("remote_ip", handler.session.RemoteIP),
+	)
 	handler.authTimer = time.NewTimer(authenticationTimeout)
 	handler.authTimeout = handler.authTimer.C
 
@@ -257,6 +262,7 @@ func (handler *connectionHandler) shutdown() {
 	}
 	handler.log.Info("session.closed",
 		slog.String("session_id", handler.sessionID),
+		slog.String("remote_ip", handler.session.RemoteIP),
 		slog.String("player", handler.session.GetPlayerName()),
 	)
 }

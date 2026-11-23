@@ -19,28 +19,29 @@ type NPCDialogue struct {
 
 // NPC represents a non-player character in the game world.
 type NPC struct {
-    ID             string                 `json:"id"`
-    Name           string                 `json:"name"`
-    Role           string                 `json:"role"`
-    Hostile        bool                   `json:"hostile"`
-    CombatStats    CombatStats            `json:"combat_stats"`
-    QuestID        string                 `json:"quest_id"`
-    Dialogue       NPCDialogue            `json:"dialogue"`
-    QuestDialogues map[string]NPCDialogue `json:"quest_dialogues"`
-    Rewards        []string               `json:"rewards,omitempty"`
+	ID             string                 `json:"id"`
+	Name           string                 `json:"name"`
+	Role           string                 `json:"role"`
+	Hostile        bool                   `json:"hostile"`
+	CombatStats    CombatStats            `json:"combat_stats"`
+	QuestID        string                 `json:"quest_id"`
+	Dialogue       NPCDialogue            `json:"dialogue"`
+	QuestDialogues map[string]NPCDialogue `json:"quest_dialogues"`
+	Rewards        []string               `json:"rewards,omitempty"`
 
-    RespawnSeconds int   `json:"respawn_seconds,omitempty"`
-    RespawnAt      int64 `json:"-"`
+	RespawnSeconds int   `json:"respawn_seconds,omitempty"`
+	RespawnAt      int64 `json:"-"`
 }
 
 // NPCConversation represents a conversation between a player and an NPC.
 type NPCConversation struct {
-	NPC         NPCSummary  `json:"npc"`
-	Dialogue    []string    `json:"dialogue"`
-	Quest       *QuestSummary `json:"quest,omitempty"`
-	QuestStatus QuestStatus `json:"quest_status,omitempty"`
+	NPC              NPCSummary    `json:"npc"`
+	Dialogue         []string      `json:"dialogue"`
+	Quest            *QuestSummary `json:"quest,omitempty"`
+	QuestStatus      QuestStatus   `json:"quest_status,omitempty"`
+	JustCompleted    bool          `json:"-"`
+	CompletedQuestID string        `json:"-"`
 }
-
 
 // dialogueForQuestStatus selects dialogue lines for a specific quest state.
 func dialogueForQuestStatus(

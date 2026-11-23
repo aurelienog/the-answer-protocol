@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"the-answer-protocol/internal/protocol"
@@ -63,10 +64,26 @@ func WritePump(session *Session, done chan<- struct{}, logger *slog.Logger) {
 			_ = session.Connection.Close()
 			return
 		}
-		logger.Debug("session.response_sent",
+		fields := strings.Fields(message)
+		attrs := []any{
 			slog.String("session_id", session.ID),
+			slog.String("remote_ip", session.RemoteIP),
 			slog.String("player", session.GetPlayerName()),
 			slog.Int("bytes", len(message)),
-		)
+		}
+		if len(fields) > 0 {
+			attrs = append(attrs, slog.String("response_kind", strings.TrimSpace(fields[0])))
+		}
+		if len(fields) >= 1 && fields[0] == "ERR" {
+			if len(fields) >= 2 {
+				attrs = append(attrs, slog.String("error_code", fields[1]))
+			}
+			if len(fields) >= 3 {
+				attrs = append(attrs, slog.String("error_name", fields[2]))
+			}
+			logger.Warn("session.response_sent", attrs...)
+		} else {
+			logger.Info("session.response_sent", attrs...)
+		}
 	}
 }

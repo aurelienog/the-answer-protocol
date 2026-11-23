@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"the-answer-protocol/internal/protocol"
@@ -84,6 +85,18 @@ func (c *TakeCommand) Execute(ctx *Context) (protocol.Message, error) {
 		default:
 			return protocol.ERR(protocol.CodeCommandFailed, "COMMAND_FAILED"), nil
 		}
+	}
+
+	if ctx.Logger != nil {
+		roomID, roomErr := ctx.World.GetPlayerRoom(ctx.PlayerName)
+		attrs := []any{
+			slog.String("player", ctx.PlayerName),
+			slog.String("item", item.ID),
+		}
+		if roomErr == nil {
+			attrs = append(attrs, slog.String("room", roomID))
+		}
+		ctx.Logger.Info("world.item_taken", attrs...)
 	}
 
 	return protocol.OK("taken=" + item.ID), nil

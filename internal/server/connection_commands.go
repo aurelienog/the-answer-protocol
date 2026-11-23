@@ -35,6 +35,7 @@ func (handler *connectionHandler) handleCommand(line string) bool {
 		PlayerName: playerName,
 		World:      handler.gameWorld,
 		Events:     handler.eventPublisher,
+		Logger:     handler.log,
 	}
 	message, err := handler.dispatcher.Dispatch(ctx, line)
 	if errors.Is(err, commands.ErrQuit) {

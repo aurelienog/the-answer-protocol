@@ -26,7 +26,7 @@ func (guard *AbuseGuard) AcquireConnection(remoteAddr net.Addr) (*ConnectionLeas
 		return nil, RejectGlobalConnections
 	}
 
-	ip := remoteIP(remoteAddr)
+	ip := RemoteIP(remoteAddr)
 	now := guard.now()
 
 	guard.mu.Lock()
@@ -98,7 +98,8 @@ func (lease *ConnectionLease) Release() {
 	}
 }
 
-func remoteIP(address net.Addr) string {
+// RemoteIP extracts and normalizes the IP address from a network address.
+func RemoteIP(address net.Addr) string {
 	if address == nil {
 		return "unknown"
 	}

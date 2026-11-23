@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"log/slog"
 	"strings"
 
 	"the-answer-protocol/internal/protocol"
@@ -47,6 +48,29 @@ func (c *TalkCommand) Execute(ctx *Context) (protocol.Message, error) {
 	)
 	if err != nil {
 		return mapTalkError(err)
+	}
+
+	if ctx.Logger != nil {
+		ctx.Logger.Info("world.npc_interacted",
+			slog.String("player", ctx.PlayerName),
+			slog.String("npc", conversation.NPC.ID),
+			slog.String("npc_name", conversation.NPC.Name),
+		)
+		if conversation.Quest != nil {
+			ctx.Logger.Info("world.quest_progress",
+				slog.String("player", ctx.PlayerName),
+				slog.String("quest", conversation.Quest.ID),
+				slog.String("status", string(conversation.QuestStatus)),
+				slog.String("progress", conversation.Quest.Progress),
+			)
+		}
+
+		if conversation.JustCompleted && conversation.CompletedQuestID != "" && ctx.Events != nil {
+			ctx.Events.Publish(world.QuestCompleted{
+				PlayerName: ctx.PlayerName,
+				QuestID:    conversation.CompletedQuestID,
+			})
+		}
 	}
 
 	return protocol.OKJSON(conversation)

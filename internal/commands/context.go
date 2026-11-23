@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"log/slog"
 	"the-answer-protocol/internal/events"
 	"the-answer-protocol/internal/world"
 )
@@ -13,4 +14,5 @@ type Context struct {
 	RawText    string
 	World      *world.World
 	Events     events.Publisher
+	Logger     *slog.Logger
 }

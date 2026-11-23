@@ -356,6 +356,7 @@ func (w *World) resolveQuestLocked(
 	w.nextItemInstanceID = nextID
 
 	progress.Status = QuestStatusCompleted
+	progress.CompletedDialoguePending = true
 	w.playerQuests[playerName][quest.ID] = progress
 
 	return true, nil

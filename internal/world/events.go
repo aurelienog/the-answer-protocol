@@ -123,14 +123,14 @@ type CombatDamage struct {
 
 // CombatEnded represents the end of a combat.
 type CombatEnded struct {
-    CombatID  string
-    Rewards   []CombatReward
-    Recipients []string
+	CombatID   string
+	Rewards    []CombatReward
+	Recipients []string
 }
 
 type CombatReward struct {
-    PlayerID string
-    Items    []Item
+	PlayerID string
+	Items    []Item
 }
 
 type ParticipantDied struct {
@@ -175,8 +175,8 @@ type CombatPlayerJoined struct {
 	CombatID   string
 	PlayerName string
 	Recipients []string
-	HP int
-	MaxHP int
+	HP         int
+	MaxHP      int
 }
 
 type CombatHelpRequested struct {
@@ -197,4 +197,16 @@ type PlayerRespawned struct {
 	RoomID     string
 	HP         int
 	MaxHP      int
+}
+
+type NPCRespawned struct {
+	NPCID       string
+	NPCName     string
+	RoomID      string
+	RoomPlayers []string
+}
+
+type QuestCompleted struct {
+	PlayerName string
+	QuestID    string
 }

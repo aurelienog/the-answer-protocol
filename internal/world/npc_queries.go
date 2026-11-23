@@ -184,6 +184,10 @@ func (w *World) TalkToNPC(
 
 		playerQuests := w.playerQuests[playerName]
 		progress, hasProgress := playerQuests[quest.ID]
+		status := QuestStatusLocked
+		if hasProgress {
+			status = progress.Status
+		}
 
 		if hasProgress && progress.Status == QuestStatusActive {
 			resolved, err := w.resolveQuestLocked(playerName, quest)
@@ -193,25 +197,35 @@ func (w *World) TalkToNPC(
 
 			if resolved {
 				progress = w.playerQuests[playerName][quest.ID]
+				status = QuestStatusCompleted
+				conversation.JustCompleted = true
+				conversation.CompletedQuestID = quest.ID
 			}
 		}
 
-		var status QuestStatus
-
 		if hasProgress {
-			status = progress.Status
-
-			// Move to the next quest only after this one is completed.
+			// Preserve the completed dialogue once. Advance the chain only
+			// after the player has seen that validation dialogue.
 			if status == QuestStatusCompleted && quest.NextQuestID != "" {
-				questID = quest.NextQuestID
-				continue
+				if progress.CompletedDialoguePending {
+					progress.CompletedDialoguePending = false
+					w.playerQuests[playerName][quest.ID] = progress
+				} else if !conversation.JustCompleted {
+					questID = quest.NextQuestID
+					continue
+				}
 			}
 
 			// Rediscover completed repeatable quests.
 			if status == QuestStatusCompleted && quest.Repeatable {
-				progress.Status = QuestStatusAvailable
-				w.playerQuests[playerName][quest.ID] = progress
-				status = QuestStatusAvailable
+				if progress.CompletedDialoguePending {
+					progress.CompletedDialoguePending = false
+					w.playerQuests[playerName][quest.ID] = progress
+				} else if !conversation.JustCompleted {
+					progress.Status = QuestStatusAvailable
+					w.playerQuests[playerName][quest.ID] = progress
+					status = QuestStatusAvailable
+				}
 			}
 		} else {
 			// Check whether this quest's prerequisites are satisfied.
