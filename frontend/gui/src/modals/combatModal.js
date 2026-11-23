@@ -4,6 +4,7 @@
 
 const CombatModal = {
     enemyId: null,
+    combatId: null,
     enemyName: "Enemy",
     enemyHp: 50,
     enemyMaxHp: 50,
@@ -713,6 +714,7 @@ const CombatModal = {
         this.pendingCombatRewards = [];
 
         GameState.inCombat = false;
+        this.combatId = null;
         this.outcomeShown = false;
         this.soleSurvivor = false;
         this.roundKnown = true;

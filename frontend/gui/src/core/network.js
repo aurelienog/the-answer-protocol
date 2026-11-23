@@ -98,6 +98,9 @@ const App = {
             GameState.inventoryCounts = {};
             GameState.quests = [];
             GameState.activeHelpCombatId = null;
+            GameState.activeHelpPlayer = null;
+            GameState.activeHelpViaParty = false;
+            GameState.fledCombatIds = {};
             GameState.chats = {
                 ROOM: [],
                 GLOBAL: [],
@@ -219,6 +222,7 @@ const App = {
         if (raw.includes('COMBAT_NOT_FOUND'))        return ['⚔️ Combat Ended', 'That battle has already concluded.'];
         if (raw.includes('NOT_YOUR_TURN'))           return ['⏳ Wait Your Turn', 'It is not your turn to act yet!'];
         if (raw.includes('NOT_IN_COMBAT'))           return ['⚔️ Combat Ended', 'You are no longer in an active combat.'];
+        if (raw.includes('ALREADY_IN_COMBAT'))       return ['⚔️ Cannot Rejoin', 'You have already participated in or fled from this battle and cannot rejoin it.'];
         if (raw.includes('ITEM_ALREADY_OWNED'))      return ['🎒 Already Owned', 'You already carry this item in your inventory.'];
         if (raw.includes('ITEM_CANNOT_BE_DROPPED'))  return ['🔒 Bound Item', 'Equipment, Unique, and Quest items are bound to you and cannot be dropped.'];
         if (raw.includes('ITEM_NOT_CONSUMABLE'))     return ['🧪 Not Consumable', 'This item cannot be consumed directly.'];
@@ -258,9 +262,13 @@ const App = {
         if (packet.type === 'ERR') {
             UI.addChatLine('LOG', 'Server ←', raw, 'chat-err');
             const failedVerb = GameState.commandQueue.shift();
-            if (raw.includes('COMBAT_NOT_FOUND') || (failedVerb === 'COMBAT' && raw.includes('INTERNAL_ERROR'))) {
+            if (raw.includes('COMBAT_NOT_FOUND') ||
+                raw.includes('COMBAT_HELP_REQUIRED') ||
+                (failedVerb === 'COMBAT_JOIN' && raw.includes('ALREADY_IN_COMBAT')) ||
+                (failedVerb === 'COMBAT' && raw.includes('INTERNAL_ERROR'))) {
                 GameState.activeHelpCombatId = null;
                 GameState.activeHelpPlayer = null;
+                GameState.activeHelpViaParty = false;
                 UI.renderRoom();
             }
 
@@ -317,6 +325,11 @@ const App = {
         const payload = raw.slice(2).trim();
 
         if (lastVerb === 'GROUP_LEAVE') {
+            if (GameState.activeHelpViaParty) {
+                GameState.activeHelpCombatId = null;
+                GameState.activeHelpPlayer = null;
+                GameState.activeHelpViaParty = false;
+            }
             GroupModal.renderCurrentGroup(null);
             UI.addChatLine('ROOM', '👥 Group', 'You left the group.', 'chat-sys');
             return;
@@ -384,9 +397,16 @@ const App = {
         if (payload.startsWith('fled=')) {
             const hpMatch = payload.match(/hp=(\d+)/);
             const dmgMatch = payload.match(/damage=(\d+)/);
+            const cMatch = payload.match(/combat=([^\s]+)/);
+            const fledCombatId = (cMatch && cMatch[1]) || CombatModal.combatId;
+            if (fledCombatId) {
+                if (!GameState.fledCombatIds) GameState.fledCombatIds = {};
+                GameState.fledCombatIds[fledCombatId] = true;
+            }
             if (hpMatch) GameState.hp = parseInt(hpMatch[1], 10);
             GameState.activeHelpCombatId = null;
             GameState.activeHelpPlayer = null;
+            GameState.activeHelpViaParty = false;
             UI.updateHUDStats();
             CombatModal.close();
             UI.addChatLine('COMBAT', '🏃 Retreated', `You fled from combat (took ${dmgMatch ? dmgMatch[1] : 0} escape penalty damage).`, 'chat-err');
@@ -551,6 +571,9 @@ const App = {
                 }
 
                 if (data.combat_id || data.attacker_hp !== undefined) {
+                    if (data.combat_id) {
+                        CombatModal.combatId = data.combat_id;
+                    }
                     if (data.combat_id && GameState.currentGroup) {
                         this.sendCommand(`CHAT GROUP [COMBAT_ID:${data.combat_id}]`);
                     }
@@ -608,9 +631,11 @@ const App = {
 
             const cidMatch = msg.match(/\[COMBAT_ID:(combat:\d+)\]/);
             if (cidMatch) {
-                if (!GameState.inCombat && author.toLowerCase() !== GameState.playerName.toLowerCase()) {
+                const alreadyFled = !!(GameState.fledCombatIds && GameState.fledCombatIds[cidMatch[1]]);
+                if (!GameState.inCombat && !alreadyFled && author.toLowerCase() !== GameState.playerName.toLowerCase()) {
                     GameState.activeHelpCombatId = cidMatch[1];
                     GameState.activeHelpPlayer = author;
+                    GameState.activeHelpViaParty = true;
                     UI.renderRoom();
                 }
                 UI.addChatLine('GROUP', '⚔️ Party Combat', `${author} started a battle (${cidMatch[1]})! Travel to their room and click Attack or ⚔️ Aid to join!`, 'chat-sys');
@@ -626,6 +651,9 @@ const App = {
             const details = parts.slice(3).join(' ');
             UI.addChatLine('GROUP', '👥 Party', `${action}: ${details}`, 'chat-sys');
             UI.addChatLine('ROOM', '👥 Party', `${action}: ${details}`, 'chat-sys');
+            if (action === 'JOIN' && GameState.inCombat && CombatModal.combatId) {
+                this.sendCommand(`CHAT GROUP [COMBAT_ID:${CombatModal.combatId}]`);
+            }
             if (action === 'INVITE') {
                 this.sendCommand('GROUP INVITATIONS');
             } else {
@@ -674,6 +702,10 @@ const App = {
             const rest = parts.slice(3).join(' ');
 
             if (sub === 'STARTED') {
+                const cMatch = rest.match(/combat=([^\s]+)/);
+                if (cMatch) {
+                    CombatModal.combatId = cMatch[1];
+                }
                 const pIdx = rest.indexOf('participants=');
                 let playerNames = [];
                 let enemyInfo = null;
@@ -772,12 +804,14 @@ const App = {
                 const cMatch = rest.match(/combat=([^\s]+)/);
                 const caller = pMatch ? pMatch[1] : 'An ally';
                 const combatId = cMatch ? cMatch[1] : '';
-                if (combatId) {
+                const alreadyFled = !!(combatId && GameState.fledCombatIds && GameState.fledCombatIds[combatId]);
+                if (combatId && !alreadyFled) {
                     GameState.activeHelpCombatId = combatId;
                     GameState.activeHelpPlayer = caller;
+                    GameState.activeHelpViaParty = false;
                     UI.renderRoom();
                 }
-                UI.addChatLine('COMBAT', '📯 Call for Arms!', `${caller} is requesting help in combat! Click "⚔️ Aid" in the player list or attack the enemy to join!`, 'chat-err');
+                UI.addChatLine('COMBAT', '📯 Call for Arms!', `${caller} is requesting help in combat!${alreadyFled ? '' : ' Click "⚔️ Aid" in the player list or attack the enemy to join!'}`, 'chat-err');
                 return;
             }
 
