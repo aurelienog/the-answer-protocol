@@ -135,6 +135,7 @@ func (w *World) AttackCombatParticipant(
 
 	// Emit the active turn state whenever the combat continues (either remaining actions or next participant).
 	if combat.Active &&
+		combatHasLivingNPCsLocked(combat) &&
 		combat.TurnIndex >= 0 &&
 		combat.TurnIndex < len(combat.Participants) {
 		if turnEvent := w.buildCombatTurnChangedLocked(combat); turnEvent != nil {
