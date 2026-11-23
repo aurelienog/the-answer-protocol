@@ -272,7 +272,7 @@ The map consists of **9 interconnected rooms** spanning a coastal city, a harbor
                         [North Town Gate] (North Gate Guard)
                                |
 [Royal Blacksmith Forge] -- [Market Street] -- [Apothecary Shop]
-   (Master Borin)        (Guide & Advisor)      (Apprentice Elisa)
+   (Master Borin)        (Guide & Advisor)      (Apprentice Lina)
                                |                        |
                     [Central Harbor Square] -- [The Salty Siren Tavern]
                        (Captain Eliza)                  (Mara)
@@ -288,7 +288,7 @@ The world features 10 NPCs divided into friendly town inhabitants and hostile en
 - Quest Givers & Social NPCs:
 
       - **Quest Advisor** (`Market Street`): Offers the introductory scouting quest (quest.explore_arvendale).
-      - **Apprentice Elisa** (`Apothecary Shop`): Offers the forest herb quest (quest.gather_herbs) and a repeatable potion-brewing bounty.
+      - **Apprentice Lina** (`Apothecary Shop`): Offers the forest herb quest (quest.gather_herbs) and a repeatable potion-brewing bounty.
       - **Captain Eliza** (`Central Harbor Square`): Leads the main two-part harbor conspiracy arc (`quest.expose_smugglers` $\rightarrow$ `quest.investigate_missing_ships`) plus a repeatable smuggler bounty.
       - **Mara** (`The Salty Siren Tavern`): Tavern keeper offering a repeatable bounty for defeating the Dock Warden.
       - **Town Guide**, **Master Borin** & **North Gate Guard**: Provide world navigation tips, combat gear hints, and perimeter lore.

@@ -129,11 +129,11 @@ const DialogueModal = {
             if (incomingStatus === 'completed') {
                 completedDuringTalk = { id: incomingId, name: data.quest.name || incomingId };
             } else if (prevActive) {
-                // Case A: Server advanced to the next quest in the chain (e.g. Captain Eliza, Apprentice Elisa)
+                // Case A: Server advanced to the next quest in the chain (e.g. Captain Eliza, Apprentice Lina)
                 if (incomingId !== prevActive.id) {
                     completedDuringTalk = { id: prevActive.id, name: prevActive.name };
                 }
-                // Case B: Server reset a repeatable quest from 'active' back to 'available' (e.g. Mara, Elisa, Eliza)
+                // Case B: Server reset a repeatable quest from 'active' back to 'available' (e.g. Mara, Lina, Eliza)
                 else if (incomingStatus === 'available') {
                     completedDuringTalk = { id: prevActive.id, name: prevActive.name };
                 }

@@ -166,7 +166,7 @@
     "item.iron_gauntlets": {
       "id": "item.iron_gauntlets",
       "name": "Alchemist's Iron Gauntlets",
-      "description": "Runed gauntlets gifted by Apprentice Elisa. Increases Attack by +3 and Defense by +3.",
+      "description": "Runed gauntlets gifted by Apprentice Lina. Increases Attack by +3 and Defense by +3.",
       "type": "equipment",
       "attack": 3,
       "defense": 3
@@ -341,7 +341,7 @@
       "quest_id": "quest.explore_arvendale",
       "dialogue": {
         "default": [
-          "Looking for quests? I offer the scouting trial for Pathfinder Boots, Apprentice Elisa in the Apothecary needs forest herbs, and Captain Eliza on Harbor Square leads the harbor investigation!"
+          "Looking for quests? I offer the scouting trial for Pathfinder Boots, Apprentice Lina in the Apothecary needs forest herbs, and Captain Eliza on Harbor Square leads the harbor investigation!"
         ],
         "available": [],
         "active": [],
@@ -357,7 +357,7 @@
             "Travel north to the North Town Gate, take the Northern Gate Seal, and return here to claim your Pathfinder Boots!"
           ],
           "completed": [
-            "Well done scouting the city! Here are your Pathfinder Boots (+2 Defense, +5 Speed). Now speak to Apprentice Elisa in the Apothecary and Captain Eliza on Harbor Square!"
+            "Well done scouting the city! Here are your Pathfinder Boots (+2 Defense, +5 Speed). Now speak to Apprentice Lina in the Apothecary and Captain Eliza on Harbor Square!"
           ],
           "locked": []
         }
@@ -365,7 +365,7 @@
     },
     "herbalist": {
       "id": "herbalist",
-      "name": "Apprentice Elisa",
+      "name": "Apprentice Lina",
       "role": "quest_giver",
       "hostile": false,
       "respawn_seconds": 60,
@@ -673,7 +673,7 @@
     "quest.gather_herbs": {
       "id": "quest.gather_herbs",
       "name": "Remedies of the Whispering Woods",
-      "description": "Defeat the Dire Wolf or gather Healing Herbs from the Whispering Forest Edge and bring them to Apprentice Elisa in the Apothecary.",
+      "description": "Defeat the Dire Wolf or gather Healing Herbs from the Whispering Forest Edge and bring them to Apprentice Lina in the Apothecary.",
       "giver_npc_id": "herbalist",
       "required_item_id": "item.herbs",
       "required_item_quantity": 1,
@@ -688,7 +688,7 @@
     "quest.repeatable_herbs": {
       "id": "quest.repeatable_herbs",
       "name": "Alchemist's Herb Supply (Repeatable)",
-      "description": "Deliver Healing Herbs from the Dire Wolf to Apprentice Elisa anytime to receive a fresh Healing Elixir (+40 HP).",
+      "description": "Deliver Healing Herbs from the Dire Wolf to Apprentice Lina anytime to receive a fresh Healing Elixir (+40 HP).",
       "giver_npc_id": "herbalist",
       "required_item_id": "item.herbs",
       "required_item_quantity": 1,

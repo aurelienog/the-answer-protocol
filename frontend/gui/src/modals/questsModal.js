@@ -32,7 +32,7 @@ const QuestsModal = {
         if (list.length === 0) {
             const emptyMsg = this.currentTab === 'completed'
                 ? 'No completed quests yet. Finish active tasks and talk to the quest-giver!'
-                : 'No active quests right now. Speak with Quest Advisor, Apprentice Elisa, Captain Eliza, or Mara to accept quests!';
+                : 'No active quests right now. Speak with Quest Advisor, Apprentice Lina, Captain Eliza, or Mara to accept quests!';
             box.innerHTML = `<li class="card-sub" style="padding:12px 6px;">${emptyMsg}</li>`;
             this.showDetails({
                 name: this.currentTab === 'completed' ? 'No Completed Quests' : 'Explore Arvendale',
