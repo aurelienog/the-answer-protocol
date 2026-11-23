@@ -267,18 +267,17 @@ func (w *World) advanceCombatTurnLocked(combat *Combat) (bool, error) {
 			continue
 		}
 
+		if AvailableActions(*participant) <= 0 {
+			continue
+		}
+
 		participantID := participant.ID
 		combat.TurnIndex = index
 
-		// Effects expire at the beginning of the participant's next turn.
+		// Effects expire only when a participant with available actions actually starts their turn.
 		if _, err := w.updateCombatEffectsLocked(combat, participantID); err != nil {
 			rollback()
 			return false, err
-		}
-
-		participant = &combat.Participants[index]
-		if AvailableActions(*participant) <= 0 {
-			continue
 		}
 
 		return true, nil

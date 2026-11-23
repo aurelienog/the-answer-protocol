@@ -271,16 +271,17 @@ func (w *World) removePlayerFromCombatsLocked(playerName string) ([]any, error) 
 				for offset := 0; offset < len(combat.Participants); offset++ {
 					index := (i + offset) % len(combat.Participants)
 					candidate := combat.Participants[index]
-					if !candidate.Alive || candidate.Escaped || (candidate.IsPlayer && !candidate.Connected) {
+										if !candidate.Alive ||
+						candidate.Escaped ||
+						(candidate.IsPlayer && !candidate.Connected) ||
+						AvailableActions(candidate) <= 0 {
 						continue
 					}
 					if _, err := w.updateCombatEffectsLocked(combat, candidate.ID); err != nil {
 						return nil, err
 					}
-					if AvailableActions(combat.Participants[index]) > 0 {
-						combat.TurnIndex = index
-						break
-					}
+					combat.TurnIndex = index
+					break
 				}
 			}
 
