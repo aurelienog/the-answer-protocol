@@ -26,6 +26,7 @@ frontend/.output/
 *.log
 *.tmp
 *.bak
+*.jsonl
 
 # --- Configuraciones de Entorno ---
 # Por si acaso guardáis credenciales o variables locales aquí

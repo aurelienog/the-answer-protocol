@@ -520,7 +520,7 @@ body,
         overflow-y: visible !important;
     }
     .inner-gold-box.flush-portrait {
-        height: 180px;
+        height: auto;
     }
     .inventory-grid {
         flex: none;

@@ -719,13 +719,15 @@ const App = {
             }
 
             if (sub === 'TURN') {
+                const typeMatch = rest.match(/participant_type=([^\s]+)/);
                 const roundMatch = rest.match(/round=(\d+)/);
                 const partMatch = rest.match(/participant=(.+?)\s+round=/);
                 const actionsMatch = rest.match(/actions=(\d+)/);
+                const isNpcTurn = !!(typeMatch && typeMatch[1].toUpperCase() === 'NPC');
                 const roundNum = roundMatch ? parseInt(roundMatch[1], 10) : undefined;
                 const who = partMatch ? partMatch[1].trim() : GameState.playerName;
                 const actions = actionsMatch ? parseInt(actionsMatch[1], 10) : 1;
-                CombatModal.queueTurnBanner(who, roundNum, actions);
+                CombatModal.queueTurnBanner(who, roundNum, actions, isNpcTurn);
                 return;
             }
 

@@ -23,6 +23,8 @@ const CombatModal = {
     turnEventCounter: 0,
     deathCheckTimer: null,
     activeTurnOwner: "",
+    activeTurnIsNpc: false,
+    availableActions: 1,
     currentRound: 1,
     roundKnown: true,
     turnSeconds: 30,
@@ -130,20 +132,31 @@ const CombatModal = {
         if (this.isFallen) {
             this.isMyTurn = false;
             const owner = this.activeTurnOwner || 'ALLY';
-            turnEl.innerHTML = `<img src="/assets/icons/ui/skull.webp" alt="" class="ui-ico">SPECTATING (${owner.toUpperCase()})`;
+            turnEl.innerHTML = `<img src="/assets/icons/ui/skull.webp" alt="" class="ui-ico">SPECTATING (${UI.escapeHtml(owner.toUpperCase())})`;
             return;
         }
+
+        if (this.activeTurnIsNpc) {
+            this.isMyTurn = false;
+            const owner = this.activeTurnOwner || this.enemyName;
+            turnEl.textContent = `${owner.toUpperCase()}'S TURN`;
+            return;
+        }
+
+        const actionsSuffix = this.availableActions > 1 ? ` (${this.availableActions} ACTIONS)` : '';
 
         if (this.soleSurvivor) {
             this.activeTurnOwner = GameState.playerName;
             this.isMyTurn = true;
-            turnEl.textContent = 'YOUR TURN';
+            turnEl.textContent = `YOUR TURN${actionsSuffix}`;
             return;
         }
 
         const owner = this.activeTurnOwner || GameState.playerName;
         this.isMyTurn = (owner.toLowerCase() === GameState.playerName.toLowerCase());
-        turnEl.textContent = this.isMyTurn ? 'YOUR TURN' : `${owner.toUpperCase()}'S TURN`;
+        turnEl.textContent = this.isMyTurn
+            ? `YOUR TURN${actionsSuffix}`
+            : `${owner.toUpperCase()}'S TURN${actionsSuffix}`;
     },
 
     initListeners() {
@@ -160,7 +173,6 @@ const CombatModal = {
                 if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
                 this.isMyTurn = false;
                 this.setButtonsDisabled(true);
-                this.advanceWithinCurrentRound(GameState.playerName);
                 this.playDefendEffect(50);
                 App.sendCommand('COMBAT DEFEND');
             });
@@ -234,7 +246,7 @@ const CombatModal = {
     },
 
     syncActionButtonsState() {
-        if (this.soleSurvivor && !this.isFallen) {
+        if (this.soleSurvivor && !this.isFallen && !this.activeTurnIsNpc) {
             this.isMyTurn = true;
         }
         const lockTurnActions = this.isPlayingAnim || !this.isMyTurn || this.isFallen;
@@ -262,6 +274,8 @@ const CombatModal = {
         if (this.endedFallbackTimer) clearTimeout(this.endedFallbackTimer);
         this.endedFallbackTimer = null;
         this.pendingCombatRewards = [];
+        this.activeTurnIsNpc = false;
+        this.availableActions = 1;
 
         if (isJoiningMidCombat) {
             this.roundKnown = false;
@@ -408,9 +422,6 @@ const CombatModal = {
 
     playHitEffect(mode, damageAmount, remainingHp, customBannerText = '', allyTargetName = '', attackerName = '') {
         const isEnemyHit = (mode === 'enemy_hit' || mode === true);
-        if (isEnemyHit && attackerName) {
-            this.advanceWithinCurrentRound(attackerName);
-        }
 
         const isMyAttack = isEnemyHit && (
             !attackerName ||
@@ -502,9 +513,10 @@ const CombatModal = {
         }, timing.totalMs);
     },
 
-    queueTurnBanner(participantName, roundNum, actions = 1) {
+    queueTurnBanner(participantName, roundNum, actions = 1, isNpcTurn = false) {
         this.turnEventCounter = (this.turnEventCounter || 0) + 1;
         const cleanOwner = (participantName || '').trim();
+        const safeActions = (actions && actions > 0) ? actions : 1;
         if (roundNum !== undefined && roundNum > 0) {
             if (roundNum !== this.currentRound) {
                 this.actedInRound = {};
@@ -513,15 +525,19 @@ const CombatModal = {
             this.roundKnown = true;
             sessionStorage.setItem('tap_combat_round', String(roundNum));
         }
-        if (cleanOwner) {
+        if (cleanOwner && !isNpcTurn) {
             delete this.actedInRound[cleanOwner.toLowerCase()];
+            sessionStorage.setItem('tap_combat_turn_owner', cleanOwner);
         }
         this.activeTurnOwner = cleanOwner;
-        sessionStorage.setItem('tap_combat_turn_owner', cleanOwner);
+        this.activeTurnIsNpc = !!isNpcTurn;
+        this.availableActions = safeActions;
         sessionStorage.setItem('tap_combat_deadline', String(Date.now() + 30000));
 
         this.enqueueAnim(() => {
             this.activeTurnOwner = cleanOwner;
+            this.activeTurnIsNpc = !!isNpcTurn;
+            this.availableActions = safeActions;
             this.updateBannerFromOwner();
             this.startTurnTimer(roundNum, true);
             this.syncActionButtonsState();
@@ -708,6 +724,8 @@ const CombatModal = {
         this.isMyTurn = true;
         this.isFallen = false;
         this.activeTurnOwner = "";
+        this.activeTurnIsNpc = false;
+        this.availableActions = 1;
         document.getElementById('modal-flee').classList.add('hidden');
         document.getElementById('modal-combat').classList.add('hidden');
         if (typeof CombatAnimator !== 'undefined') CombatAnimator.stopAll();

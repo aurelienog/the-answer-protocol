@@ -12,7 +12,7 @@ The interface is organized into several views, with a main content area, a sideb
 
 ### Requirements
 
-- Go 1.18 or later.
+- Go 1.27+ or later.
 - A running instance of the game server.
 - A terminal that supports ANSI colors and Unicode characters.
 

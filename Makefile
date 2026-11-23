@@ -63,7 +63,7 @@ install-deps:
 	@echo "$(GREEN)Dependencies ready.$(RESET)"
 
 run-server: $(BIN_DIR)/$(SERVER_NAME)
-	./$(BIN_DIR)/$(SERVER_NAME) -port $(PORT)
+	@./$(BIN_DIR)/$(SERVER_NAME) -port $(PORT)
 
 run-client: $(BIN_DIR)/$(CLI_NAME)
 	./$(BIN_DIR)/$(CLI_NAME) -host $(HOST) -port $(PORT)
