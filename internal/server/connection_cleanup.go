@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"the-answer-protocol/internal/events"
-	"the-answer-protocol/internal/logger"
 	"the-answer-protocol/internal/world"
 )
 
@@ -20,18 +19,14 @@ func cleanupPlayer(
 	playerEnterBroadcast bool,
 	eventPublisher events.Publisher,
 ) {
-	if log == nil {
-		log = logger.NewNop()
-	}
-
 	if authenticated {
 		playerLeft, uniqueItemsReturned, combatEvents, statsEvent, err :=
-			gameWorld.RemovePlayer(session.PlayerName)
+			gameWorld.RemovePlayer(session.GetPlayerName())
 
 		if err != nil {
-			log.Error("player.cleanup_failed",
+			log.Error("world.player_removal_failed",
 				slog.String("session_id", sessionID),
-				slog.String("player", session.PlayerName),
+				slog.String("player", session.GetPlayerName()),
 				slog.String("error", err.Error()),
 			)
 		} else {

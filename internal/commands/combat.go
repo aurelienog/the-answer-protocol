@@ -2,7 +2,7 @@ package commands
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,7 +39,11 @@ func publishDomainEvents(publisher events.Publisher, domainEvents []any) {
 func NewCombatTurnTimeoutHandler(
 	gameWorld *world.World,
 	publisher events.Publisher,
+	logger *slog.Logger,
 ) func(world.CombatTurnChanged) {
+	if logger == nil {
+		panic("combat turn timeout handler requires a logger")
+	}
 	return func(turn world.CombatTurnChanged) {
 		progressionEvents, err := gameWorld.SkipPlayerCombatTurn(
 			turn.CombatID,
@@ -47,11 +51,10 @@ func NewCombatTurnTimeoutHandler(
 		)
 		if err != nil {
 			if !errors.Is(err, world.ErrInvalidCombatTurn) {
-				log.Printf(
-					"Failed to expire combat turn for participant %q in combat %q: %v",
-					turn.ParticipantID,
-					turn.CombatID,
-					err,
+				logger.Error("combat.turn_expiration_failed",
+					slog.String("combat", turn.CombatID),
+					slog.String("participant", turn.ParticipantID),
+					slog.String("error", err.Error()),
 				)
 			}
 			return

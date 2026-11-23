@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"the-answer-protocol/internal/protocol"
@@ -33,26 +33,40 @@ func SendMessage(session *Session, message protocol.Message) error {
 
 // WritePump is the only goroutine that writes to the session connection.
 // It drains the output queue until the queue is closed or a write fails.
-func WritePump(session *Session, done chan<- struct{}) {
+func WritePump(session *Session, done chan<- struct{}, logger *slog.Logger) {
+	if session == nil {
+		close(done)
+		return
+	}
+	if logger == nil {
+		panic("write pump requires a logger")
+	}
 	defer close(done)
 
 	for message := range session.Outbox {
 		if err := session.Connection.SetWriteDeadline(
 			time.Now().Add(WriteTimeout),
 		); err != nil {
-			log.Printf(
-				"Failed to set write deadline for %s: %v",
-				session.ID,
-				err,
+			logger.Error("session.write_deadline_failed",
+				slog.String("session_id", session.ID),
+				slog.String("error", err.Error()),
 			)
 			_ = session.Connection.Close()
 			return
 		}
 
 		if _, err := fmt.Fprint(session.Connection, message); err != nil {
-			log.Printf("Write error for session %s: %v", session.ID, err)
+			logger.Error("session.write_failed",
+				slog.String("session_id", session.ID),
+				slog.String("error", err.Error()),
+			)
 			_ = session.Connection.Close()
 			return
 		}
+		logger.Debug("session.response_sent",
+			slog.String("session_id", session.ID),
+			slog.String("player", session.GetPlayerName()),
+			slog.Int("bytes", len(message)),
+		)
 	}
 }

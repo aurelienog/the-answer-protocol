@@ -10,7 +10,6 @@ import (
 	"the-answer-protocol/internal/abuse"
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/events"
-	"the-answer-protocol/internal/logger"
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
 )
@@ -24,7 +23,6 @@ const (
 // HandleAdmittedConnection handles a connection whose capacity has already
 // been reserved by the accept loop.
 func HandleAdmittedConnection(
-	log *slog.Logger,
 	conn net.Conn,
 	dispatcher *commands.Dispatcher,
 	registry *Registry,
@@ -32,13 +30,17 @@ func HandleAdmittedConnection(
 	eventPublisher events.Publisher,
 	lease *abuse.ConnectionLease,
 	idleTimeout time.Duration,
+	logger *slog.Logger,
 ) {
+	if logger == nil {
+		panic("connection handler requires a logger")
+	}
 	if lease == nil {
 		_ = conn.Close()
 		return
 	}
 
-	handler := newConnectionHandler(log, conn, dispatcher, registry, gameWorld, eventPublisher, lease, idleTimeout)
+	handler := newConnectionHandler(conn, dispatcher, registry, gameWorld, eventPublisher, lease, idleTimeout, logger)
 	handler.run()
 }
 
@@ -53,7 +55,6 @@ type connectionHandler struct {
 	idleTimeout    time.Duration
 	session        *Session
 	sessionID      string
-	remoteIP       string
 	writerDone     chan struct{}
 	stopRead       chan struct{}
 	readerDone     chan struct{}
@@ -69,19 +70,7 @@ type connectionHandler struct {
 	idleTimer      *time.Timer
 }
 
-func remoteIPFromConn(conn net.Conn) string {
-	if conn == nil || conn.RemoteAddr() == nil {
-		return "unknown"
-	}
-	host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
-	if err != nil {
-		return conn.RemoteAddr().String()
-	}
-	return host
-}
-
 func newConnectionHandler(
-	log *slog.Logger,
 	conn net.Conn,
 	dispatcher *commands.Dispatcher,
 	registry *Registry,
@@ -89,14 +78,14 @@ func newConnectionHandler(
 	eventPublisher events.Publisher,
 	lease *abuse.ConnectionLease,
 	idleTimeout time.Duration,
+	logger *slog.Logger,
 ) *connectionHandler {
-	if log == nil {
-		log = logger.NewNop()
+	if logger == nil {
+		panic("connection handler requires a logger")
 	}
-
 	sessionID := conn.RemoteAddr().String()
 	return &connectionHandler{
-		log:            log,
+		log:            logger,
 		conn:           conn,
 		dispatcher:     dispatcher,
 		registry:       registry,
@@ -110,7 +99,6 @@ func newConnectionHandler(
 			Outbox:     make(chan string, OutboxSize),
 		},
 		sessionID:  sessionID,
-		remoteIP:   remoteIPFromConn(conn),
 		writerDone: make(chan struct{}),
 		stopRead:   make(chan struct{}),
 		readerDone: make(chan struct{}),
@@ -119,7 +107,7 @@ func newConnectionHandler(
 }
 
 func (handler *connectionHandler) run() {
-	go WritePump(handler.session, handler.writerDone)
+	go WritePump(handler.session, handler.writerDone, handler.log)
 	handler.authTimer = time.NewTimer(authenticationTimeout)
 	handler.authTimeout = handler.authTimer.C
 
@@ -128,11 +116,7 @@ func (handler *connectionHandler) run() {
 	defer handler.shutdown()
 
 	if err := SendMessage(handler.session, protocol.OK("hello proto=1")); err != nil {
-		handler.log.Error("connection.greeting_failed",
-			slog.String("session_id", handler.sessionID),
-			slog.String("ip", handler.remoteIP),
-			slog.String("error", err.Error()),
-		)
+		handler.log.Error("session.greeting_failed", slog.String("session_id", handler.sessionID), slog.String("error", err.Error()))
 		return
 	}
 	handler.startReader()
@@ -154,21 +138,16 @@ func (handler *connectionHandler) readLoop() {
 			return
 		}
 		if event.ProtocolError != nil {
-			handler.log.Warn("protocol.malformed",
+			handler.log.Warn("protocol.malformed_message",
 				slog.String("session_id", handler.sessionID),
-				slog.String("ip", handler.remoteIP),
-				slog.String("player", handler.session.PlayerName),
 				slog.String("error", event.ProtocolError.Error()),
-				slog.Int("error_code", protocol.CodeInvalidRequest),
-				slog.String("error_name", "INVALID_REQUEST"),
 			)
 			if err := SendMessage(
 				handler.session,
 				protocol.ERR(protocol.CodeInvalidRequest, "INVALID_REQUEST"),
 			); err != nil {
-				handler.log.Error("connection.send_failed",
+				handler.log.Error("session.response_queue_failed",
 					slog.String("session_id", handler.sessionID),
-					slog.String("ip", handler.remoteIP),
 					slog.String("error", err.Error()),
 				)
 				return
@@ -177,10 +156,8 @@ func (handler *connectionHandler) readLoop() {
 		}
 		if event.Err != nil {
 			if !errors.Is(event.Err, net.ErrClosed) {
-				handler.log.Warn("connection.read_error",
+				handler.log.Warn("session.read_failed",
 					slog.String("session_id", handler.sessionID),
-					slog.String("ip", handler.remoteIP),
-					slog.String("player", handler.session.PlayerName),
 					slog.String("error", event.Err.Error()),
 				)
 			}
@@ -206,17 +183,15 @@ func (handler *connectionHandler) readLoop() {
 func (handler *connectionHandler) nextReadEvent() (ReadEvent, bool) {
 	select {
 	case <-handler.authTimeout:
-		handler.log.Warn("auth.timeout",
+		handler.log.Warn("session.authentication_timeout",
 			slog.String("session_id", handler.sessionID),
-			slog.String("ip", handler.remoteIP),
 		)
 		_ = handler.conn.Close()
 		return ReadEvent{}, false
 	case <-handler.idleTimeoutChannel():
-		handler.log.Warn("connection.idle_timeout",
+		handler.log.Info("session.idle_timeout",
 			slog.String("session_id", handler.sessionID),
-			slog.String("ip", handler.remoteIP),
-			slog.String("player", handler.session.PlayerName),
+			slog.String("player", handler.session.GetPlayerName()),
 		)
 		_ = handler.conn.Close()
 		return ReadEvent{}, false
@@ -280,10 +255,8 @@ func (handler *connectionHandler) shutdown() {
 	if handler.readerStarted {
 		<-handler.readerDone
 	}
-	handler.log.Info("connection.closed",
+	handler.log.Info("session.closed",
 		slog.String("session_id", handler.sessionID),
-		slog.String("ip", handler.remoteIP),
-		slog.String("player", handler.session.PlayerName),
-		slog.Bool("quit_requested", handler.quitRequested),
+		slog.String("player", handler.session.GetPlayerName()),
 	)
 }

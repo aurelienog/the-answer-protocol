@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -31,17 +31,20 @@ func (c *Config) ServerAddr() string {
 }
 
 // LoadConfig fetches settings from flags or environment variables
-func LoadConfig() *Config {
+func LoadConfig(logger *slog.Logger) *Config {
+	if logger == nil {
+		panic("config loader requires a logger")
+	}
 	// 1. Set fallback default values
 	defaultHost := ""
 	defaultPort := "8090"
 	defaultWorld := "data/world.json"
-	defaultMaxConnections := envInt("TAP_MAX_CONNECTIONS", 100)
-	defaultMaxConnectionsPerIP := envInt("TAP_MAX_CONNECTIONS_PER_IP", 5)
-	defaultMaxConnectionAttemptsPerIP := envInt("TAP_MAX_CONNECTION_ATTEMPTS_PER_IP", 10)
-	defaultMaxUnauthenticatedConnections := envInt("TAP_MAX_UNAUTHENTICATED_CONNECTIONS", 20)
-	defaultIdleTimeout := envDuration("TAP_IDLE_TIMEOUT", 30*time.Minute)
-	defaultCombatTurnTimeout := envDuration("TAP_COMBAT_TURN_TIMEOUT", 30*time.Second)
+	defaultMaxConnections := envInt(logger, "TAP_MAX_CONNECTIONS", 100)
+	defaultMaxConnectionsPerIP := envInt(logger, "TAP_MAX_CONNECTIONS_PER_IP", 5)
+	defaultMaxConnectionAttemptsPerIP := envInt(logger, "TAP_MAX_CONNECTION_ATTEMPTS_PER_IP", 10)
+	defaultMaxUnauthenticatedConnections := envInt(logger, "TAP_MAX_UNAUTHENTICATED_CONNECTIONS", 20)
+	defaultIdleTimeout := envDuration(logger, "TAP_IDLE_TIMEOUT", 30*time.Minute)
+	defaultCombatTurnTimeout := envDuration(logger, "TAP_COMBAT_TURN_TIMEOUT", 30*time.Second)
 
 	if envHost := os.Getenv("TAP_SERVER_HOST"); envHost != "" {
 		defaultHost = envHost
@@ -78,27 +81,27 @@ func LoadConfig() *Config {
 	}
 }
 
-func envDuration(name string, fallback time.Duration) time.Duration {
+func envDuration(log *slog.Logger, name string, fallback time.Duration) time.Duration {
 	value := os.Getenv(name)
 	if value == "" {
 		return fallback
 	}
 	parsed, err := time.ParseDuration(value)
 	if err != nil || parsed < 0 {
-		log.Printf("Invalid %s value %q; using default %s", name, value, fallback)
+		log.Warn("config.invalid_value", slog.String("name", name), slog.String("value", value), slog.String("fallback", fallback.String()))
 		return fallback
 	}
 	return parsed
 }
 
-func envInt(name string, fallback int) int {
+func envInt(log *slog.Logger, name string, fallback int) int {
 	value := os.Getenv(name)
 	if value == "" {
 		return fallback
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed <= 0 {
-		log.Printf("Invalid %s value %q; using default %d", name, value, fallback)
+		log.Warn("config.invalid_value", slog.String("name", name), slog.String("value", value), slog.Int("fallback", fallback))
 		return fallback
 	}
 	return parsed

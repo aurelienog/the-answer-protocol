@@ -1,8 +1,8 @@
 package server
 
 import (
-	"log"
 	"encoding/json"
+	"log/slog"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,15 +12,23 @@ import (
 
 // NotificationDispatcher translates internal game events into TAP notifications.
 type NotificationDispatcher struct {
-	registry *Registry
-	statsMu sync.Mutex
+	registry          *Registry
+	log               *slog.Logger
+	statsMu           sync.Mutex
 	lastStatsRevision uint64
 }
 
 // NewNotificationDispatcher creates a notification dispatcher.
-func NewNotificationDispatcher(registry *Registry) *NotificationDispatcher {
+func NewNotificationDispatcher(registry *Registry, logger *slog.Logger) *NotificationDispatcher {
+	if registry == nil {
+		panic("notification dispatcher requires a registry")
+	}
+	if logger == nil {
+		panic("notification dispatcher requires a logger")
+	}
 	return &NotificationDispatcher{
 		registry: registry,
+		log:      logger,
 	}
 }
 
@@ -95,10 +103,10 @@ func (dispatcher *NotificationDispatcher) Handle(event any) {
 		dispatcher.handleItemUsed(event)
 
 	case world.PlayerCountChanged:
-    	dispatcher.handlePlayerCountChanged(event)
-	
+		dispatcher.handlePlayerCountChanged(event)
+
 	case world.CombatEnded:
-    	dispatcher.handleCombatEnded(event)
+		dispatcher.handleCombatEnded(event)
 	case world.PlayerRespawned:
 		dispatcher.handlePlayerRespawned(event)
 	}
@@ -157,10 +165,9 @@ func (dispatcher *NotificationDispatcher) notifyPlayers(
 		}
 
 		if err := dispatcher.registry.Queue(session.ID, message); err != nil {
-			log.Printf(
-				"Failed to queue notification for %q: %v",
-				playerName,
-				err,
+			dispatcher.log.Error("notification.queue_failed",
+				slog.String("player", playerName),
+				slog.String("error", err.Error()),
 			)
 		}
 	}
@@ -179,10 +186,10 @@ func (dispatcher *NotificationDispatcher) handleGroupInvite(event world.GroupInv
 			"INVITE player="+event.Inviter+" group="+event.GroupName,
 		),
 	); err != nil {
-		log.Printf(
-			"Failed to queue group invitation notification for %q: %v",
-			event.Invitee,
-			err,
+		dispatcher.log.Error("notification.queue_failed",
+			slog.String("player", event.Invitee),
+			slog.String("notification", "group_invite"),
+			slog.String("error", err.Error()),
 		)
 	}
 }
@@ -214,10 +221,10 @@ func (dispatcher *NotificationDispatcher) handleChatMessage(event world.ChatMess
 		}
 
 		if err := dispatcher.registry.Queue(session.ID, notification); err != nil {
-			log.Printf(
-				"Failed to queue chat message for %q: %v",
-				playerName,
-				err,
+			dispatcher.log.Error("notification.queue_failed",
+				slog.String("player", playerName),
+				slog.String("notification", "chat"),
+				slog.String("error", err.Error()),
 			)
 		}
 	}
@@ -250,7 +257,10 @@ func (dispatcher *NotificationDispatcher) handleCombatStarted(
 ) {
 	participantsJSON, err := json.Marshal(event.Participants)
 	if err != nil {
-		log.Printf("Failed to serialize combat participants: %v", err)
+		dispatcher.log.Error("notification.serialize_failed",
+			slog.String("combat", event.CombatID),
+			slog.String("error", err.Error()),
+		)
 		return
 	}
 
@@ -267,7 +277,6 @@ func (dispatcher *NotificationDispatcher) handleCombatStarted(
 		notification,
 	)
 }
-
 
 func (dispatcher *NotificationDispatcher) handleCombatAttack(
 	event world.CombatAttack,
@@ -366,10 +375,10 @@ func (dispatcher *NotificationDispatcher) handleItemUsed(
 		session.ID,
 		protocol.EVT("ITEM_USED", data),
 	); err != nil {
-		log.Printf(
-			"Failed to queue item used notification for %q: %v",
-			event.PlayerName,
-			err,
+		dispatcher.log.Error("notification.queue_failed",
+			slog.String("player", event.PlayerName),
+			slog.String("notification", "item_used"),
+			slog.String("error", err.Error()),
 		)
 	}
 }
@@ -433,43 +442,43 @@ func (dispatcher *NotificationDispatcher) handlePlayerCountChanged(
 }
 
 func (dispatcher *NotificationDispatcher) handleCombatEnded(
-    event world.CombatEnded,
+	event world.CombatEnded,
 ) {
-    for _, recipient := range event.Recipients {
-        var playerRewards []world.CombatReward
+	for _, recipient := range event.Recipients {
+		var playerRewards []world.CombatReward
 
-        for _, reward := range event.Rewards {
-            if reward.PlayerID == recipient {
-                playerRewards = append(playerRewards, reward)
-            }
-        }
+		for _, reward := range event.Rewards {
+			if reward.PlayerID == recipient {
+				playerRewards = append(playerRewards, reward)
+			}
+		}
 
-        if playerRewards == nil {
-            playerRewards = make([]world.CombatReward, 0)
-        }
+		if playerRewards == nil {
+			playerRewards = make([]world.CombatReward, 0)
+		}
 
-        rewardsJSON, err := json.Marshal(playerRewards)
-        if err != nil {
-            log.Printf(
-                "Failed to serialize combat rewards for player %q: %v",
-                recipient,
-                err,
-            )
-            continue
-        }
+		rewardsJSON, err := json.Marshal(playerRewards)
+		if err != nil {
+			dispatcher.log.Error("notification.serialize_failed",
+				slog.String("player", recipient),
+				slog.String("combat", event.CombatID),
+				slog.String("error", err.Error()),
+			)
+			continue
+		}
 
-        notification := protocol.EVT(
-            "COMBAT",
-            "ENDED combat="+event.CombatID+
-                " rewards="+string(rewardsJSON),
-        )
+		notification := protocol.EVT(
+			"COMBAT",
+			"ENDED combat="+event.CombatID+
+				" rewards="+string(rewardsJSON),
+		)
 
-        dispatcher.notifyPlayers(
-            []string{recipient},
-            "",
-            notification,
-        )
-    }
+		dispatcher.notifyPlayers(
+			[]string{recipient},
+			"",
+			notification,
+		)
+	}
 }
 
 func (dispatcher *NotificationDispatcher) handlePlayerRespawned(

@@ -3,7 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -21,13 +21,18 @@ type Registry struct {
 	mu       sync.RWMutex
 	sessions map[string]*Session
 	names    map[string]string // normalized name -> session ID
+	log      *slog.Logger
 }
 
 // NewRegistry initializes the session registry.
-func NewRegistry() *Registry {
+func NewRegistry(logger *slog.Logger) *Registry {
+	if logger == nil {
+		panic("registry requires a logger")
+	}
 	return &Registry{
 		sessions: make(map[string]*Session),
 		names:    make(map[string]string),
+		log:      logger,
 	}
 }
 
@@ -103,7 +108,7 @@ func (r *Registry) GetByName(name string) (*Session, bool) {
 func (r *Registry) Broadcast(message protocol.Message) {
 	data, err := protocol.Encode(message)
 	if err != nil {
-		log.Printf("Failed to encode broadcast message: %v", err)
+		r.log.Error("registry.broadcast_encode_failed", slog.String("error", err.Error()))
 		return
 	}
 
@@ -114,10 +119,10 @@ func (r *Registry) Broadcast(message protocol.Message) {
 
 	for _, s := range r.sessions {
 		if err := s.Enqueue(string(data)); err != nil {
-			log.Printf(
-				"Dropping TAP broadcast for %q: %v",
-				s.PlayerName,
-				err,
+			r.log.Warn("registry.broadcast_dropped",
+				slog.String("player", s.PlayerName),
+				slog.String("session_id", s.ID),
+				slog.String("error", err.Error()),
 			)
 		}
 	}

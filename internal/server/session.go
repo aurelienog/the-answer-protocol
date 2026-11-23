@@ -20,6 +20,25 @@ type Session struct {
 	Outbox       chan string
 	outboxMu     sync.Mutex
 	outboxClosed bool
+	playerMu     sync.RWMutex
+}
+
+func (s *Session) SetPlayerName(name string) {
+	if s == nil {
+		return
+	}
+	s.playerMu.Lock()
+	s.PlayerName = name
+	s.playerMu.Unlock()
+}
+
+func (s *Session) GetPlayerName() string {
+	if s == nil {
+		return ""
+	}
+	s.playerMu.RLock()
+	defer s.playerMu.RUnlock()
+	return s.PlayerName
 }
 
 // Enqueue queues a message without blocking.

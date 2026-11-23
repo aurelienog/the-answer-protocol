@@ -1,87 +1,92 @@
 package logger
 
 import (
-	"context"
-	"io"
+	"fmt"
 	"log/slog"
 	"os"
-	"time"
+	"strconv"
+
+	"the-answer-protocol/internal/world"
 )
 
-// levelSplitHandler routes INFO records to stdout and WARN/ERROR records to stderr.
-// Concurrency safety is handled internally by slog.JSONHandler.
-type levelSplitHandler struct {
-	out slog.Handler
-	err slog.Handler
-}
-
-func (h *levelSplitHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	if level >= slog.LevelWarn {
-		return h.err.Enabled(ctx, level)
-	}
-	return h.out.Enabled(ctx, level)
-}
-
-func (h *levelSplitHandler) Handle(ctx context.Context, r slog.Record) error {
-	if r.Level >= slog.LevelWarn {
-		return h.err.Handle(ctx, r)
-	}
-	return h.out.Handle(ctx, r)
-}
-
-func (h *levelSplitHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &levelSplitHandler{
-		out: h.out.WithAttrs(attrs),
-		err: h.err.WithAttrs(attrs),
-	}
-}
-
-func (h *levelSplitHandler) WithGroup(name string) slog.Handler {
-	return &levelSplitHandler{
-		out: h.out.WithGroup(name),
-		err: h.err.WithGroup(name),
-	}
-}
-
-// New creates a structured JSON logger writing INFO to stdout and WARN/ERROR to stderr.
 func New() *slog.Logger {
-	return NewWithWriters(os.Stdout, os.Stderr)
-}
-
-// NewWithWriters creates a structured JSON logger with custom output streams (useful for tests).
-func NewWithWriters(stdout, stderr io.Writer) *slog.Logger {
-	if stdout == nil {
-		stdout = os.Stdout
-	}
-	if stderr == nil {
-		stderr = os.Stderr
-	}
-
-	opts := &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-		ReplaceAttr: func(_ []string, attr slog.Attr) slog.Attr {
-			switch attr.Key {
-			case slog.TimeKey:
-				return slog.String(
-					"timestamp",
-					attr.Value.Time().UTC().Format(time.RFC3339Nano),
-				)
-			case slog.MessageKey:
-				attr.Key = "event"
-				return attr
-			default:
-				return attr
-			}
-		},
-	}
-
-	return slog.New(&levelSplitHandler{
-		out: slog.NewJSONHandler(stdout, opts),
-		err: slog.NewJSONHandler(stderr, opts),
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     slog.LevelInfo,
+		AddSource: true,
 	})
+
+	return slog.New(handler)
 }
 
-// NewNop returns a silent logger safe for unit tests or nil fallbacks.
-func NewNop() *slog.Logger {
-	return slog.New(slog.NewJSONHandler(io.Discard, nil))
+// AuditLogger records real world changes published to the event bus.
+type AuditLogger struct {
+	log *slog.Logger
+}
+
+func NewAuditLogger(log *slog.Logger) *AuditLogger {
+	if log == nil {
+		panic("audit logger requires a logger")
+	}
+	return &AuditLogger{log: log}
+}
+
+func (audit *AuditLogger) Handle(event any) {
+	if audit == nil || audit.log == nil || event == nil {
+		return
+	}
+
+	switch value := event.(type) {
+	case world.PlayerMoved:
+		audit.log.Info("world.player_moved", slog.String("player", value.PlayerName), slog.String("from_room", value.PreviousRoomID), slog.String("to_room", value.NewRoomID))
+	case *world.PlayerMoved:
+		if value != nil {
+			audit.log.Info("world.player_moved", slog.String("player", value.PlayerName), slog.String("from_room", value.PreviousRoomID), slog.String("to_room", value.NewRoomID))
+		}
+	case world.PlayerEntered:
+		audit.log.Info("world.player_entered", slog.String("player", value.PlayerName), slog.String("room", value.RoomID))
+	case world.PlayerLeft:
+		audit.log.Info("world.player_left", slog.String("player", value.PlayerName), slog.String("room", value.RoomID))
+	case world.ItemDropped:
+		audit.log.Info("world.item_dropped", slog.String("player", value.PlayerName), slog.String("item", value.ItemID), slog.String("room", value.RoomID))
+	case world.UniqueItemsReturned:
+		audit.log.Info("world.unique_items_returned", slog.String("player", value.PlayerName), slog.String("room", value.RoomID), slog.String("items", fmt.Sprint(value.ItemIDs)))
+	case world.ChatMessage:
+		audit.log.Info("world.chat_message", slog.String("player", value.PlayerName), slog.String("scope", value.Scope), slog.Int("recipients", len(value.Recipients)))
+	case world.GroupInvite:
+		audit.log.Info("world.group_invite", slog.String("inviter", value.Inviter), slog.String("invitee", value.Invitee), slog.String("group", value.GroupName))
+	case world.GroupJoin:
+		audit.log.Info("world.group_join", slog.String("player", value.PlayerName), slog.String("group", value.GroupName))
+	case world.GroupLeave:
+		audit.log.Info("world.group_leave", slog.String("player", value.PlayerName), slog.String("group", value.GroupName))
+	case world.CombatStarted:
+		audit.log.Info("world.combat_started", slog.String("combat", value.CombatID), slog.String("room", value.RoomID), slog.Int("participants", len(value.Participants)))
+	case world.CombatAttack:
+		audit.log.Info("world.combat_attack", slog.String("combat", value.CombatID), slog.String("attacker", value.AttackerName), slog.String("target", value.TargetName))
+	case world.CombatDamage:
+		audit.log.Info("world.combat_damage", slog.String("combat", value.CombatID), slog.String("attacker", value.AttackerName), slog.String("target", value.TargetName), slog.Int("damage", value.Damage), slog.Int("remaining_hp", value.RemainingHP))
+	case world.ParticipantDied:
+		audit.log.Info("world.participant_died", slog.String("combat", value.CombatID), slog.String("participant", value.ParticipantName), slog.String("killer", value.KillerID))
+	case world.PlayerFled:
+		audit.log.Info("world.player_fled", slog.String("combat", value.CombatID), slog.String("player", value.PlayerName), slog.Int("remaining_hp", value.RemainingHP))
+	case world.CombatTurnChanged:
+		audit.log.Info("world.combat_turn_changed", slog.String("combat", value.CombatID), slog.String("participant", value.ParticipantName), slog.Int("round", value.Round))
+	case world.CombatPlayerJoined:
+		audit.log.Info("world.combat_player_joined", slog.String("combat", value.CombatID), slog.String("player", value.PlayerName))
+	case world.CombatHelpRequested:
+		audit.log.Info("world.combat_help_requested", slog.String("combat", value.CombatID), slog.String("player", value.PlayerName), slog.String("room", value.RoomID))
+	case world.CombatEnded:
+		audit.log.Info("world.combat_ended", slog.String("combat", value.CombatID), slog.Int("rewards", len(value.Rewards)))
+	case *world.CombatEnded:
+		if value != nil {
+			audit.log.Info("world.combat_ended", slog.String("combat", value.CombatID), slog.Int("rewards", len(value.Rewards)))
+		}
+	case world.ItemUsed:
+		audit.log.Info("world.item_used", slog.String("player", value.PlayerName), slog.String("item", value.ItemID))
+	case world.PlayerCountChanged:
+		audit.log.Info("world.player_count_changed", slog.Int("players", value.Count), slog.String("revision", strconv.FormatUint(value.Revision, 10)))
+	case world.PlayerRespawned:
+		audit.log.Info("world.player_respawned", slog.String("player", value.PlayerName), slog.String("room", value.RoomID), slog.Int("hp", value.HP))
+	default:
+		audit.log.Info("world.event", slog.String("event_type", fmt.Sprintf("%T", event)))
+	}
 }

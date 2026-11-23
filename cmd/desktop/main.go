@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -17,7 +18,7 @@ import (
 )
 
 func main() {
-	cfg := config.LoadConfig()
+	cfg := config.LoadConfig(slog.Default())
 
 	app := desktop.NewApp()
 
