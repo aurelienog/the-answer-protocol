@@ -106,12 +106,27 @@ const PlayersDockView = {
             const iconSrc = idx === 0 ? '/assets/icons/ui/crown.webp' : '/assets/icons/ui/shield.webp';
             const rank = idx === 0 ? 'Leader' : 'Member';
             const safeMember = UI.escapeHtml(member);
+
+            const inSameRoom = (GameState.playersInRoom || []).some(p => p.toLowerCase() === member.toLowerCase());
+            const canAid = !isMe && !GameState.inCombat && inSameRoom &&
+                GameState.activeHelpCombatId &&
+                GameState.activeHelpPlayer &&
+                GameState.activeHelpPlayer.toLowerCase() === member.toLowerCase();
+
+            const rightCell = canAid
+                ? `<button type="button" class="btn-gold-sm js-party-aid"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`
+                : `<span class="badge">${safeGroupName}</span>`;
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><img src="${iconSrc}" alt="" class="tab-mini-icon"> <strong>${safeMember}</strong> ${isMe ? '<small style="color:var(--text-muted)">(You)</small>' : ''}</td>
                 <td class="col-wide-only">${rank}</td>
-                <td><span class="badge">${safeGroupName}</span></td>
+                <td>${rightCell}</td>
             `;
+            if (canAid) {
+                const btn = tr.querySelector('.js-party-aid');
+                if (btn) btn.dataset.cmd = `COMBAT JOIN ${GameState.activeHelpCombatId}`;
+            }
             gBody.appendChild(tr);
         });
     }

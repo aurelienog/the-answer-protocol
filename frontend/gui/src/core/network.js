@@ -455,7 +455,7 @@ const App = {
 
                     if (GameState.inCombat) {
                         const hasHostileHere = GameState.npcsInRoom.some(n => GameState.getNpcMeta(n).hostile);
-                        if (!hasHostileHere) {
+                        if (!hasHostileHere && CombatModal.isFallen) {
                             if (!CombatModal.outcomeShown) {
                                 CombatModal.showOutcome(false, 'Your party was defeated! Respawned at Harbor Square.');
                                 this.sendCommand('STATUS');
@@ -608,7 +608,7 @@ const App = {
 
             const cidMatch = msg.match(/\[COMBAT_ID:(combat:\d+)\]/);
             if (cidMatch) {
-                if (author.toLowerCase() !== GameState.playerName.toLowerCase()) {
+                if (!GameState.inCombat && author.toLowerCase() !== GameState.playerName.toLowerCase()) {
                     GameState.activeHelpCombatId = cidMatch[1];
                     GameState.activeHelpPlayer = author;
                     UI.renderRoom();
@@ -712,7 +712,14 @@ const App = {
                         GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) ||
                         GameState.npcsInRoom[0] ||
                         'dire_wolf';
-                    CombatModal.open(enemyId, GameState.hp, enemyInfo ? enemyInfo.hp : undefined);
+                    CombatModal.open(
+                        enemyId,
+                        GameState.hp,
+                        enemyInfo ? enemyInfo.hp : undefined,
+                        false,
+                        false,
+                        enemyInfo ? enemyInfo.maxHp : undefined
+                    );
                     UI.renderRoom();
                 }
                 return;

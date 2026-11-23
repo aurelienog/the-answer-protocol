@@ -263,7 +263,7 @@ const CombatModal = {
         });
     },
 
-    open(npcIdentifier, initialHeroHp, initialEnemyHp, isRestoring = false, isJoiningMidCombat = false) {
+    open(npcIdentifier, initialHeroHp, initialEnemyHp, isRestoring = false, isJoiningMidCombat = false, initialEnemyMaxHp = undefined) {
         const alreadyOpen = GameState.inCombat && !document.getElementById('modal-combat').classList.contains('hidden');
 
         UI.closeAllModals();
@@ -314,7 +314,7 @@ const CombatModal = {
             sessionStorage.setItem('tap_active_combat_enemy', this.enemyId);
         }
 
-        const defaultMax = npcMeta.maxHp || npcMeta.hp || 60;
+        const defaultMax = initialEnemyMaxHp || npcMeta.maxHp || npcMeta.hp || 60;
         const savedEnemyHp = parseInt(sessionStorage.getItem('tap_active_combat_enemy_hp'), 10);
 
         this.enemyMaxHp = (initialEnemyHp !== undefined && initialEnemyHp > defaultMax)
