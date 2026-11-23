@@ -2,7 +2,7 @@ package server
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 
 	"the-answer-protocol/internal/protocol"
 	"the-answer-protocol/internal/world"
@@ -71,6 +71,12 @@ func authenticatePlayer(
 func (handler *connectionHandler) handleConnect(line string) bool {
 	username, rejection := parseConnectRequest(line)
 	if rejection != nil {
+		handler.log.Warn("auth.rejected",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.Int("error_code", rejection.Code),
+			slog.String("error_name", rejection.Name),
+		)
 		return SendMessage(handler.session, *rejection) == nil
 	}
 
@@ -83,13 +89,27 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	)
 	if err != nil {
 		if errors.Is(err, ErrNameInUse) {
+			handler.log.Warn("auth.name_in_use",
+				slog.String("session_id", handler.sessionID),
+				slog.String("ip", handler.remoteIP),
+				slog.String("player", username),
+				slog.Int("error_code", protocol.CodeNameInUse),
+				slog.String("error_name", "NAME_IN_USE"),
+			)
 			return SendMessage(
 				handler.session,
 				protocol.ERR(protocol.CodeNameInUse, "NAME_IN_USE"),
 			) == nil
 		}
 
-		log.Printf("Failed to authenticate player %q: %v", username, err)
+		handler.log.Error("auth.failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", username),
+			slog.String("error", err.Error()),
+			slog.Int("error_code", protocol.CodeConnectionFailed),
+			slog.String("error_name", "CONNECTION_FAILED"),
+		)
 		_ = SendMessage(
 			handler.session,
 			protocol.ERR(protocol.CodeConnectionFailed, "CONNECTION_FAILED"),
@@ -102,17 +122,34 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	handler.lease.Authenticate()
 	handler.stopAuthenticationTimer()
 
-	log.Printf("Player %q connected from %s", username, handler.sessionID)
 	roomID, err := handler.gameWorld.GetPlayerRoom(username)
 	if err != nil {
-		log.Printf("Failed to get room for %q: %v", username, err)
+		handler.log.Error("auth.room_lookup_failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", username),
+			slog.String("error", err.Error()),
+		)
 		return false
 	}
 	players, err := handler.gameWorld.GetPlayersInRoom(roomID)
 	if err != nil {
-		log.Printf("Failed to get players in room %q: %v", roomID, err)
+		handler.log.Error("auth.room_players_failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("room_id", roomID),
+			slog.String("error", err.Error()),
+		)
 		return false
 	}
+
+	handler.log.Info("auth.succeeded",
+		slog.String("session_id", handler.sessionID),
+		slog.String("ip", handler.remoteIP),
+		slog.String("player", username),
+		slog.String("room_id", roomID),
+	)
+
 	if handler.eventPublisher != nil {
 		handler.eventPublisher.Publish(world.PlayerEntered{
 			PlayerName:  username,
@@ -123,7 +160,12 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	handler.enterBroadcast = true
 
 	if err := SendMessage(handler.session, protocol.OK("connected")); err != nil {
-		log.Printf("Failed to queue CONNECT response for %s: %v", username, err)
+		handler.log.Error("auth.response_failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", username),
+			slog.String("error", err.Error()),
+		)
 		return false
 	}
 	if statsEvent != nil && handler.eventPublisher != nil {

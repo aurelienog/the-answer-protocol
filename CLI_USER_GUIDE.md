@@ -21,7 +21,7 @@ The interface is organized into several views, with a main content area, a sideb
 From the project directory, run:
 
 ```bash
-go run ./frontend/cli
+make run-client / ./bin/tap-cli
 ```
 
 If the project provides a compiled executable, you can also start the client directly:

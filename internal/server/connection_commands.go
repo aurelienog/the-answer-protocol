@@ -2,22 +2,34 @@ package server
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 
 	"the-answer-protocol/internal/commands"
 	"the-answer-protocol/internal/protocol"
 )
 
 // handleCommand rate-limits and dispatches one authenticated request.
+// Command and response auditing is centralized in commands.Dispatcher.
 // It returns false when the connection should be closed.
 func (handler *connectionHandler) handleCommand(line string) bool {
 	if !handler.lease.AllowCommand(handler.session.PlayerName, line) {
-		log.Printf("Rate limit exceeded for player %q", handler.session.PlayerName)
+		handler.log.Warn("abuse.rate_limited",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", handler.session.PlayerName),
+			slog.Int("error_code", protocol.CodeRateLimited),
+			slog.String("error_name", "RATE_LIMITED"),
+		)
 		if err := SendMessage(handler.session, protocol.ERR(
 			protocol.CodeRateLimited,
 			"RATE_LIMITED",
 		)); err != nil {
-			log.Printf("Failed to queue rate-limit response for %q: %v", handler.session.PlayerName, err)
+			handler.log.Error("command.send_failed",
+				slog.String("session_id", handler.sessionID),
+				slog.String("ip", handler.remoteIP),
+				slog.String("player", handler.session.PlayerName),
+				slog.String("error", err.Error()),
+			)
 			return false
 		}
 		return true
@@ -34,14 +46,26 @@ func (handler *connectionHandler) handleCommand(line string) bool {
 		return false
 	}
 	if err != nil {
-		log.Printf("Command error from %s: %v", handler.session.PlayerName, err)
+		handler.log.Error("command.dispatch_failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", handler.session.PlayerName),
+			slog.String("error", err.Error()),
+			slog.Int("error_code", protocol.CodeCommandFailed),
+			slog.String("error_name", "COMMAND_FAILED"),
+		)
 		return SendMessage(
 			handler.session,
 			protocol.ERR(protocol.CodeCommandFailed, "COMMAND_FAILED"),
 		) == nil
 	}
 	if err := SendMessage(handler.session, message); err != nil {
-		log.Printf("Failed to queue response for %s: %v", handler.session.PlayerName, err)
+		handler.log.Error("command.send_failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", handler.session.PlayerName),
+			slog.String("error", err.Error()),
+		)
 		return false
 	}
 	return true
@@ -50,6 +74,7 @@ func (handler *connectionHandler) handleCommand(line string) bool {
 func (handler *connectionHandler) handleQuit(response protocol.Message) {
 	handler.quitRequested = true
 	cleanupPlayer(
+		handler.log,
 		handler.sessionID,
 		handler.session,
 		handler.registry,
@@ -64,9 +89,18 @@ func (handler *connectionHandler) handleQuit(response protocol.Message) {
 	handler.enterBroadcast = false
 
 	if err := SendMessage(handler.session, response); err != nil {
-		log.Printf("Failed to queue QUIT response for %s: %v", handler.session.PlayerName, err)
+		handler.log.Error("command.quit_send_failed",
+			slog.String("session_id", handler.sessionID),
+			slog.String("ip", handler.remoteIP),
+			slog.String("player", handler.session.PlayerName),
+			slog.String("error", err.Error()),
+		)
 	}
 	handler.session.CloseOutbox()
 	<-handler.writerDone
-	log.Printf("Player %s requested session closure", handler.session.PlayerName)
+	handler.log.Info("player.quit",
+		slog.String("session_id", handler.sessionID),
+		slog.String("ip", handler.remoteIP),
+		slog.String("player", handler.session.PlayerName),
+	)
 }

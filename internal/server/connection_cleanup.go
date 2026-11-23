@@ -1,14 +1,16 @@
 package server
 
 import (
-	"log"
+	"log/slog"
 
 	"the-answer-protocol/internal/events"
+	"the-answer-protocol/internal/logger"
 	"the-answer-protocol/internal/world"
 )
 
 // cleanupPlayer removes the player's state before publishing departure events.
 func cleanupPlayer(
+	log *slog.Logger,
 	sessionID string,
 	session *Session,
 	registry *Registry,
@@ -18,15 +20,19 @@ func cleanupPlayer(
 	playerEnterBroadcast bool,
 	eventPublisher events.Publisher,
 ) {
+	if log == nil {
+		log = logger.NewNop()
+	}
+
 	if authenticated {
 		playerLeft, uniqueItemsReturned, combatEvents, statsEvent, err :=
 			gameWorld.RemovePlayer(session.PlayerName)
 
 		if err != nil {
-			log.Printf(
-				"Failed to remove departing player %q: %v",
-				session.PlayerName,
-				err,
+			log.Error("player.cleanup_failed",
+				slog.String("session_id", sessionID),
+				slog.String("player", session.PlayerName),
+				slog.String("error", err.Error()),
 			)
 		} else {
 			// Remove the session before broadcasting the updated player count.

@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"the-answer-protocol/internal/abuse"
@@ -31,16 +35,21 @@ func main() {
 	gameWorld, err := world.Load(cfg.WorldPath)
 	if err != nil {
 		log.Error("world.load_failed",
+			slog.String("world_path", cfg.WorldPath),
 			slog.String("error", err.Error()),
 		)
 		return
 	}
 	log.Info("world.loaded",
+		slog.String("world_path", cfg.WorldPath),
 		slog.Int("rooms", gameWorld.RoomCount()),
 	)
 
 	registry := server.NewRegistry()
 	eventBus := events.NewBus()
+
+	auditLogger := server.NewAuditLogger(log)
+	eventBus.Subscribe(auditLogger.Handle)
 
 	notificationDispatcher := server.NewNotificationDispatcher(registry)
 	eventBus.Subscribe(notificationDispatcher.Handle)
@@ -52,6 +61,7 @@ func main() {
 	go combatTurnTimeouts.Run(cleanupContext)
 
 	dispatcher := commands.NewDispatcher()
+	dispatcher.SetLogger(log)
 	commands.RegisterCommands(dispatcher)
 
 	listener, err := net.Listen("tcp", cfg.ServerAddr())
@@ -64,6 +74,15 @@ func main() {
 	}
 	defer listener.Close()
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-sigChan
+		log.Info("server.shutdown_requested", slog.String("signal", sig.String()))
+		stopCleanup()
+		_ = listener.Close()
+	}()
+
 	log.Info("server.listening",
 		slog.String("address", cfg.ServerAddr()),
 	)
@@ -71,15 +90,25 @@ func main() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				log.Info("server.stopped")
+				return
+			}
 			log.Error("connection.accept_failed",
 				slog.String("error", err.Error()),
 			)
 			continue
 		}
 
+		ip := conn.RemoteAddr().String()
+		if host, _, splitErr := net.SplitHostPort(ip); splitErr == nil {
+			ip = host
+		}
+
 		lease, rejection := guard.AcquireConnection(conn.RemoteAddr())
 		if rejection != "" {
-			log.Warn("connection.rejected",
+			log.Warn("abuse.connection_rejected",
+				slog.String("ip", ip),
 				slog.String("remote_addr", conn.RemoteAddr().String()),
 				slog.String("reason", string(rejection)),
 			)
@@ -87,6 +116,7 @@ func main() {
 			continue
 		}
 		log.Info("connection.accepted",
+			slog.String("ip", ip),
 			slog.String("remote_addr", conn.RemoteAddr().String()),
 		)
 

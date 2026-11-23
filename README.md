@@ -317,7 +317,11 @@ Players may belong to one group at a time (`GROUP CREATE <name>`), enabling priv
 
 ### Server Logging
 
-The server uses Go's standard log package to record startup validation, connection lifecycle events, and asynchronous delivery failures (e.g., logging the target player name and error whenever a Session.Outbox enqueue fails or overflows). Operators can redirect stdout/stderr to a log aggregator or file to monitor connection spikes, session disconnects, and dropped notifications.
+The server uses Go's standard `log/slog` package (`internal/logger`) with a custom level-splitting JSON handler (zero extra goroutines or channels, thread-safe via `slog.JSONHandler`):
+
+- **Structured JSON & Timestamps:** Every log entry is emitted as a single JSON line with a UTC `RFC3339Nano` `timestamp`, `level` (`INFO`, `WARN`, `ERROR`), `event` name, and structured fields (`ip`, `session_id`, `player`, `command`, `args`, `error_code`, `room_id`, `combat_id`, `quest_id`, etc.).
+- **Output Streams:** Operational and gameplay events (`INFO`) are written to `stdout`; recoverable errors (`4xx`), timeouts, abuse alerts (`abuse.connection_rejected`, `abuse.rate_limited`), and internal failures (`WARN`/`ERROR`) are written to `stderr`.
+- **Centralized Dispatch Auditing:** Command reception, responses, error codes, and direct command outcomes (`TAKE`, `TALK`, `QUEST`, `GROUP CREATE`) are logged centrally in `commands.Dispatcher`, while all world state transitions (movement, drops, item usage, chat, groups, combat, and respawns) are audited by `server.AuditLogger` subscribed to the internal `events.Bus`.
 
 ### Abuse Detection & Rate Limiting
 
