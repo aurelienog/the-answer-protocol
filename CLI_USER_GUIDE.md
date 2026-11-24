@@ -132,9 +132,10 @@ Available directions depend on the exits of the current room.
 | `INVENTORY` | Display the player's inventory. |
 | `TAKE <item>` | Pick up an item from the current room. |
 | `DROP <item>` | Drop an item from the inventory. |
-| `USE <item>` | Use a consumable item. |
+| `USE <item>` | Use a consumable item outside combat. |
 
-Only supported item types can be dropped or used.
+Only supported item types can be dropped or used. During combat, use `COMBAT USE`
+on your turn.
 
 ### NPC Interaction and Quests
 
@@ -187,7 +188,7 @@ Combat commands are available when the player participates in an active combat e
 | `COMBAT ATTACK` | Attack during the combat turn. |
 | `COMBAT DEFEND` | Defend during the combat turn. |
 | `COMBAT FLEE` | Attempt to escape combat. |
-| `COMBAT USE` | Use an item during combat. |
+| `COMBAT USE` | Use an item during combat on your turn. |
 | `COMBAT HELP` | Request help during combat. |
 | `COMBAT JOIN` | Join an ongoing combat. |
 

@@ -57,6 +57,25 @@ func handleCombatActionResponse(model *Model, payload string) error {
 	return nil
 }
 
+func (model Model) isPlayerCombatTurn() bool {
+	if !model.world.Combat.Active || model.world.Combat.CurrentTurn == "" {
+		return false
+	}
+
+	for _, participant := range model.world.Combat.Participants {
+		if !participant.IsPlayer ||
+			(!strings.EqualFold(participant.Name, model.player.Username) &&
+				!strings.EqualFold(participant.ID, model.player.Username)) {
+			continue
+		}
+
+		return strings.EqualFold(model.world.Combat.CurrentTurn, participant.Name) ||
+			strings.EqualFold(model.world.Combat.CurrentTurn, participant.ID)
+	}
+
+	return strings.EqualFold(model.world.Combat.CurrentTurn, model.player.Username)
+}
+
 func handleCombatUseResponse(model *Model, payload string) error {
 	fields := parsePayloadFields(payload)
 
@@ -65,6 +84,12 @@ func handleCombatUseResponse(model *Model, payload string) error {
 		model.world.Combat.Active = true
 	}
 
+	applyItemUseChanges(model, fields)
+
+	return nil
+}
+
+func applyItemUseChanges(model *Model, fields map[string]string) {
 	if changesText, exists := fields["changes"]; exists {
 		for _, change := range strings.Split(changesText, ",") {
 			statName, deltaText, found := strings.Cut(change, "=")
@@ -78,8 +103,6 @@ func handleCombatUseResponse(model *Model, payload string) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func handleCombatFleeResponse(model *Model, payload string) error {

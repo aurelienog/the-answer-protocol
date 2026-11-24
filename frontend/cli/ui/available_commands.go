@@ -157,7 +157,7 @@ var combatCommands = []AvailableCommand{
     {
         Name:        "USE",
         Usage:       "COMBAT USE",
-        Description: "Use an item during combat.",
+        Description: "Use an item during your combat turn.",
     },
     {
         Name:        "HELP",
@@ -231,6 +231,10 @@ func (m Model) availableCommandsContent() string {
 
     add("INVENTORY")
 
+	if !m.world.Combat.Active {
+		add("USE")
+	}
+
 	if m.hasRoomItems() && !m.world.Combat.Active {
 		add("TAKE")
 	}
@@ -260,6 +264,9 @@ func (m Model) availableCommandsContent() string {
 
 	if m.world.Combat.Active {
 		for _, command := range combatCommands {
+			if command.Name == "USE" && !m.isPlayerCombatTurn() {
+				continue
+			}
 			commands = append(commands, command)
 		}
 	}

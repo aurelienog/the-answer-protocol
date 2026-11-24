@@ -335,7 +335,7 @@ func (m *Model) refreshViewports() {
 		content = m.renderEventsView(m.ui.MainViewport.Width)
 
 	case ViewTalk:
-    	content = m.renderTalk()
+		content = m.renderTalk()
 	default:
 		content = "Unknown view"
 	}

@@ -291,6 +291,30 @@ func TestRequestManagerHandlesOKAndERRResponses(t *testing.T) {
 	}
 }
 
+func TestRequestManagerReturnsResponseWhenConnectionClosesAfterResponse(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	responses := make(chan network.IncomingMessage, 1)
+	manager, err := network.NewRequestManager(ctx, responses)
+	if err != nil {
+		t.Fatalf("NewRequestManager() error = %v", err)
+	}
+	defer manager.Close()
+
+	got, err := manager.Do(context.Background(), func(context.Context) error {
+		responses <- network.IncomingMessage{Message: protocol.OK("bye")}
+		cancel()
+		return errors.New("connection closed after request was written")
+	})
+	if err != nil {
+		t.Fatalf("Do() error = %v, want the received server response", err)
+	}
+	if got.Payload != "bye" {
+		t.Fatalf("Do() payload = %q, want bye", got.Payload)
+	}
+}
+
 func TestRequestManagerCloseInterruptsPendingRequest(t *testing.T) {
 	manager, err := network.NewRequestManager(
 		context.Background(),

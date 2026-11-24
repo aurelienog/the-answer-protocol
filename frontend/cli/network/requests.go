@@ -118,6 +118,10 @@ func (m *RequestManager) Do(
 	// From this point, the request cannot be individually cancelled.
 	// The send function must return only after the TCP write completes.
 	if err := send(m.ctx); err != nil {
+		if response, responseErr, received := m.receivePendingResponse(); received {
+			return response, responseErr
+		}
+
 		if m.ctx.Err() != nil {
 			return protocol.Message{}, ErrRequestManagerClosed
 		}
@@ -126,6 +130,10 @@ func (m *RequestManager) Do(
 			"send request: %w",
 			err,
 		)
+	}
+
+	if response, err, received := m.receivePendingResponse(); received {
+		return response, err
 	}
 
 	// Wait for the server response or client shutdown.
@@ -139,7 +147,29 @@ func (m *RequestManager) Do(
 		return handleResponse(incoming)
 
 	case <-m.ctx.Done():
+		if response, err, received := m.receivePendingResponse(); received {
+			return response, err
+		}
 		return protocol.Message{}, ErrRequestManagerClosed
+	}
+}
+
+func (m *RequestManager) receivePendingResponse() (
+	protocol.Message,
+	error,
+	bool,
+) {
+	select {
+	case incoming, ok := <-m.responses:
+		if !ok {
+			return protocol.Message{}, ErrRequestManagerClosed, true
+		}
+
+		message, err := handleResponse(incoming)
+		return message, err, true
+
+	default:
+		return protocol.Message{}, nil, false
 	}
 }
 

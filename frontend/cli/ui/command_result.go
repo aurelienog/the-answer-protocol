@@ -16,12 +16,14 @@ var commandHandlers = map[string]commandHandler{
 	"WHO":               handleWhoResponse,
 	"QUESTS":            handleQuestsResponse,
 	"QUEST":             handleQuestResponse,
+	"QUIT":              handleActionResponse,
+	"USE":               handleUseResponse,
 	"GROUP INFO":        handleGroupInfoResponse,
-	"GROUP CREATE":      handleGroupActionResponse,
-	"GROUP JOIN":        handleGroupActionResponse,
-	"GROUP INVITE":      handleGroupActionResponse,
+	"GROUP CREATE":      handleActionResponse,
+	"GROUP JOIN":        handleActionResponse,
+	"GROUP INVITE":      handleActionResponse,
 	"GROUP INVITATIONS": handleGroupInvitationsResponse,
-	"GROUP LEAVE":       handleGroupActionResponse,
+	"GROUP LEAVE":       handleActionResponse,
 	"LOOK":              handleLookResponse,
 	"MOVE":              handleMoveResponse,
 	"TALK":              handleTalkResponse,
@@ -43,7 +45,7 @@ var commandErrorHandlers = map[string]errorHandler{
 	},
 }
 
-func handleGroupActionResponse(_ *Model, _ string) error {
+func handleActionResponse(_ *Model, _ string) error {
 	return nil
 }
 
@@ -213,9 +215,15 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		m.communication.StatusMessage = "You fled from combat!"
 		return m, nil
 
-	case "COMBAT USE":
+	case "USE":
 		fields := parsePayloadFields(msg.response.Payload)
 		m.communication.StatusMessage = "Used " + fields["used"]
+		m.ui.PendingRefresh = RefreshInventory
+		return m, sendCommand(m.client, "INVENTORY")
+
+	case "COMBAT USE":
+		fields := parsePayloadFields(msg.response.Payload)
+		m.communication.StatusMessage = "Used " + fields["used"] + " during combat"
 		m.ui.PendingRefresh = RefreshInventory
 		return m, sendCommand(m.client, "INVENTORY")
 	}

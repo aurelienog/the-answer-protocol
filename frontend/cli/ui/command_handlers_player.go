@@ -71,6 +71,11 @@ func handleInventoryResponse(m *Model, payload string) error {
 	return nil
 }
 
+func handleUseResponse(m *Model, payload string) error {
+	applyItemUseChanges(m, parsePayloadFields(payload))
+	return nil
+}
+
 func handleQuestResponse(m *Model, payload string) error {
     var quest QuestSummary
 
