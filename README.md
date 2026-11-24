@@ -267,18 +267,34 @@ The world of **Arvendale** is loaded from `data/world.json`, which undergoes str
 The map consists of **9 interconnected rooms** spanning a coastal city, a harbor district, and a northern forest edge:
 
 ```text
-                    [Whispering Forest Edge] (Dire Wolf)
-                               |
-                        [North Town Gate] (North Gate Guard)
-                               |
-[Royal Blacksmith Forge] -- [Market Street] -- [Apothecary Shop]
-   (Master Borin)        (Guide & Advisor)      (Apprentice Lina)
-                               |                        |
-                    [Central Harbor Square] -- [The Salty Siren Tavern]
-                       (Captain Eliza)                  (Mara)
-                               |
-                        [The Great Pier] ----- [Abandoned Warehouse]
-                         (Dock Warden)           (Shadow Smuggler)
+                           ┌────────────────────────┐
+                           │ Whispering Forest Edge │
+                           │      (Dire Wolf)       │
+                           └───────────┬────────────┘
+                                       │
+                                       ▼
+                           ┌────────────────────────┐
+                           │    North Town Gate     │
+                           │   (North Gate Guard)   │
+                           └───────────┬────────────┘
+                                       │
+                                       ▼
+┌────────────────────────┐ ┌────────────────────────┐ ┌────────────────────────┐
+│ Royal Blacksmith Forge ├─┤     Market Street      ├─┤    Apothecary Shop     │
+│     (Master Borin)     │ │   (Guide & Advisor)    │ │   (Apprentice Lina)    │
+└────────────────────────┘ └───────────┬────────────┘ └───────────┬────────────┘
+                                       │                          │
+                                       ▼                          ▼
+                           ┌────────────────────────┐ ┌────────────────────────┐
+                           │ Central Harbor Square  ├─┤ The Salty Siren Tavern │
+                           │    (Captain Eliza)     │ │         (Mara)         │
+                           └───────────┬────────────┘ └────────────────────────┘
+                                       │
+                                       ▼
+                           ┌────────────────────────┐ ┌────────────────────────┐
+                           │     The Great Pier     ├─┤  Abandoned Warehouse   │
+                           │     (Dock Warden)      │ │    (Shadow Smuggler)   │
+                           └────────────────────────┘ └────────────────────────┘
 ```
 
 #### NPC Roles & Progression
