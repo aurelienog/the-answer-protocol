@@ -1,8 +1,10 @@
 package ui
+
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
 )
+
 func handleStatusResponse(m *Model, payload string) error {
 	var status PlayerStatus
 
@@ -28,39 +30,33 @@ func handleGroupInfoResponse(m *Model, payload string) error {
 	return nil
 }
 
-func handleGroupJoinResponse(m *Model, payload string) error {
-	fields := parsePayloadFields(payload)
-	groupID := fields["group"]
+func handleGroupInvitationsResponse(m *Model, payload string) error {
+	var invitations []GroupInvitation
 
-	if groupID == "" {
-		return fmt.Errorf("missing group ID in GROUP JOIN response")
+	if err := json.Unmarshal([]byte(payload), &invitations); err != nil {
+		return err
 	}
 
-	m.player.Invitations = removeInvitationByID(
-		m.player.Invitations,
-		groupID,
-	)
-
-	m.ui.PendingRefresh = RefreshGroup
+	m.player.Invitations = invitations
+	m.ui.PendingRefresh = RefreshNone
 
 	return nil
 }
 
-func removeInvitationByID(
+func removeInvitationByName(
 	invitations []GroupInvitation,
-	groupID string,
+	groupName string,
 ) []GroupInvitation {
 	result := make([]GroupInvitation, 0, len(invitations))
 
 	for _, invitation := range invitations {
-		if invitation.ID != groupID {
+		if !strings.EqualFold(invitation.Name, groupName) {
 			result = append(result, invitation)
 		}
 	}
 
 	return result
 }
-
 
 func handleInventoryResponse(m *Model, payload string) error {
 	var inventory []InventoryItem

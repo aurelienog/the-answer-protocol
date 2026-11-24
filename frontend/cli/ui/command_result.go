@@ -12,29 +12,29 @@ type commandHandler func(*Model, string) error
 type errorHandler func(*Model)
 
 var commandHandlers = map[string]commandHandler{
-	"STATUS":        handleStatusResponse,
-	"WHO":           handleWhoResponse,
-	"QUESTS":        handleQuestsResponse,
-	"QUEST":         handleQuestResponse,
-	"GROUP INFO":    handleGroupInfoResponse,
-	"GROUP CREATE":  handleGroupActionResponse,
-	"GROUP JOIN":    handleGroupJoinResponse,
-	"GROUP INVITE":  handleGroupActionResponse,
-	"GROUP INVITATIONS":  handleGroupActionResponse,
-	"GROUP LEAVE":   handleGroupActionResponse,
-	"LOOK":          handleLookResponse,
-	"MOVE":          handleMoveResponse,
-	"TALK":          handleTalkResponse,
-	"INVENTORY":     handleInventoryResponse,
-	"TAKE":          handleTakeResponse,
-	"DROP":          handleDropResponse,
-	"ATTACK":        handleAttackResponse,
-	"COMBAT ATTACK": handleCombatActionResponse,
-	"COMBAT DEFEND": handleCombatActionResponse,
-	"COMBAT USE":    handleCombatUseResponse,
-	"COMBAT FLEE":   handleCombatFleeResponse,
-	"COMBAT HELP":   handleCombatActionResponse,
-	"COMBAT JOIN":   handleCombatActionResponse,
+	"STATUS":            handleStatusResponse,
+	"WHO":               handleWhoResponse,
+	"QUESTS":            handleQuestsResponse,
+	"QUEST":             handleQuestResponse,
+	"GROUP INFO":        handleGroupInfoResponse,
+	"GROUP CREATE":      handleGroupActionResponse,
+	"GROUP JOIN":        handleGroupActionResponse,
+	"GROUP INVITE":      handleGroupActionResponse,
+	"GROUP INVITATIONS": handleGroupInvitationsResponse,
+	"GROUP LEAVE":       handleGroupActionResponse,
+	"LOOK":              handleLookResponse,
+	"MOVE":              handleMoveResponse,
+	"TALK":              handleTalkResponse,
+	"INVENTORY":         handleInventoryResponse,
+	"TAKE":              handleTakeResponse,
+	"DROP":              handleDropResponse,
+	"ATTACK":            handleAttackResponse,
+	"COMBAT ATTACK":     handleCombatActionResponse,
+	"COMBAT DEFEND":     handleCombatActionResponse,
+	"COMBAT USE":        handleCombatUseResponse,
+	"COMBAT FLEE":       handleCombatFleeResponse,
+	"COMBAT HELP":       handleCombatActionResponse,
+	"COMBAT JOIN":       handleCombatActionResponse,
 }
 
 var commandErrorHandlers = map[string]errorHandler{
@@ -89,6 +89,16 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		m.ui.PendingRefresh = RefreshNone
 		m.communication.StatusMessage = "Error parsing " + command + ": " + err.Error()
 		return m, nil
+	}
+
+	if command == "GROUP JOIN" {
+		parts := strings.Fields(msg.command)
+		if len(parts) > 2 {
+			m.player.Invitations = removeInvitationByName(
+				m.player.Invitations,
+				strings.Join(parts[2:], " "),
+			)
+		}
 	}
 
 	// Handle commands that navigate to another view.
@@ -154,7 +164,7 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 		m.communication.StatusMessage = "Invitation sent."
 		m.ui.PendingRefresh = RefreshGroup
 		return m, sendCommand(m.client, "GROUP INFO")
-	
+
 	case "GROUP INVITATIONS":
 		m.communication.StatusMessage = "Invitations updated."
 		return m, nil
