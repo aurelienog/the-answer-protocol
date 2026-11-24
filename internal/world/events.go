@@ -1,5 +1,7 @@
 package world
 
+import "time"
+
 // PlayerMoved represents a successfully completed player movement.
 // The player lists contain the occupants of each room immediately
 // before the movement, including the player who moved.
@@ -204,6 +206,11 @@ type NPCRespawned struct {
 	NPCName     string
 	RoomID      string
 	RoomPlayers []string
+}
+
+type NPCRespawnScheduled struct {
+	NPCID     string
+	RespawnAt time.Time
 }
 
 type QuestCompleted struct {

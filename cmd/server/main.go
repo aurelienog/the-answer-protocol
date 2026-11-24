@@ -53,6 +53,12 @@ func main() {
 	eventBus.Subscribe(combatTurnTimeouts.Handle)
 	go combatTurnTimeouts.Run(cleanupContext)
 
+	npcRespawns := server.NewNPCRespawnManager(
+		server.NewNPCRespawnHandler(gameWorld, eventBus, log),
+	)
+	eventBus.Subscribe(npcRespawns.Handle)
+	go npcRespawns.Run(cleanupContext)
+
 	dispatcher := commands.NewDispatcher(log)
 	commands.RegisterCommands(dispatcher)
 

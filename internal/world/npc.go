@@ -1,5 +1,7 @@
 package world
 
+import "time"
+
 type NPCSummary struct {
 	ID          string      `json:"id"`
 	Name        string      `json:"name"`
@@ -29,8 +31,8 @@ type NPC struct {
 	QuestDialogues map[string]NPCDialogue `json:"quest_dialogues"`
 	Rewards        []string               `json:"rewards,omitempty"`
 
-	RespawnSeconds int   `json:"respawn_seconds,omitempty"`
-	RespawnAt      int64 `json:"-"`
+	RespawnSeconds int       `json:"respawn_seconds,omitempty"`
+	RespawnAt      time.Time `json:"-"`
 }
 
 // NPCConversation represents a conversation between a player and an NPC.

@@ -17,12 +17,15 @@ func (w *World) resolveCombatProgressionLocked(combat *Combat) ([]any, error) {
 
 		// 1. Check whether combat must end before taking any further turns.
 		if !combatHasActivePlayersLocked(combat) || !combatHasLivingNPCsLocked(combat) {
-			endEvent, respawnEvents, err := w.endCombatLocked(combat)
+			endEvent, respawnEvents, npcRespawns, err := w.endCombatLocked(combat)
 			if err != nil {
 				return nil, err
 			}
 			if endEvent != nil {
 				events = append(events, *endEvent)
+			}
+			for _, respawn := range npcRespawns {
+				events = append(events, respawn)
 			}
 			for _, respawn := range respawnEvents {
 				events = append(events, respawn)
@@ -76,8 +79,9 @@ func (w *World) resolveCombatProgressionLocked(combat *Combat) ([]any, error) {
 		combatEnded := !combatHasActivePlayersLocked(combat) || !combatHasLivingNPCsLocked(combat)
 		var endEvent *CombatEnded
 		var respawnEvents []PlayerRespawned
+		var npcRespawns []NPCRespawnScheduled
 		if combatEnded {
-			endEvent, respawnEvents, err = w.endCombatLocked(combat)
+			endEvent, respawnEvents, npcRespawns, err = w.endCombatLocked(combat)
 			if err != nil {
 				return nil, err
 			}
@@ -94,6 +98,9 @@ func (w *World) resolveCombatProgressionLocked(combat *Combat) ([]any, error) {
 		}
 		if endEvent != nil {
 			events = append(events, *endEvent)
+			for _, respawn := range npcRespawns {
+				events = append(events, respawn)
+			}
 			for _, respawn := range respawnEvents {
 				events = append(events, respawn)
 			}
@@ -271,30 +278,35 @@ func (w *World) executeNPCCombatTurnLocked(
 	return attackEvent, damageEvent, deathEvent, nil
 }
 
-func (w *World) endCombatLocked(combat *Combat) (*CombatEnded, []PlayerRespawned, error) {
+func (w *World) endCombatLocked(combat *Combat) (
+	*CombatEnded,
+	[]PlayerRespawned,
+	[]NPCRespawnScheduled,
+	error,
+) {
 	defeatedNPCs, hasLivingNPC, err := w.collectCombatNPCResultsLocked(combat)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if hasLivingNPC && combatHasActivePlayersLocked(combat) {
-		return nil, nil, fmt.Errorf("%w: combat is still ongoing", ErrInvalidWorldState)
+		return nil, nil, nil, fmt.Errorf("%w: combat is still ongoing", ErrInvalidWorldState)
 	}
 
 	victory := !hasLivingNPC
 
 	if err := w.validateCombatEndLocked(combat, victory, defeatedNPCs); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	w.synchronizeCombatNPCsLocked(combat)
+	npcRespawns := w.synchronizeCombatNPCsLocked(combat)
 	respawnEvents := w.synchronizeCombatPlayersLocked(combat, victory)
 
 	var rewards []CombatReward
 	if victory {
 		rewards, err = w.distributeCombatRewardsLocked(combat, defeatedNPCs)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -306,5 +318,5 @@ func (w *World) endCombatLocked(combat *Combat) (*CombatEnded, []PlayerRespawned
 		CombatID:   combat.ID,
 		Rewards:    rewards,
 		Recipients: recipients,
-	}, respawnEvents, nil
+	}, respawnEvents, npcRespawns, nil
 }

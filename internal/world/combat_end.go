@@ -100,7 +100,11 @@ func (w *World) validateCombatEndLocked(
 // synchronizeCombatNPCsLocked synchronizes NPC HP
 // and schedules respawn when an NPC is defeated.
 // The caller must hold w.mu.Lock().
-func (w *World) synchronizeCombatNPCsLocked(combat *Combat) {
+func (w *World) synchronizeCombatNPCsLocked(
+	combat *Combat,
+) []NPCRespawnScheduled {
+	respawns := make([]NPCRespawnScheduled, 0)
+
 	for _, participant := range combat.Participants {
 		if participant.IsPlayer {
 			continue
@@ -117,11 +121,17 @@ func (w *World) synchronizeCombatNPCsLocked(combat *Combat) {
 
 			npc.RespawnAt = time.Now().Add(
 				time.Duration(respawnSeconds) * time.Second,
-			).Unix()
+			)
+			respawns = append(respawns, NPCRespawnScheduled{
+				NPCID:     npc.ID,
+				RespawnAt: npc.RespawnAt,
+			})
 		}
 
 		w.npcs[participant.ID] = npc
 	}
+
+	return respawns
 }
 
 // synchronizeCombatPlayersLocked synchronizes player HP,

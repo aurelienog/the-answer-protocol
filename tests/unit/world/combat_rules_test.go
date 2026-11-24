@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"the-answer-protocol/internal/world"
 )
@@ -37,6 +38,7 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 	}
 
 	combatEnded := false
+	var npcRespawn *world.NPCRespawnScheduled
 	for actions := 0; actions < 100; actions++ {
 		combat, err = gameWorld.GetCombat(combat.ID)
 		if err != nil {
@@ -62,11 +64,17 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 
 		participant := combat.Participants[combat.TurnIndex]
 		if participant.IsPlayer {
-			_, _, _, err = gameWorld.AttackCombatParticipant(
+			var actionEvents []any
+			_, _, actionEvents, err = gameWorld.AttackCombatParticipant(
 				combat.ID,
 				participant.ID,
 				"dire_wolf",
 			)
+			for _, event := range actionEvents {
+				if scheduled, ok := event.(world.NPCRespawnScheduled); ok {
+					npcRespawn = &scheduled
+				}
+			}
 		} else {
 		}
 		if err != nil {
@@ -83,6 +91,19 @@ func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 	}
 	if combat.Active {
 		t.Fatal("combat remains active after the Dire Wolf was defeated")
+	}
+	if npcRespawn == nil || npcRespawn.NPCID != "dire_wolf" ||
+		!npcRespawn.RespawnAt.After(time.Now()) {
+		t.Fatalf("NPC respawn schedule = %+v, want future deadline for dire_wolf", npcRespawn)
+	}
+	npcs, err := gameWorld.GetNPCsInRoom("forest_edge")
+	if err != nil {
+		t.Fatalf("GetNPCsInRoom(forest_edge) returned an error: %v", err)
+	}
+	for _, npc := range npcs {
+		if npc.ID == npcRespawn.NPCID && !npc.RespawnAt.Equal(npcRespawn.RespawnAt) {
+			t.Fatalf("NPC respawn deadline = %v, event deadline = %v", npc.RespawnAt, npcRespawn.RespawnAt)
+		}
 	}
 	if !combatEnded {
 	}
