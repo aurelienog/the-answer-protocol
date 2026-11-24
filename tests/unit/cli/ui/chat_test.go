@@ -133,6 +133,34 @@ func TestChatHistoryRetainsLatestHundredMessagesAndScrolls(t *testing.T) {
 }
 
 func newChatHistoryClient(t *testing.T, messageCount int) *network.Client {
+	return newHistoryClient(t, messageCount, func(index int) string {
+		scope := "GLOBAL"
+		switch index % 3 {
+		case 0:
+			scope = "GROUP"
+		case 1:
+			scope = "ROOM"
+		}
+
+		return fmt.Sprintf(
+			"EVT %s CHAT player=Alice message=message-%03d",
+			scope,
+			index,
+		)
+	})
+}
+
+func newLogHistoryClient(t *testing.T, messageCount int) *network.Client {
+	return newHistoryClient(t, messageCount, func(index int) string {
+		return fmt.Sprintf("EVT NOTICE event-%03d", index)
+	})
+}
+
+func newHistoryClient(
+	t *testing.T,
+	messageCount int,
+	eventLine func(int) string,
+) *network.Client {
 	t.Helper()
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -163,21 +191,8 @@ func newChatHistoryClient(t *testing.T, messageCount int) *network.Client {
 		}
 
 		for i := 0; i < messageCount; i++ {
-			scope := "GLOBAL"
-			switch i % 3 {
-			case 0:
-				scope = "GROUP"
-			case 1:
-				scope = "ROOM"
-			}
-
-			if _, err := fmt.Fprintf(
-				conn,
-				"EVT %s CHAT player=Alice message=message-%03d\n",
-				scope,
-				i,
-			); err != nil {
-				t.Errorf("send chat event %d: %v", i, err)
+			if _, err := fmt.Fprintln(conn, eventLine(i)); err != nil {
+				t.Errorf("send history event %d: %v", i, err)
 				return
 			}
 		}

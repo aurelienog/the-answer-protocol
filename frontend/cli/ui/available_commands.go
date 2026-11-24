@@ -79,6 +79,11 @@ var availableCommands = []AvailableCommand{
         Description: "Open chat history or send a chat message.",
     },
     {
+        Name:        "EVENTS",
+        Usage:       "EVENTS",
+        Description: "Display the full event history.",
+    },
+    {
         Name:        "STATUS",
         Usage:       "STATUS",
         Description: "Display your character's health status.",

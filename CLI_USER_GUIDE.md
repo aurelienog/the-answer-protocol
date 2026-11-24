@@ -100,6 +100,7 @@ The interface also supports animated transitions between views.
 
 Enter `CHAT` to open the full chat history. Use `Tab` to cycle through all,
 group, room chat, and global messages; use the viewport controls to scroll.
+Enter `EVENTS` to open the full event history and use the viewport controls to scroll.
 
 ## 5. Available Commands
 
@@ -170,6 +171,11 @@ CHAT GROUP <message>
 Entering `CHAT` without a scope or message opens the chat history.
 
 Each channel has a different audience.
+
+### Events
+
+Enter `EVENTS` to review the retained event history. Use the viewport controls to
+scroll through the entries.
 
 ### Combat
 

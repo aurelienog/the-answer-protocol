@@ -146,6 +146,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.startViewTransition(ViewChat)
 		}
 
+		if strings.EqualFold(command, "EVENTS") {
+			return m, m.startViewTransition(ViewEvents)
+		}
+
 		// Combat navigation: "combat" opens the view without sending a command.
 		if strings.EqualFold(command, "combat") {
 			if m.navigation.CurrentView != ViewCombat {
@@ -326,6 +330,9 @@ func (m *Model) refreshViewports() {
 
 	case ViewChat:
 		content = m.renderChatView(m.ui.MainViewport.Width)
+
+	case ViewEvents:
+		content = m.renderEventsView(m.ui.MainViewport.Width)
 
 	case ViewTalk:
     	content = m.renderTalk()
