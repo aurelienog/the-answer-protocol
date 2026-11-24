@@ -28,6 +28,10 @@ const GameState = {
 
     currentGroup: null,
     groupInvitations: [],
+    knownCombats: {},
+    fledCombatIds: {},
+    lastJoinCombatId: null,
+    lastAttackEnemyId: null,
 
     serverPlayerCount: 1,
     activeChatScope: "ROOM",
@@ -39,6 +43,121 @@ const GameState = {
         GROUP: [],
         COMBAT: [],
         LOG: []
+    },
+
+    resetCombatTracking() {
+        this.knownCombats = {};
+        this.fledCombatIds = {};
+        this.lastJoinCombatId = null;
+        this.lastAttackEnemyId = null;
+    },
+
+    registerKnownCombat(combatId, playerName, roomId, { enemyId = null, viaParty = false, helpRequested = false } = {}) {
+        if (!combatId || !playerName) return;
+        const lowerPlayer = playerName.toLowerCase();
+
+        // One player can only be in one active combat at a time: drop older combats by this player
+        Object.keys(this.knownCombats).forEach(cid => {
+            if (cid !== combatId && this.knownCombats[cid].player.toLowerCase() === lowerPlayer) {
+                delete this.knownCombats[cid];
+            }
+        });
+
+        const prev = this.knownCombats[combatId] || {};
+        this.knownCombats[combatId] = {
+            id: combatId,
+            player: playerName,
+            room: roomId || prev.room || null,
+            enemyId: enemyId || prev.enemyId || null,
+            viaParty: !!(prev.viaParty || viaParty),
+            helpRequested: !!(prev.helpRequested || helpRequested)
+        };
+    },
+
+    removeKnownCombat(combatId) {
+        if (combatId && this.knownCombats[combatId]) {
+            delete this.knownCombats[combatId];
+        }
+    },
+
+    clearPartyCombats() {
+        Object.keys(this.knownCombats).forEach(cid => {
+            const c = this.knownCombats[cid];
+            if (c.helpRequested) {
+                c.viaParty = false;
+            } else if (c.viaParty) {
+                delete this.knownCombats[cid];
+            }
+        });
+    },
+
+    pruneNonPartyCombats(newRoomId) {
+        Object.keys(this.knownCombats).forEach(cid => {
+            const c = this.knownCombats[cid];
+            if (!c.viaParty && c.room && c.room !== newRoomId) {
+                delete this.knownCombats[cid];
+            }
+        });
+    },
+
+    pruneCombatsInRoom(roomId) {
+        if (!roomId) return;
+        Object.keys(this.knownCombats).forEach(cid => {
+            if (this.knownCombats[cid].room === roomId) {
+                delete this.knownCombats[cid];
+            }
+        });
+    },
+
+    // Finds a joinable combat in the CURRENT room matching targetEnemyId
+    findJoinableCombatInRoom(targetEnemyId) {
+        const curRoom = this.room && this.room.id;
+        const roomPlayersLower = (this.playersInRoom || []).map(p => p.toLowerCase());
+        const myNameLower = (this.playerName || '').toLowerCase();
+        const targetLower = targetEnemyId ? String(targetEnemyId).toLowerCase() : null;
+
+        const candidates = Object.values(this.knownCombats).filter(c => {
+            if (!c || !c.id) return false;
+            if (this.fledCombatIds && this.fledCombatIds[c.id]) return false;
+            if (c.player.toLowerCase() === myNameLower) return false;
+            if (!c.viaParty && !c.helpRequested) return false;
+            if (c.room && curRoom && c.room !== curRoom) return false;
+            if (!roomPlayersLower.includes(c.player.toLowerCase())) return false;
+
+            // Reject if combat is explicitly against a DIFFERENT NPC in the same room
+            if (c.enemyId && targetLower && c.enemyId.toLowerCase() !== targetLower) {
+                return false;
+            }
+            return true;
+        });
+
+        if (candidates.length === 0) return null;
+
+        // Prioritize exact enemyId match over unknown-enemyId (e.g. non-party HELP_REQUESTED)
+        if (targetLower) {
+            const exact = candidates.find(c => c.enemyId && c.enemyId.toLowerCase() === targetLower);
+            if (exact) return exact;
+        }
+        return candidates[0];
+    },
+
+    // Checks whether we should render the "Aid" button next to a player in our room
+    getAidCombatForPlayer(playerName) {
+        if (this.inCombat || !playerName) return null;
+        const lower = playerName.toLowerCase();
+        if (lower === (this.playerName || '').toLowerCase()) return null;
+
+        const curRoom = this.room && this.room.id;
+        const inSameRoom = (this.playersInRoom || []).some(p => p.toLowerCase() === lower);
+        if (!inSameRoom) return null;
+
+        return Object.values(this.knownCombats).find(c => {
+            if (!c || c.player.toLowerCase() !== lower) return false;
+            if (this.fledCombatIds && this.fledCombatIds[c.id]) return false;
+            if (!c.viaParty && !c.helpRequested) return false;
+            if (c.room && curRoom && c.room !== curRoom) return false;
+            return true;
+        }) || null;
     },
 
     formatItemStats(itemObj) {

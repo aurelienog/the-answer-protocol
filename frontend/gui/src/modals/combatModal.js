@@ -376,6 +376,41 @@ const CombatModal = {
         document.getElementById('modal-combat').classList.remove('hidden');
     },
 
+    syncEnemyFromServer(enemyInfo) {
+        if (!enemyInfo || !enemyInfo.id) return;
+        const npcMeta = GameState.getNpcMeta(enemyInfo.id);
+        const enemyChanged = this.enemyId !== npcMeta.id;
+
+        this.enemyId = npcMeta.id;
+        this.enemyName = enemyInfo.name || npcMeta.name;
+        if (enemyInfo.maxHp) this.enemyMaxHp = enemyInfo.maxHp;
+        if (enemyInfo.hp !== undefined) this.enemyHp = enemyInfo.hp;
+
+        if (this.enemyId && this.enemyId !== 'default') {
+            sessionStorage.setItem('tap_active_combat_enemy', this.enemyId);
+        }
+
+        if (enemyChanged) {
+            this.syncRoomBackground();
+            document.getElementById('combat-enemy-name').textContent = this.enemyName;
+            UI.setArt(document.getElementById('combat-enemy-avatar'), npcMeta.iconImg, npcMeta.icon);
+            const enemySprite = document.getElementById('combat-enemy-sprite');
+            const enemyFallback = document.getElementById('combat-enemy-fallback');
+            if (enemyFallback) enemyFallback.textContent = npcMeta.icon;
+            if (enemySprite) {
+                enemySprite.style.display = 'block';
+                if (enemyFallback) enemyFallback.style.display = 'none';
+                enemySprite.src = (ASSETS.combat && ASSETS.combat.enemies && ASSETS.combat.enemies[this.enemyId])
+                    || (ASSETS.combat && ASSETS.combat.enemies && ASSETS.combat.enemies.default)
+                    || `/assets/combat/${this.enemyId}.webp`;
+            }
+            if (typeof CombatAnimator !== 'undefined') {
+                CombatAnimator.startCombat(GameState.gender, this.enemyId);
+            }
+        }
+        this.updateBars();
+    },
+
     updateBars() {
         const heroPct = Math.max(0, Math.min(100, Math.round((GameState.hp / GameState.maxHp) * 100)));
         document.getElementById('combat-hero-hp-fill').style.width = heroPct + '%';
@@ -697,8 +732,6 @@ const CombatModal = {
     },
 
     close() {
-        GameState.activeHelpCombatId = null;
-        GameState.activeHelpPlayer = null;
         sessionStorage.removeItem('tap_active_combat_enemy');
         sessionStorage.removeItem('tap_active_combat_enemy_hp');
         sessionStorage.removeItem('tap_combat_deadline');

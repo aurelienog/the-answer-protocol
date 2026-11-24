@@ -37,13 +37,10 @@ const PlayersDockView = {
 
             let partyCell = '-';
             let actionCmd = null;
-            const isHelpTarget = !GameState.inCombat &&
-                GameState.activeHelpCombatId &&
-                GameState.activeHelpPlayer &&
-                GameState.activeHelpPlayer.toLowerCase() === name.toLowerCase();
-            if (!isMe && isHelpTarget) {
+            const aidCombat = GameState.getAidCombatForPlayer(name);
+            if (!isMe && aidCombat) {
                 partyCell = `<button type="button" class="btn-gold-sm js-player-act"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`;
-                actionCmd = `COMBAT JOIN ${GameState.activeHelpCombatId}`;
+                actionCmd = `COMBAT JOIN ${aidCombat.id}`;
             } else if (isMe) {
                 partyCell = inGroup ? '<span class="badge">In Party</span>' : '-';
             } else if (alreadyInMyGroup) {
@@ -108,12 +105,8 @@ const PlayersDockView = {
             const safeMember = UI.escapeHtml(member);
 
             const inSameRoom = (GameState.playersInRoom || []).some(p => p.toLowerCase() === member.toLowerCase());
-            const canAid = !isMe && !GameState.inCombat && inSameRoom &&
-                GameState.activeHelpCombatId &&
-                GameState.activeHelpPlayer &&
-                GameState.activeHelpPlayer.toLowerCase() === member.toLowerCase();
-
-            const rightCell = canAid
+            const aidCombat = GameState.getAidCombatForPlayer(member);
+            const rightCell = aidCombat
                 ? `<button type="button" class="btn-gold-sm js-party-aid"><img src="/assets/icons/ui/sword.webp" alt="" class="tab-mini-icon">Aid</button>`
                 : `<span class="badge">${safeGroupName}</span>`;
 
@@ -123,9 +116,9 @@ const PlayersDockView = {
                 <td class="col-wide-only">${rank}</td>
                 <td>${rightCell}</td>
             `;
-            if (canAid) {
+            if (aidCombat) {
                 const btn = tr.querySelector('.js-party-aid');
-                if (btn) btn.dataset.cmd = `COMBAT JOIN ${GameState.activeHelpCombatId}`;
+                if (btn) btn.dataset.cmd = `COMBAT JOIN ${aidCombat.id}`;
             }
             gBody.appendChild(tr);
         });

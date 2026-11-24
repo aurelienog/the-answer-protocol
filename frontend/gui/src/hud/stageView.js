@@ -54,11 +54,7 @@ const StageView = {
                     if (isHostile) {
                         CombatModal.enemyId = m.id;
                         UI.closeAllModals();
-                        if (GameState.activeHelpCombatId) {
-                            App.sendCommand(`COMBAT JOIN ${GameState.activeHelpCombatId}`);
-                        } else {
-                            App.sendCommand(`ATTACK ${m.id}`);
-                        }
+                        App.sendCommand(`ATTACK ${m.id}`);
                     } else {
                         DialogueModal.open(m.id);
                     }
