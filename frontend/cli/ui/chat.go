@@ -8,12 +8,10 @@ import (
 )
 
 func (m Model) renderChat(width, height int) string {
-    entries := make([]string, 0, len(m.communication.ChatLog))
-
-    for _, message := range m.communication.ChatLog {
-        if m.matchesChatFilter(message) {
-            entries = append(entries, renderChatMessage(message))
-        }
+    messages := m.filteredChatMessages()
+    entries := make([]string, 0, len(messages))
+    for _, message := range messages {
+        entries = append(entries, renderChatMessage(message))
     }
 
     title := layout.TitleStyle.Render("CHAT") + "  " + m.renderChatFilter()
@@ -46,6 +44,18 @@ func (m Model) renderChatFilter() string {
     }
 
     return strings.Join(options, " ")
+}
+
+func (m Model) filteredChatMessages() []ChatMessage {
+    messages := make([]ChatMessage, 0, len(m.communication.ChatLog))
+
+    for _, message := range m.communication.ChatLog {
+        if m.matchesChatFilter(message) {
+            messages = append(messages, message)
+        }
+    }
+
+    return messages
 }
 
 func (m Model) matchesChatFilter(message ChatMessage) bool {

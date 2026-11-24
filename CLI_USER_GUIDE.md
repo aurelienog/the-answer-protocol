@@ -98,6 +98,9 @@ Enter commands in the input area and press `Enter` to execute them.
 
 The interface also supports animated transitions between views.
 
+Enter `CHAT` to open the full chat history. Use `Tab` to cycle through all,
+group, room chat, and global messages; use the viewport controls to scroll.
+
 ## 5. Available Commands
 
 Commands are entered in the input area and executed by pressing `Enter`.
@@ -163,6 +166,8 @@ CHAT GLOBAL <message>
 CHAT ROOM <message>
 CHAT GROUP <message>
 ```
+
+Entering `CHAT` without a scope or message opens the chat history.
 
 Each channel has a different audience.
 

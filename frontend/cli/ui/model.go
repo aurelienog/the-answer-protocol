@@ -25,6 +25,7 @@ const (
 	ViewQuests
 	ViewGroup
 	ViewCombat
+    ViewChat
     ViewTalk
 )
 

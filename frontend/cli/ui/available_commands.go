@@ -75,8 +75,8 @@ var availableCommands = []AvailableCommand{
     },
     {
         Name:        "CHAT",
-        Usage:       "CHAT <GLOBAL|ROOM|GROUP> <message>",
-        Description: "Send a chat message.",
+        Usage:       "CHAT [<GLOBAL|ROOM|GROUP> <message>]",
+        Description: "Open chat history or send a chat message.",
     },
     {
         Name:        "STATUS",

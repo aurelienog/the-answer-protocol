@@ -11,6 +11,7 @@ import (
 )
 
 const maxEventLogEntries = 100
+const maxChatLogEntries = 100
 
 func (m Model) handleServerEvent(
 	msg serverEventMsg,
@@ -27,8 +28,8 @@ func (m Model) handleServerEvent(
 				chatMessage,
 			)
 
-			if len(m.communication.ChatLog) > maxEventLogEntries {
-				m.communication.ChatLog = m.communication.ChatLog[len(m.communication.ChatLog)-maxEventLogEntries:]
+			if len(m.communication.ChatLog) > maxChatLogEntries {
+				m.communication.ChatLog = m.communication.ChatLog[len(m.communication.ChatLog)-maxChatLogEntries:]
 			}
 		}
 	} else {
