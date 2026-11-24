@@ -1,6 +1,7 @@
 package ui
 import (
 	"encoding/json"
+	"fmt"
 )
 func handleStatusResponse(m *Model, payload string) error {
 	var status PlayerStatus
@@ -23,9 +24,43 @@ func handleGroupInfoResponse(m *Model, payload string) error {
 	}
 
 	m.world.Group = group
+	m.ui.PendingRefresh = RefreshNone
+	return nil
+}
+
+func handleGroupJoinResponse(m *Model, payload string) error {
+	fields := parsePayloadFields(payload)
+	groupID := fields["group"]
+
+	if groupID == "" {
+		return fmt.Errorf("missing group ID in GROUP JOIN response")
+	}
+
+	m.player.Invitations = removeInvitationByID(
+		m.player.Invitations,
+		groupID,
+	)
+
+	m.ui.PendingRefresh = RefreshGroup
 
 	return nil
 }
+
+func removeInvitationByID(
+	invitations []GroupInvitation,
+	groupID string,
+) []GroupInvitation {
+	result := make([]GroupInvitation, 0, len(invitations))
+
+	for _, invitation := range invitations {
+		if invitation.ID != groupID {
+			result = append(result, invitation)
+		}
+	}
+
+	return result
+}
+
 
 func handleInventoryResponse(m *Model, payload string) error {
 	var inventory []InventoryItem

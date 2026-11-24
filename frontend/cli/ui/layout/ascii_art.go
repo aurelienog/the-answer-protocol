@@ -1,6 +1,7 @@
 package layout
 
 import (
+    "fmt"
     "strings"
     "os"
     "path/filepath"
@@ -54,4 +55,18 @@ func GetRoomASCIIArt(roomName string) string {
     }
 
     return string(data)
+}
+
+func PrintBanner() {
+	fmt.Print(`
+    ████████╗ █████╗ ██████╗
+    ╚══██╔══╝██╔══██╗██╔══██╗
+      ██║   ███████║██████╔╝
+      ██║   ██╔══██║██╔═══╝
+      ██║   ██║  ██║██║
+      ╚═╝   ╚═╝  ╚═╝╚═╝
+
+        THE ANSWER PROTOCOL
+      A TCP Multiplayer Adventure
+  `)
 }

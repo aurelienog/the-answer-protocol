@@ -112,6 +112,11 @@ var groupCommands = []AvailableCommand{
         Description: "Invite a player to your group.",
     },
     {
+        Name:        "INVITATIONS",
+        Usage:       "GROUP INVITATIONS",
+        Description: "show pending party invites.",
+    },
+    {
         Name:        "JOIN",
         Usage:       "GROUP JOIN <name>",
         Description: "Join a group.",

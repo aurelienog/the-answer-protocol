@@ -1,3 +1,4 @@
+
 package ui
 
 import (
@@ -9,80 +10,119 @@ import (
 )
 
 func (m Model) renderGroup(detailed bool) string {
+	var sections []string
+
 	group := m.world.Group
 
+	// Group header
 	if group.ID == "" {
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
+		sections = append(
+			sections,
 			layout.TitleStyle.Render(layout.IconGroup+" GROUP"),
 			"",
 			layout.MutedStyle.Render("You are not in a group"),
 		)
-	}
-
-	title := layout.TitleStyle.Render(
-		layout.IconGroup + " GROUP " + group.Name,
-	)
-
-	sections := []string{
-		title,
-	}
-
-	if detailed {
-		sections = append(
-			sections,
-			layout.MutedStyle.Render("ID: "+group.ID),
-			"",
-			layout.TitleStyle.Render("MEMBERS"),
-		)
 	} else {
 		sections = append(
 			sections,
-			"",
+			layout.TitleStyle.Render(
+				layout.IconGroup+" GROUP "+group.Name,
+			),
 		)
-	}
 
-	if len(group.Members) == 0 {
-		sections = append(
-			sections,
-			layout.MutedStyle.Render("No members"),
-		)
-	} else {
-		for _, member := range group.Members {
+		if detailed {
 			sections = append(
 				sections,
-				layout.SuccessStyle.Render("[+] "+member),
+				layout.MutedStyle.Render("ID: "+group.ID),
+				"",
+				layout.TitleStyle.Render("MEMBERS"),
 			)
+		} else {
+			sections = append(sections, "")
 		}
-	}
 
-	if detailed {
-		sections = append(
-			sections,
-			"",
-			layout.TitleStyle.Render("PENDING INVITATIONS"),
-		)
-
-		pendingInvitations := make([]string, 0)
-
-		for player, pending := range group.Invitations {
-			if pending {
-				pendingInvitations = append(pendingInvitations, player)
+		// Group members
+		if len(group.Members) == 0 {
+			sections = append(
+				sections,
+				layout.MutedStyle.Render("No members"),
+			)
+		} else {
+			for _, member := range group.Members {
+				sections = append(
+					sections,
+					layout.SuccessStyle.Render("[+] "+member),
+				)
 			}
 		}
 
-		sort.Strings(pendingInvitations)
-
-		if len(pendingInvitations) == 0 {
+		// Invitations sent by the current group
+		if detailed {
 			sections = append(
 				sections,
-				layout.MutedStyle.Render("No pending invitations"),
+				"",
+				layout.TitleStyle.Render("PENDING INVITATIONS"),
 			)
-		} else {
-			for _, player := range pendingInvitations {
+
+			pendingInvitations := make([]string, 0)
+
+			for player, pending := range group.Invitations {
+				if pending {
+					pendingInvitations = append(
+						pendingInvitations,
+						player,
+					)
+				}
+			}
+
+			sort.Strings(pendingInvitations)
+
+			if len(pendingInvitations) == 0 {
 				sections = append(
 					sections,
-					layout.WarningStyle.Render("[?] "+player),
+					layout.MutedStyle.Render("No pending invitations"),
+				)
+			} else {
+				for _, player := range pendingInvitations {
+					sections = append(
+						sections,
+						layout.WarningStyle.Render("[?] "+player),
+					)
+				}
+			}
+		}
+	}
+
+	// Invitations received by the current player.
+	// This section is independent of group membership.
+	if detailed {
+		sections = append(
+			sections,
+			"",
+			layout.TitleStyle.Render("RECEIVED INVITATIONS"),
+		)
+
+		if len(m.player.Invitations) == 0 {
+			sections = append(
+				sections,
+				layout.MutedStyle.Render("No received invitations"),
+			)
+		} else {
+			invitations := append(
+				[]GroupInvitation(nil),
+				m.player.Invitations...,
+			)
+
+			sort.Slice(invitations, func(i, j int) bool {
+				return invitations[i].Name < invitations[j].Name
+			})
+
+			for _, invitation := range invitations {
+				sections = append(
+					sections,
+					layout.WarningStyle.Render(
+						"[+] "+invitation.Name,
+					),
 				)
 			}
 		}

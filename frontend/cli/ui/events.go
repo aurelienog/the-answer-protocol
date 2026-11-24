@@ -100,24 +100,50 @@ func (m *Model) appendEventLog(message string) {
 	}
 }
 
-func (m *Model) handleGroupEvent(data string) tea.Cmd {
-	if m.navigation.CurrentView != ViewGroup {
-		return nil
-	}
 
+func (m *Model) handleGroupEvent(data string) tea.Cmd {
 	parts := strings.Fields(data)
 	if len(parts) == 0 {
 		return nil
 	}
 
 	switch parts[0] {
-	case "JOIN", "LEAVE":
-		m.ui.PendingRefresh = RefreshGroup
-		return sendCommand(m.client, "GROUP INFO")
+	case "INVITE":
+		fields := parseKeyValuesOrdered(data, "player", "group")
 
-	default:
-		return nil
+		player := fields["player"]
+		groupName := fields["group"]
+
+		// Ignore invitations not addressed to the current player.
+		if player == "" || groupName == "" {
+			return nil
+		}
+
+		// Avoid adding duplicate invitations.
+		for _, invitation := range m.player.Invitations {
+			if strings.EqualFold(invitation.Name, groupName) {
+				return nil
+			}
+		}
+
+		m.player.Invitations = append(
+			m.player.Invitations,
+			GroupInvitation{
+				Name: groupName,
+			},
+		)
+
+		m.communication.StatusMessage =
+			"You received an invitation to join " + groupName
+
+	case "JOIN", "LEAVE":
+		if m.navigation.CurrentView == ViewGroup {
+			m.ui.PendingRefresh = RefreshGroup
+			return sendCommand(m.client, "GROUP INFO")
+		}
 	}
+
+	return nil
 }
 
 func (m *Model) appendCombatLog(message string) {

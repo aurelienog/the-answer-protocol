@@ -62,11 +62,17 @@ type InventoryItem struct {
     Quantity int    `json:"quantity"`
 }
 
+type GroupInvitation struct {
+    ID   string
+    Name string
+}
+
 type PlayerState struct {
     Username  string
     Status    PlayerStatus
     Inventory []InventoryItem
     Quests    []Quest
+    Invitations []GroupInvitation
 }
 
 type Room struct {

@@ -18,8 +18,9 @@ var commandHandlers = map[string]commandHandler{
 	"QUEST":         handleQuestResponse,
 	"GROUP INFO":    handleGroupInfoResponse,
 	"GROUP CREATE":  handleGroupActionResponse,
-	"GROUP JOIN":    handleGroupActionResponse,
+	"GROUP JOIN":    handleGroupJoinResponse,
 	"GROUP INVITE":  handleGroupActionResponse,
+	"GROUP INVITATIONS":  handleGroupActionResponse,
 	"GROUP LEAVE":   handleGroupActionResponse,
 	"LOOK":          handleLookResponse,
 	"MOVE":          handleMoveResponse,
@@ -116,7 +117,7 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 	case "TALK":
 		return m, m.startViewTransition(ViewTalk)
 
-	case "GROUP INFO":
+	case "GROUP INFO", "GROUP INVITATIONS":
 		if pendingRefresh != RefreshGroup {
 			return m, m.startViewTransition(ViewGroup)
 		}
@@ -146,13 +147,17 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 	switch command {
 	case "GROUP CREATE", "GROUP JOIN":
 		m.communication.StatusMessage = "Group updated. Loading group..."
-		m.ui.PendingRefresh = RefreshNone
+		m.ui.PendingRefresh = RefreshGroup
 		return m, sendCommand(m.client, "GROUP INFO")
 
 	case "GROUP INVITE":
 		m.communication.StatusMessage = "Invitation sent."
 		m.ui.PendingRefresh = RefreshGroup
 		return m, sendCommand(m.client, "GROUP INFO")
+	
+	case "GROUP INVITATIONS":
+		m.communication.StatusMessage = "Invitations updated."
+		return m, nil
 
 	case "GROUP LEAVE":
 		m.world.Group = Group{}
