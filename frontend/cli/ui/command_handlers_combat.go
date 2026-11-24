@@ -115,9 +115,14 @@ func handleCombatFleeResponse(model *Model, payload string) error {
 		}
 	}
 
+	model.world.Combat.Active = false
+	model.world.Combat.CurrentTurn = ""
+
 	for index := range model.world.Combat.Participants {
 		participant := &model.world.Combat.Participants[index]
-		if participant.IsPlayer && strings.EqualFold(participant.Name, model.player.Username) {
+		if participant.IsPlayer &&
+			(strings.EqualFold(participant.Name, model.player.Username) ||
+				strings.EqualFold(participant.ID, model.player.Username)) {
 			participant.Escaped = true
 			break
 		}

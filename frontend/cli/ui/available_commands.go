@@ -3,172 +3,172 @@ package ui
 import (
 	"strings"
 
-    "the-answer-protocol/frontend/cli/ui/layout"
+	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
 type AvailableCommand struct {
-    Name        string
-    Usage       string
-    Description string
+	Name        string
+	Usage       string
+	Description string
 }
 
 var availableCommands = []AvailableCommand{
-    {
-        Name:        "MAP",
-        Usage:       "MAP",
-        Description: "Display the world map.",
-    },
-    {
-        Name:        "LOOK",
-        Usage:       "LOOK",
-        Description: "Look around the current room.",
-    },
-    {
-        Name:        "QUIT",
-        Usage:       "QUIT",
-        Description: "Disconnect from the server.",
-    },
-    {
-        Name:        "MOVE",
-        Usage:       "MOVE <direction>",
-        Description: "Move in a direction.",
-    },
-    {
-        Name:        "TAKE",
-        Usage:       "TAKE <item>",
-        Description: "Pick up an item from the room.",
-    },
-    {
-        Name:        "DROP",
-        Usage:       "DROP <item>",
-        Description: "Drop an item from your inventory.",
-    },
-    {
-        Name:        "INVENTORY",
-        Usage:       "INVENTORY",
-        Description: "Display your inventory.",
-    },
-    {
-        Name:        "TALK",
-        Usage:       "TALK <npc>",
-        Description: "Talk to an NPC.",
-    },
-    {
-        Name:        "QUEST",
-        Usage:       "QUEST <npc>",
-        Description: "Request and accept a quest from an NPC.",
-    },
-    {
-        Name:        "QUESTS",
-        Usage:       "QUESTS",
-        Description: "Display your quests.",
-    },
-    {
-        Name:        "WHO",
-        Usage:       "WHO",
-        Description: "Display the number of connected players.",
-    },
-    {
-        Name:        "GROUP",
-        Usage:       "GROUP <subcommand>",
-        Description: "Manage your group.",
-    },
-    {
-        Name:        "CHAT",
-        Usage:       "CHAT [<GLOBAL|ROOM|GROUP> <message>]",
-        Description: "Open chat history or send a chat message.",
-    },
-    {
-        Name:        "EVENTS",
-        Usage:       "EVENTS",
-        Description: "Display the full event history.",
-    },
-    {
-        Name:        "STATUS",
-        Usage:       "STATUS",
-        Description: "Display your character's health status.",
-    },
-    {
-        Name:        "ATTACK",
-        Usage:       "ATTACK <target>",
-        Description: "Start combat against an NPC.",
-    },
-    {
-        Name:        "COMBAT",
-        Usage:       "COMBAT <subcommand>",
-        Description: "Perform actions during combat.",
-    },
-    {
-        Name:        "USE",
-        Usage:       "USE <item>",
-        Description: "Use a consumable item from your inventory.",
-    },
+	{
+		Name:        "MAP",
+		Usage:       "MAP",
+		Description: "Display the world map.",
+	},
+	{
+		Name:        "LOOK",
+		Usage:       "LOOK",
+		Description: "Look around the current room.",
+	},
+	{
+		Name:        "QUIT",
+		Usage:       "QUIT",
+		Description: "Disconnect from the server.",
+	},
+	{
+		Name:        "MOVE",
+		Usage:       "MOVE <direction>",
+		Description: "Move in a direction.",
+	},
+	{
+		Name:        "TAKE",
+		Usage:       "TAKE <item>",
+		Description: "Pick up an item from the room.",
+	},
+	{
+		Name:        "DROP",
+		Usage:       "DROP <item>",
+		Description: "Drop an item from your inventory.",
+	},
+	{
+		Name:        "INVENTORY",
+		Usage:       "INVENTORY",
+		Description: "Display your inventory.",
+	},
+	{
+		Name:        "TALK",
+		Usage:       "TALK <npc>",
+		Description: "Talk to an NPC.",
+	},
+	{
+		Name:        "QUEST",
+		Usage:       "QUEST <npc>",
+		Description: "Request and accept a quest from an NPC.",
+	},
+	{
+		Name:        "QUESTS",
+		Usage:       "QUESTS",
+		Description: "Display your quests.",
+	},
+	{
+		Name:        "WHO",
+		Usage:       "WHO",
+		Description: "Display the number of connected players.",
+	},
+	{
+		Name:        "GROUP",
+		Usage:       "GROUP <subcommand>",
+		Description: "Manage your group.",
+	},
+	{
+		Name:        "CHAT",
+		Usage:       "CHAT [<GLOBAL|ROOM|GROUP> <message>]",
+		Description: "Open chat history or send a chat message.",
+	},
+	{
+		Name:        "EVENTS",
+		Usage:       "EVENTS",
+		Description: "Display the full event history.",
+	},
+	{
+		Name:        "STATUS",
+		Usage:       "STATUS",
+		Description: "Display your character's health status.",
+	},
+	{
+		Name:        "ATTACK",
+		Usage:       "ATTACK <target>",
+		Description: "Start combat against an NPC.",
+	},
+	{
+		Name:        "COMBAT",
+		Usage:       "COMBAT <subcommand>",
+		Description: "Perform actions during combat.",
+	},
+	{
+		Name:        "USE",
+		Usage:       "USE <item>",
+		Description: "Use a consumable item from your inventory.",
+	},
 }
 
 var groupCommands = []AvailableCommand{
-    {
-        Name:        "CREATE",
-        Usage:       "GROUP CREATE <name>",
-        Description: "Create a group.",
-    },
-    {
-        Name:        "INVITE",
-        Usage:       "GROUP INVITE <player>",
-        Description: "Invite a player to your group.",
-    },
-    {
-        Name:        "INVITATIONS",
-        Usage:       "GROUP INVITATIONS",
-        Description: "show pending party invites.",
-    },
-    {
-        Name:        "JOIN",
-        Usage:       "GROUP JOIN <name>",
-        Description: "Join a group.",
-    },
-    {
-        Name:        "LEAVE",
-        Usage:       "GROUP LEAVE",
-        Description: "Leave your current group.",
-    },
-    {
-        Name:        "INFO",
-        Usage:       "GROUP INFO",
-        Description: "Display information about your group.",
-    },
+	{
+		Name:        "CREATE",
+		Usage:       "GROUP CREATE <name>",
+		Description: "Create a group.",
+	},
+	{
+		Name:        "INVITE",
+		Usage:       "GROUP INVITE <player>",
+		Description: "Invite a player to your group.",
+	},
+	{
+		Name:        "INVITATIONS",
+		Usage:       "GROUP INVITATIONS",
+		Description: "show pending party invites.",
+	},
+	{
+		Name:        "JOIN",
+		Usage:       "GROUP JOIN <name>",
+		Description: "Join a group.",
+	},
+	{
+		Name:        "LEAVE",
+		Usage:       "GROUP LEAVE",
+		Description: "Leave your current group.",
+	},
+	{
+		Name:        "INFO",
+		Usage:       "GROUP INFO",
+		Description: "Display information about your group.",
+	},
 }
 
 var combatCommands = []AvailableCommand{
-    {
-        Name:        "ATTACK",
-        Usage:       "COMBAT ATTACK",
-        Description: "Attack during your combat turn.",
-    },
-    {
-        Name:        "FLEE",
-        Usage:       "COMBAT FLEE",
-        Description: "Attempt to escape combat.",
-    },
-    {
-        Name:        "DEFEND",
-        Usage:       "COMBAT DEFEND",
-        Description: "Defend during your combat turn.",
-    },
-    {
-        Name:        "USE",
-        Usage:       "COMBAT USE",
-        Description: "Use an item during your combat turn.",
-    },
-    {
-        Name:        "HELP",
-        Usage:       "COMBAT HELP",
-        Description: "Request help during combat.",
-    },
-    {
-        Name:        "JOIN",
-        Usage:       "COMBAT JOIN",
-        Description: "Join an ongoing combat.",
-    },
+	{
+		Name:        "ATTACK",
+		Usage:       "COMBAT ATTACK",
+		Description: "Attack during your combat turn.",
+	},
+	{
+		Name:        "FLEE",
+		Usage:       "COMBAT FLEE",
+		Description: "Attempt to escape combat.",
+	},
+	{
+		Name:        "DEFEND",
+		Usage:       "COMBAT DEFEND",
+		Description: "Defend during your combat turn.",
+	},
+	{
+		Name:        "USE",
+		Usage:       "COMBAT USE",
+		Description: "Use an item during your combat turn.",
+	},
+	{
+		Name:        "HELP",
+		Usage:       "COMBAT HELP",
+		Description: "Request help during combat.",
+	},
+	{
+		Name:        "JOIN",
+		Usage:       "COMBAT JOIN",
+		Description: "Join an ongoing combat.",
+	},
 }
 
 func (m Model) hasHostileNPC() bool {
@@ -217,19 +217,19 @@ func (m Model) availableCommandsContent() string {
 		addCommand(availableCommands, name)
 	}
 
-    add("MAP")
-    add("LOOK")
-    
+	add("MAP")
+	add("LOOK")
+
 	if m.hasAvailableExits() && !m.world.Combat.Active {
 		add("MOVE")
 	}
 
 	if m.hasFriendlyNPC() && !m.world.Combat.Active {
 		add("TALK")
-        // add("QUEST") if hasquest...
+		// add("QUEST") if hasquest...
 	}
 
-    add("INVENTORY")
+	add("INVENTORY")
 
 	if !m.world.Combat.Active {
 		add("USE")
@@ -239,15 +239,15 @@ func (m Model) availableCommandsContent() string {
 		add("TAKE")
 	}
 
-    if m.hasDroppableItems() && !m.world.Combat.Active {
-        add("DROP")
-    }
-    
+	if m.hasDroppableItems() && !m.world.Combat.Active {
+		add("DROP")
+	}
+
 	add("CHAT")
-    add("GROUP")
+	add("GROUP")
 	add("QUESTS")
 	add("WHO")
-    add("STATUS")
+	add("STATUS")
 
 	// if m.hasGroup() {
 	// 	addCommand(groupCommands, "INVITATIONS")
@@ -270,7 +270,7 @@ func (m Model) availableCommandsContent() string {
 			commands = append(commands, command)
 		}
 	}
-    add("QUIT")
+	add("QUIT")
 
 	usages := make([]string, 0, len(commands))
 
@@ -279,9 +279,9 @@ func (m Model) availableCommandsContent() string {
 
 		usage := parts[0]
 
-        if strings.HasPrefix(command.Usage, "COMBAT ") {
-            usage = command.Usage
-        }
+		if strings.HasPrefix(command.Usage, "COMBAT ") {
+			usage = command.Usage
+		}
 		// if len(parts) == 2 {
 		// 	usage += " " + layout.CommandArgumentStyle.Render(parts[1])
 		// }

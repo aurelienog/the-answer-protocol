@@ -1,4 +1,3 @@
-
 package ui
 
 import (
@@ -7,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"the-answer-protocol/frontend/cli/ui/layout"
 	"the-answer-protocol/frontend/cli/ui/animations"
+	"the-answer-protocol/frontend/cli/ui/layout"
 )
 
 func (m Model) renderCombat() string {
@@ -51,11 +50,17 @@ func renderCombatInfo(combat CombatState) string {
 		status = layout.MutedStyle.Render("ENDED")
 	}
 
+	playerStatus := layout.MutedStyle.Render("NOT IN COMBAT")
+	if combat.Active {
+		playerStatus = layout.SuccessStyle.Render("IN COMBAT")
+	}
+
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		fmt.Sprintf("%s %s", layout.StatusStyle.Render("Combat:"), layout.InfoStyle.Render(combat.ID)),
 		fmt.Sprintf("%s %d", layout.StatusStyle.Render("Round:"), combat.Round),
 		fmt.Sprintf("%s %s", layout.StatusStyle.Render("Status:"), status),
+		fmt.Sprintf("%s %s", layout.StatusStyle.Render("You:"), playerStatus),
 	)
 }
 
@@ -164,7 +169,7 @@ func (m Model) renderCombatParticipant(participant CombatParticipantState, width
 func (m Model) renderCombatTurn() string {
 	combat := m.world.Combat
 	if !combat.Active {
-		return layout.MutedStyle.Render("Combat has ended")
+		return layout.MutedStyle.Render("You are not in combat")
 	}
 
 	if combat.CurrentTurn == "" {

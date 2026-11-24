@@ -3,6 +3,7 @@ package internal_test
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
@@ -32,11 +33,12 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 		t.Fatalf("load world: %v", err)
 	}
 
-	registry := server.NewRegistry(slog.Default())
-	dispatcher := commands.NewDispatcher(slog.Default())
+	testLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	registry := server.NewRegistry(testLogger)
+	dispatcher := commands.NewDispatcher(testLogger)
 	commands.RegisterCommands(dispatcher)
 	eventBus := events.NewBus()
-	eventBus.Subscribe(server.NewNotificationDispatcher(registry, slog.Default()).Handle)
+	eventBus.Subscribe(server.NewNotificationDispatcher(registry, testLogger).Handle)
 
 	config := abuse.DefaultConfig()
 	config.MaxConnections = concurrentClientCount
@@ -97,7 +99,7 @@ func Test100ConcurrentClientsMutateWorldConcurrently(t *testing.T) {
 			eventBus,
 			lease,
 			0,
-			slog.Default(),
+			testLogger,
 		)
 	}
 
