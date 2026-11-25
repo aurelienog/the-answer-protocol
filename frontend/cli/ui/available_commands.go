@@ -190,6 +190,23 @@ func (m Model) hasFriendlyNPC() bool {
 	return false
 }
 
+func (m Model) hasAvailableQuestNPC() bool {
+	conversation := m.world.Conversation
+	if conversation == nil ||
+		conversation.Quest == nil ||
+		conversation.QuestStatus != "available" {
+		return false
+	}
+
+	for _, npc := range m.world.Room.NPCs {
+		if npc.ID == conversation.NPC.ID {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (m Model) hasAvailableExits() bool {
 	return len(m.world.Room.Room.Exits) > 0
 }
@@ -227,8 +244,10 @@ func (m Model) availableCommandsContent() string {
 
 	if m.hasFriendlyNPC() && !m.world.Combat.Active {
 		add("TALK")
-		
-		// add("QUEST") if hasquest...
+	}
+
+	if m.hasAvailableQuestNPC() && !m.world.Combat.Active {
+		add("QUEST")
 	}
 	
 	add("INVENTORY")
