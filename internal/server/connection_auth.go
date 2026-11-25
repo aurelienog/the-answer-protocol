@@ -71,6 +71,18 @@ func authenticatePlayer(
 func (handler *connectionHandler) handleConnect(line string) bool {
 	username, rejection := parseConnectRequest(line)
 	if rejection != nil {
+		request, _ := protocol.ParseRequest(line)
+		command := request.Command
+		if command == "" {
+			command = "CONNECT"
+		}
+		handler.log.Warn("command.rejected",
+			slog.String("session_id", handler.sessionID),
+			slog.String("command", command),
+			slog.Any("parameters", request.Args),
+			slog.String("raw_parameters", request.RawArgs),
+			slog.String("error", rejection.Name),
+		)
 		return SendMessage(handler.session, *rejection) == nil
 	}
 
@@ -83,6 +95,14 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	)
 	if err != nil {
 		if errors.Is(err, ErrNameInUse) {
+			handler.log.Warn("command.rejected",
+				slog.String("session_id", handler.sessionID),
+				slog.String("player", username),
+				slog.String("command", "CONNECT"),
+				slog.Any("parameters", []string{username}),
+				slog.String("raw_parameters", username),
+				slog.String("error", "NAME_IN_USE"),
+			)
 			return SendMessage(
 				handler.session,
 				protocol.ERR(protocol.CodeNameInUse, "NAME_IN_USE"),
@@ -92,6 +112,9 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 		handler.log.Error("session.authentication_failed",
 			slog.String("session_id", handler.sessionID),
 			slog.String("player", username),
+			slog.String("command", "CONNECT"),
+			slog.Any("parameters", []string{username}),
+			slog.String("raw_parameters", username),
 			slog.String("error", err.Error()),
 		)
 		_ = SendMessage(
@@ -109,6 +132,9 @@ func (handler *connectionHandler) handleConnect(line string) bool {
 	handler.log.Info("session.authenticated",
 		slog.String("session_id", handler.sessionID),
 		slog.String("player", username),
+		slog.String("command", "CONNECT"),
+		slog.Any("parameters", []string{username}),
+		slog.String("raw_parameters", username),
 	)
 	roomID, err := handler.gameWorld.GetPlayerRoom(username)
 	if err != nil {
