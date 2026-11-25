@@ -62,6 +62,8 @@ func TestHandleConnectionGroupStartsCooperativeCombat(t *testing.T) {
 	if bobStarted != aliceStarted {
 		t.Fatalf("combat-start events differ: Alice=%q Bob=%q", aliceStarted, bobStarted)
 	}
+	readInitialAttackEvents(t, alice)
+	readInitialAttackEvents(t, bob)
 	if !strings.Contains(aliceStarted, `"name":"Alice"`) ||
 		!strings.Contains(aliceStarted, `"name":"Bob"`) ||
 		!strings.Contains(aliceStarted, "room=docks") {
@@ -85,11 +87,13 @@ func TestHandleConnectionGroupStartsCooperativeCombat(t *testing.T) {
 		CombatID string `json:"combat_id"`
 		Status   string `json:"status"`
 		TargetHP int    `json:"target_hp"`
+		Damage   int    `json:"damage"`
 	}
 	if err := json.Unmarshal([]byte(strings.TrimPrefix(attackResponse, "OK ")), &response); err != nil {
 		t.Fatalf("decode attack response: %v; response: %q", err, attackResponse)
 	}
-	if response.CombatID == "" || response.Status != "combat" || response.TargetHP <= 0 {
+	if response.CombatID == "" || response.Status != "combat" ||
+		response.TargetHP != 130 || response.Damage != 10 {
 		t.Fatalf("unexpected attack response payload: %+v", response)
 	}
 
@@ -148,6 +152,7 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
@@ -223,6 +228,8 @@ func TestHandleConnectionCombatContinuesWhenParticipantDisconnects(t *testing.T)
 	if got := bob.readResponse(t); got != aliceStarted {
 		t.Fatalf("Bob's combat-start event = %q, want %q", got, aliceStarted)
 	}
+	readInitialAttackEvents(t, alice)
+	readInitialAttackEvents(t, bob)
 	aliceTurn := alice.readResponse(t)
 	if !strings.HasPrefix(aliceTurn, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", aliceTurn)
@@ -304,6 +311,7 @@ func TestHandleConnectionCombatEndsWhenAllParticipantsDisconnect(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
@@ -356,6 +364,7 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
@@ -431,6 +440,7 @@ func TestHandleConnectionCombatDefeatRespawnsPlayer(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
@@ -490,6 +500,7 @@ func TestHandleConnectionCombatFleeEndsSoloEncounter(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
@@ -582,6 +593,18 @@ func readUntilResponse(t *testing.T, env *connectionTestEnv) string {
 	}
 }
 
+func readInitialAttackEvents(t *testing.T, env *connectionTestEnv) {
+	t.Helper()
+
+	if got := env.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT ATTACK attacker_type=PLAYER ") {
+		t.Fatalf("initial combat-attack event = %q", got)
+	}
+	if got := env.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT DAMAGE ") ||
+		!strings.Contains(got, "amount=10 ") {
+		t.Fatalf("initial combat-damage event = %q", got)
+	}
+}
+
 func TestHandleConnectionRejectsNonCombatActionsDuringCombat(t *testing.T) {
 	alice := newConnectionTestEnv(t)
 	connectTestPlayer(t, alice, "Alice")
@@ -600,6 +623,7 @@ func TestHandleConnectionRejectsNonCombatActionsDuringCombat(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
@@ -652,6 +676,7 @@ func TestHandleConnectionRejectsJoiningCombatFromAnotherRoom(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}

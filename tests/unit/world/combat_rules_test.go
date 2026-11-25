@@ -12,6 +12,64 @@ import (
 	"the-answer-protocol/internal/world"
 )
 
+func TestStartCombatWithInitialAttackAppliesDamageAndPublishesEvents(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+
+	combat, damage, events, err := gameWorld.StartCombatWithInitialAttack(
+		"Alice",
+		"Dock Warden",
+	)
+	if err != nil {
+		t.Fatalf("StartCombatWithInitialAttack() returned an error: %v", err)
+	}
+	if damage != 10 {
+		t.Fatalf("initial damage = %d, want 10", damage)
+	}
+
+	npc := combatParticipantByID(t, combat, "dock_warden")
+	if npc.Stats.HP != 130 || !npc.Alive {
+		t.Fatalf("Dock Warden combat state = %+v, want 130 HP and alive", npc)
+	}
+
+	npcs, err := gameWorld.GetNPCsInRoom("docks")
+	if err != nil {
+		t.Fatalf("GetNPCsInRoom(docks) returned an error: %v", err)
+	}
+	foundNPC := false
+	for _, current := range npcs {
+		if current.ID == "dock_warden" {
+			if current.CombatStats.HP != 130 {
+				t.Fatalf("Dock Warden world HP = %d, want 130", current.CombatStats.HP)
+			}
+			foundNPC = true
+			break
+		}
+	}
+	if !foundNPC {
+		t.Fatal("Dock Warden not found in docks")
+	}
+
+	attackFound := false
+	damageFound := false
+	for _, event := range events {
+		switch event := event.(type) {
+		case world.CombatAttack:
+			attackFound = event.AttackerID == "Alice" &&
+				event.TargetID == "dock_warden" && event.IsPlayer
+		case world.CombatDamage:
+			damageFound = event.AttackerID == "Alice" &&
+				event.TargetID == "dock_warden" &&
+				event.Damage == 10 && event.RemainingHP == 130
+		}
+	}
+	if !attackFound || !damageFound {
+		t.Fatalf("initial attack events missing or incorrect: %+v", events)
+	}
+}
+
 func TestWorldCombatVictoryRewardsEveryConnectedParticipant(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	for _, name := range []string{"Alice", "Bob"} {

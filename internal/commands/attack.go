@@ -48,7 +48,10 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		), nil
 	}
 
-	combat, domainEvents, err := ctx.World.StartCombat(ctx.PlayerName, target)
+	combat, damage, domainEvents, err := ctx.World.StartCombatWithInitialAttack(
+		ctx.PlayerName,
+		target,
+	)
 	if err != nil {
 		return mapAttackError(err)
 	}
@@ -83,7 +86,7 @@ func (c *AttackCommand) Execute(ctx *Context) (protocol.Message, error) {
 		CombatID:   combat.ID,
 		AttackerHP: attackerHP,
 		TargetHP:   targetHP,
-		Damage:     0,
+		Damage:     damage,
 		Status:     status,
 	}
 

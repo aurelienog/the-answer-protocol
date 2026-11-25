@@ -5,21 +5,41 @@ import (
 	"strings"
 )
 
+const initialCombatAttackDamage = 10
+
 // StartCombat starts a combat against a hostile NPC, initializes turn order,
 // and resolves any initial NPC turns if the NPC acts first.
 func (w *World) StartCombat(
 	playerName string,
 	npcID string,
 ) (*Combat, []any, error) {
+	combat, _, events, err := w.startCombat(playerName, npcID, 0)
+	return combat, events, err
+}
+
+// StartCombatWithInitialAttack starts combat and applies the attacker's opening
+// hit before resolving any NPC turns.
+func (w *World) StartCombatWithInitialAttack(
+	playerName string,
+	npcID string,
+) (*Combat, int, []any, error) {
+	return w.startCombat(playerName, npcID, initialCombatAttackDamage)
+}
+
+func (w *World) startCombat(
+	playerName string,
+	npcID string,
+	initialDamage int,
+) (*Combat, int, []any, error) {
 	if w == nil {
-		return nil, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
+		return nil, 0, nil, fmt.Errorf("%w: world is nil", ErrInvalidWorldState)
 	}
 
 	playerName = strings.TrimSpace(playerName)
 	npcID = strings.TrimSpace(npcID)
 
 	if playerName == "" || npcID == "" {
-		return nil, nil, fmt.Errorf(
+		return nil, 0, nil, fmt.Errorf(
 			"%w: player name and NPC ID cannot be empty",
 			ErrInvalidArgument,
 		)
@@ -30,11 +50,11 @@ func (w *World) StartCombat(
 
 	player, exists := w.players[playerName]
 	if !exists {
-		return nil, nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
+		return nil, 0, nil, fmt.Errorf("%w: %q", ErrPlayerNotFound, playerName)
 	}
 
 	if player.CombatStats.HP <= 0 {
-		return nil, nil, fmt.Errorf(
+		return nil, 0, nil, fmt.Errorf(
 			"%w: player %q is defeated",
 			ErrInvalidWorldState,
 			playerName,
@@ -43,7 +63,7 @@ func (w *World) StartCombat(
 
 	room, exists := w.rooms[player.RoomID]
 	if !exists {
-		return nil, nil, fmt.Errorf(
+		return nil, 0, nil, fmt.Errorf(
 			"%w: player %q references nonexistent room %q",
 			ErrInvalidWorldState,
 			playerName,
@@ -53,7 +73,7 @@ func (w *World) StartCombat(
 
 	resolvedNPCID, err := w.resolveNPCIDInRoomLocked(room, npcID)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, nil, err
 	}
 	respawnEvent, respawned := w.refreshNPCRespawnLocked(resolvedNPCID)
 
@@ -61,11 +81,11 @@ func (w *World) StartCombat(
 	npc := w.npcs[npcID]
 
 	if !npc.Hostile {
-		return nil, nil, fmt.Errorf("%w: %q", ErrNPCNotHostile, npcID)
+		return nil, 0, nil, fmt.Errorf("%w: %q", ErrNPCNotHostile, npcID)
 	}
 
 	if npc.CombatStats.HP <= 0 {
-		return nil, nil, fmt.Errorf(
+		return nil, 0, nil, fmt.Errorf(
 			"%w: %q",
 			ErrNPCRespawning,
 			npcID,
@@ -73,7 +93,7 @@ func (w *World) StartCombat(
 	}
 
 	if w.playerInActiveCombatLocked(playerName) {
-		return nil, nil, fmt.Errorf(
+		return nil, 0, nil, fmt.Errorf(
 			"%w: %q",
 			ErrPlayerAlreadyInCombat,
 			playerName,
@@ -81,7 +101,7 @@ func (w *World) StartCombat(
 	}
 
 	if w.npcInActiveCombatLocked(npcID) {
-		return nil, nil, fmt.Errorf(
+		return nil, 0, nil, fmt.Errorf(
 			"%w: %q",
 			ErrNPCAlreadyInCombat,
 			npcID,
@@ -135,13 +155,13 @@ func (w *World) StartCombat(
 	groupID := w.playerGroups[playerName]
 
 	if err := addPlayer(playerName); err != nil {
-		return nil, nil, err
+		return nil, 0, nil, err
 	}
 
 	if groupID != "" {
 		group, exists := w.groups[groupID]
 		if !exists {
-			return nil, nil, ErrGroupNotFound
+			return nil, 0, nil, ErrGroupNotFound
 		}
 
 		for _, member := range group.Members {
@@ -150,7 +170,7 @@ func (w *World) StartCombat(
 			}
 
 			if err := addPlayer(member); err != nil {
-				return nil, nil, err
+				return nil, 0, nil, err
 			}
 		}
 	}
@@ -191,7 +211,7 @@ func (w *World) StartCombat(
 	// so failed initialization requires zero cleanup.
 	turnEvent, err := w.initializeCombatTurnsLocked(combat)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, nil, err
 	}
 
 	w.combats[combatID] = combat
@@ -218,22 +238,65 @@ func (w *World) StartCombat(
 	}
 
 	events := make([]any, 0, 8)
+	damage := 0
 	if respawned {
 		events = append(events, *respawnEvent)
 	}
 	events = append(events, startedEvent)
-	if turnEvent != nil {
+
+	if initialDamage > 0 {
+		target := &combat.Participants[len(combat.Participants)-1]
+		damage, err = w.applyCombatDamageLocked(target, initialDamage)
+		if err != nil {
+			return nil, 0, nil, err
+		}
+
+		events = append(events,
+			CombatAttack{
+				CombatID:     combat.ID,
+				AttackerID:   playerName,
+				AttackerName: player.Name,
+				TargetID:     target.ID,
+				TargetName:   target.Name,
+				IsPlayer:     true,
+				Recipients:   startedEvent.Recipients,
+			},
+			CombatDamage{
+				CombatID:     combat.ID,
+				AttackerID:   playerName,
+				AttackerName: player.Name,
+				TargetID:     target.ID,
+				TargetName:   target.Name,
+				Damage:       damage,
+				RemainingHP:  target.Stats.HP,
+				Recipients:   startedEvent.Recipients,
+			},
+		)
+
+		if !target.Alive {
+			events = append(events, ParticipantDied{
+				CombatID:        combat.ID,
+				ParticipantID:   target.ID,
+				ParticipantName: target.Name,
+				IsPlayer:        false,
+				KillerID:        playerName,
+				Recipients:      startedEvent.Recipients,
+			})
+		}
+	}
+
+	if turnEvent != nil && combatHasLivingNPCsLocked(combat) {
 		events = append(events, *turnEvent)
 	}
 
 	// If the NPC won initiative, resolve its turn(s) immediately until a player's turn arrives.
 	progressionEvents, err := w.resolveCombatProgressionLocked(combat)
 	if err != nil {
-		return nil, nil, err
+		return nil, 0, nil, err
 	}
 	events = append(events, progressionEvents...)
 
-	return cloneCombat(combat), events, nil
+	return cloneCombat(combat), damage, events, nil
 }
 
 // removePlayerFromCombatsLocked removes a player from active combats,

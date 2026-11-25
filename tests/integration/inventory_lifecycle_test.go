@@ -52,6 +52,7 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT STARTED combat=") {
 		t.Fatalf("combat-start event = %q", got)
 	}
+	readInitialAttackEvents(t, alice)
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "EVT COMBAT TURN ") {
 		t.Fatalf("combat-turn event = %q", got)
 	}
