@@ -225,7 +225,7 @@ func formatCombatEvent(data string) (string, lipgloss.Style) {
 }
 
 func formatItemEvent(data string) (string, lipgloss.Style) {
-	name, body := splitEventName(data, "DROPPED", "USED")
+	name, body := splitEventName(data, "DROPPED", "USED", "TAKEN")
 	switch name {
 	case "DROPPED":
 		summary := "Item dropped"
@@ -236,6 +236,9 @@ func formatItemEvent(data string) (string, lipgloss.Style) {
 	case "USED":
 		fields := parseKeyValuesOrdered(body, "player", "item", "hp")
 		return fields["player"] + " used " + fields["item"], layout.SuccessStyle
+	case "TAKEN":
+		item := parseKeyValuesOrdered(body, "item")["item"]
+		return "You picked up " + item, layout.SuccessStyle
 	default:
 		return formatUnknownEvent("ITEM", data)
 	}

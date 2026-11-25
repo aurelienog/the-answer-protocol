@@ -67,6 +67,37 @@ func TestUseCommandRefreshesInventory(t *testing.T) {
 	}
 }
 
+func TestTakeCommandAddsFriendlyEvent(t *testing.T) {
+	client, requests := newUICommandClient(t)
+	model := ui.NewModel(client)
+	model, authCmd := enterText(t, model, "Alice")
+	model, _ = updateModel(t, model, authCmd())
+	model, _ = updateModel(t, model, tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	model, takeCmd := enterText(t, model, "TAKE rope")
+	if takeCmd == nil {
+		t.Fatal("TAKE did not send a command")
+	}
+	model, _ = updateModel(t, model, takeCmd())
+	if request := <-requests; request != "TAKE rope" {
+		t.Fatalf("server request = %q, want TAKE rope", request)
+	}
+
+	model, eventsCmd := enterText(t, model, "EVENTS")
+	if eventsCmd == nil {
+		t.Fatal("EVENTS did not start the event view transition")
+	}
+	model, eventsCmd = updateModel(t, model, eventsCmd())
+	if eventsCmd == nil {
+		t.Fatal("event view transition did not schedule completion")
+	}
+	model, _ = updateModel(t, model, eventsCmd())
+
+	if view := model.View(); !strings.Contains(view, "You picked up item.rope") {
+		t.Fatalf("event history = %q, want successful TAKE feedback", view)
+	}
+}
+
 func newUICommandClient(t *testing.T) (*network.Client, <-chan string) {
 	t.Helper()
 
@@ -107,6 +138,9 @@ func newUICommandClient(t *testing.T) (*network.Client, <-chan string) {
 			case strings.HasPrefix(request, "USE "):
 				requests <- request
 				response = "OK used=item.healing_potion changes=hp=10"
+			case strings.HasPrefix(request, "TAKE "):
+				requests <- request
+				response = "OK taken=item.rope"
 			case request == "INVENTORY":
 				requests <- request
 				response = "OK []"

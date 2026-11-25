@@ -1,40 +1,40 @@
 package ui
 
 import (
-    "fmt"
-    "strings"
-    "encoding/json"
+	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 )
 
 func handleLookResponse(m *Model, payload string) error {
-    var response LookResponse
+	var response LookResponse
 
-    if err := json.Unmarshal([]byte(payload), &response); err != nil {
-        return err
-    }
+	if err := json.Unmarshal([]byte(payload), &response); err != nil {
+		return err
+	}
 
-    m.world.Room = response
+	m.world.Room = response
 
-    m.ui.PendingRefresh = RefreshNone
+	m.ui.PendingRefresh = RefreshNone
 
-    return nil
+	return nil
 }
 
 func handleMoveResponse(m *Model, payload string) error {
-    return nil
+	return nil
 }
 
 func handleTalkResponse(m *Model, payload string) error {
-    var conversation NPCConversation
+	var conversation NPCConversation
 
-    if err := json.Unmarshal([]byte(payload), &conversation); err != nil {
-        return err
-    }
+	if err := json.Unmarshal([]byte(payload), &conversation); err != nil {
+		return err
+	}
 
-    m.world.Conversation = &conversation
+	m.world.Conversation = &conversation
 
-    return nil
+	return nil
 }
 
 func handleDropResponse(_ *Model, payload string) error {
@@ -52,7 +52,7 @@ func handleDropResponse(_ *Model, payload string) error {
 	return nil
 }
 
-func handleTakeResponse(_ *Model, payload string) error {
+func handleTakeResponse(m *Model, payload string) error {
 	const prefix = "taken="
 
 	if !strings.HasPrefix(payload, prefix) {
@@ -63,6 +63,9 @@ func handleTakeResponse(_ *Model, payload string) error {
 	if itemID == "" {
 		return fmt.Errorf("TAKE response contains an empty item ID")
 	}
+
+	summary, style := formatItemEvent("TAKEN item=" + itemID)
+	m.appendEventLog(style.Render(summary))
 
 	return nil
 }
