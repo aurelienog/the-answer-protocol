@@ -139,7 +139,7 @@ func TestLoadWorldPopulatesCurrentRooms(t *testing.T) {
 		{
 			roomID: "loc.north_town_gate",
 			name:   "North Town Gate",
-			items:  map[string]int{"item.northern_gate_seal": 2},
+			items:  map[string]int{"item.northern_gate_seal": 5},
 			npcIDs: []string{"npc.north_gate_guard"},
 		},
 		{
@@ -200,8 +200,8 @@ func TestLoadWorldPopulatesCurrentRooms(t *testing.T) {
 		}
 	}
 
-	if totalItemInstances != 21 {
-		t.Errorf("expected 21 item instances across rooms, got %d", totalItemInstances)
+	if totalItemInstances != 24 {
+		t.Errorf("expected 24 item instances across rooms, got %d", totalItemInstances)
 	}
 }
 
