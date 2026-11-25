@@ -133,7 +133,7 @@ const GameState = {
 
         if (candidates.length === 0) return null;
 
-        // Prioritize exact enemyId match over unknown-enemyId (e.g. non-party HELP_REQUESTED)
+        // Prioritize exact enemyId match over unknown-enemyId (e.g. non-party HELP REQUESTED)
         if (targetLower) {
             const exact = candidates.find(c => c.enemyId && c.enemyId.toLowerCase() === targetLower);
             if (exact) return exact;

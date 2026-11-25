@@ -66,7 +66,7 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 		t.Fatalf("close Alice's connection: %v", err)
 	}
 	returnedEvent := bob.readResponse(t)
-	if !strings.HasPrefix(returnedEvent, "EVT UNIQUE_ITEMS_RETURNED instance:") {
+	if !strings.HasPrefix(returnedEvent, "EVT UNIQUE ITEMS RETURNED instance:") {
 		t.Fatalf("unique-item return event = %q", returnedEvent)
 	}
 

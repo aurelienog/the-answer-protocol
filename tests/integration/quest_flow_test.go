@@ -46,7 +46,7 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 	}
 	alice.sendRequest(t, "TALK Quest Advisor")
 	conversationResponse := alice.readResponse(t)
-	if conversationResponse == "EVT QUEST_COMPLETED quest=quest.explore_arvendale" {
+	if conversationResponse == "EVT QUEST COMPLETED quest=quest.explore_arvendale" {
 		conversationResponse = alice.readResponse(t)
 	}
 	if !strings.HasPrefix(conversationResponse, "OK ") {
@@ -223,7 +223,7 @@ func readQuestConversation(t *testing.T, env *connectionTestEnv) struct {
 	t.Helper()
 
 	response := env.readResponse(t)
-	for strings.HasPrefix(response, "EVT QUEST_COMPLETED ") {
+	for strings.HasPrefix(response, "EVT QUEST COMPLETED ") {
 		response = env.readResponse(t)
 	}
 	if !strings.HasPrefix(response, "OK ") {

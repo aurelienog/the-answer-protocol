@@ -170,7 +170,7 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	if got := alice.readResponse(t); got != "OK combat="+attackResult.CombatID {
 		t.Fatalf("combat-help response = %q", got)
 	}
-	if got := carol.readResponse(t); got != "EVT COMBAT HELP_REQUESTED player=Alice combat="+attackResult.CombatID+" room=docks" {
+	if got := carol.readResponse(t); got != "EVT COMBAT HELP REQUESTED player=Alice combat="+attackResult.CombatID+" room=docks" {
 		t.Fatalf("combat-help notification = %q", got)
 	}
 
@@ -183,7 +183,7 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	}
 
 	carol.sendRequest(t, "COMBAT JOIN "+attackResult.CombatID)
-	wantJoinEvent := "EVT COMBAT PLAYER_JOINED player=Carol combat=" + attackResult.CombatID +
+	wantJoinEvent := "EVT COMBAT PLAYER JOINED player=Carol combat=" + attackResult.CombatID +
 		" hp=100 max_hp=100"
 	if got := alice.readResponse(t); got != wantJoinEvent {
 		t.Fatalf("Alice's join notification = %q, want %q", got, wantJoinEvent)

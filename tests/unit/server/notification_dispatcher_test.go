@@ -54,7 +54,20 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				RoomPlayers: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Bob": "EVT ITEM_DROPPED item.rope\n",
+				"Bob": "EVT ITEM DROPPED item.rope\n",
+			},
+		},
+		{
+			name: "NPC respawned",
+			event: world.NPCRespawned{
+				NPCID:       "dock_warden",
+				NPCName:     "Dock Warden",
+				RoomID:      "docks",
+				RoomPlayers: []string{"Alice", "Bob"},
+			},
+			expected: map[string]string{
+				"Alice": "EVT NPC RESPAWN npc=dock_warden name=Dock Warden room=docks\n",
+				"Bob":   "EVT NPC RESPAWN npc=dock_warden name=Dock Warden room=docks\n",
 			},
 		},
 		{
@@ -63,9 +76,9 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				ItemIDs: []string{"instance:item.sword:1", "instance:item.shield:2"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT UNIQUE_ITEMS_RETURNED instance:item.sword:1,instance:item.shield:2\n",
-				"Bob":   "EVT UNIQUE_ITEMS_RETURNED instance:item.sword:1,instance:item.shield:2\n",
-				"Carol": "EVT UNIQUE_ITEMS_RETURNED instance:item.sword:1,instance:item.shield:2\n",
+				"Alice": "EVT UNIQUE ITEMS RETURNED instance:item.sword:1,instance:item.shield:2\n",
+				"Bob":   "EVT UNIQUE ITEMS RETURNED instance:item.sword:1,instance:item.shield:2\n",
+				"Carol": "EVT UNIQUE ITEMS RETURNED instance:item.sword:1,instance:item.shield:2\n",
 			},
 		},
 		{
@@ -74,6 +87,16 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				ItemIDs: []string{},
 			},
 			expected: map[string]string{},
+		},
+		{
+			name: "quest completed",
+			event: world.QuestCompleted{
+				PlayerName: "Alice",
+				QuestID:    "quest.explore_arvendale",
+			},
+			expected: map[string]string{
+				"Alice": "EVT QUEST COMPLETED quest=quest.explore_arvendale\n",
+			},
 		},
 		{
 			name: "group invite",
@@ -129,8 +152,8 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				Recipients:      []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT COMBAT NPC_DIED participant=Dire Wolf killer=Alice\n",
-				"Bob":   "EVT COMBAT NPC_DIED participant=Dire Wolf killer=Alice\n",
+				"Alice": "EVT COMBAT NPC DIED participant=Dire Wolf killer=Alice\n",
+				"Bob":   "EVT COMBAT NPC DIED participant=Dire Wolf killer=Alice\n",
 			},
 		},
 		{
@@ -142,8 +165,8 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				Recipients:      []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT COMBAT PLAYER_DIED participant=Alice killer=dire_wolf\n",
-				"Bob":   "EVT COMBAT PLAYER_DIED participant=Alice killer=dire_wolf\n",
+				"Alice": "EVT COMBAT PLAYER DIED participant=Alice killer=dire_wolf\n",
+				"Bob":   "EVT COMBAT PLAYER DIED participant=Alice killer=dire_wolf\n",
 			},
 		},
 		{
@@ -210,7 +233,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				Recipients:  []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Bob": "EVT COMBAT PLAYER_FLED player=Alice damage=5 remaining_hp=35\n",
+				"Bob": "EVT COMBAT PLAYER FLED player=Alice damage=5 remaining_hp=35\n",
 			},
 		},
 		{
@@ -249,7 +272,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				Recipients: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Bob": "EVT COMBAT HELP_REQUESTED player=Alice combat=combat-1 room=docks\n",
+				"Bob": "EVT COMBAT HELP REQUESTED player=Alice combat=combat-1 room=docks\n",
 			},
 		},
 		{
@@ -260,8 +283,8 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				Recipients: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT COMBAT PLAYER_JOINED player=Alice combat=combat-1\n",
-				"Bob":   "EVT COMBAT PLAYER_JOINED player=Alice combat=combat-1\n",
+				"Alice": "EVT COMBAT PLAYER JOINED player=Alice combat=combat-1\n",
+				"Bob":   "EVT COMBAT PLAYER JOINED player=Alice combat=combat-1\n",
 			},
 		},
 		{
@@ -274,7 +297,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				},
 			},
 			expected: map[string]string{
-				"Alice": "EVT ITEM_USED player=Alice item=item.healing_potion hp=40\n",
+				"Alice": "EVT ITEM USED player=Alice item=item.healing_potion hp=40\n",
 			},
 		},
 		{
@@ -284,7 +307,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				ItemID:     "item.iron_sword",
 			},
 			expected: map[string]string{
-				"Alice": "EVT ITEM_USED player=Alice item=item.iron_sword\n",
+				"Alice": "EVT ITEM USED player=Alice item=item.iron_sword\n",
 			},
 		},
 	}

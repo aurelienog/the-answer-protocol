@@ -675,7 +675,7 @@ const CombatModal = {
     handleCombatEnded(rewardNames = []) {
         this.pendingCombatRewards = rewardNames;
 
-        // If NPC_DIED already triggered showOutcome before ENDED arrived,
+        // If NPC DIED already triggered showOutcome before ENDED arrived,
         // enrich the victory banner subtitle with the actual reward items.
         if (this.outcomeShown && rewardNames.length > 0) {
             const subEl = document.getElementById('combat-outcome-sub');

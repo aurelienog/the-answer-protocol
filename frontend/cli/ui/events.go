@@ -101,7 +101,6 @@ func (m *Model) appendEventLog(message string) {
 	}
 }
 
-
 func (m *Model) handleGroupEvent(data string) tea.Cmd {
 	parts := strings.Fields(data)
 	if len(parts) == 0 {
@@ -210,6 +209,14 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 	body := ""
 	if len(parts) > 1 {
 		body = parts[1]
+		if next, remaining, found := strings.Cut(body, " "); found {
+			spacedSubType := subType + " " + strings.ToUpper(next)
+			switch spacedSubType {
+			case "PLAYER DIED", "NPC DIED", "PLAYER FLED", "PLAYER JOINED", "HELP REQUESTED":
+				subType = spacedSubType
+				body = remaining
+			}
+		}
 	}
 
 	switch subType {
@@ -313,7 +320,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 
 		m.appendCombatLog(fmt.Sprintf("%s deals %d damage to %s.", attacker, amount, target))
 
-	case "PLAYER_DIED", "NPC_DIED":
+	case "PLAYER DIED", "NPC DIED":
 		if !m.world.Combat.Active {
 			return nil
 		}
@@ -329,7 +336,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 			m.appendCombatLog(fmt.Sprintf("%s was defeated.", participant))
 		}
 
-	case "PLAYER_FLED":
+	case "PLAYER FLED":
 		if !m.world.Combat.Active {
 			return nil
 		}
@@ -356,7 +363,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 
 		m.appendCombatLog(fmt.Sprintf("%s fled from combat (-%d HP).", player, damage))
 
-	case "PLAYER_JOINED":
+	case "PLAYER JOINED":
 		if !m.world.Combat.Active {
 			return nil
 		}
@@ -403,7 +410,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 
 		m.appendCombatLog(fmt.Sprintf("%s joined the combat (enters next round).", player))
 
-	case "HELP_REQUESTED":
+	case "HELP REQUESTED":
 		fields := parseKeyValuesOrdered(body, "player", "combat", "room")
 		player := fields["player"]
 		combatID := fields["combat"]

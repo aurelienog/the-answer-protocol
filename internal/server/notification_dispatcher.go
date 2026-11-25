@@ -136,7 +136,7 @@ func (dispatcher *NotificationDispatcher) handleNPCRespawned(event world.NPCResp
 	dispatcher.notifyPlayers(
 		event.RoomPlayers,
 		"",
-		protocol.EVT("NPC_RESPAWN", "npc="+event.NPCID+" name="+event.NPCName+" room="+event.RoomID),
+		protocol.EVT("NPC", "RESPAWN npc="+event.NPCID+" name="+event.NPCName+" room="+event.RoomID),
 	)
 }
 
@@ -147,7 +147,7 @@ func (dispatcher *NotificationDispatcher) handleQuestCompleted(event world.Quest
 	}
 	if err := dispatcher.registry.Queue(
 		session.ID,
-		protocol.EVT("QUEST_COMPLETED", "quest="+event.QuestID),
+		protocol.EVT("QUEST", "COMPLETED quest="+event.QuestID),
 	); err != nil {
 		dispatcher.log.Error("notification.queue_failed",
 			slog.String("player", event.PlayerName),
@@ -161,7 +161,7 @@ func (dispatcher *NotificationDispatcher) handleItemDropped(event world.ItemDrop
 	dispatcher.notifyPlayers(
 		event.RoomPlayers,
 		event.PlayerName,
-		protocol.EVT("ITEM_DROPPED", event.ItemID),
+		protocol.EVT("ITEM", "DROPPED "+event.ItemID),
 	)
 }
 
@@ -174,7 +174,7 @@ func (dispatcher *NotificationDispatcher) handleUniqueItemsReturned(event world.
 	// Send one global notification describing the return.
 	itemIDs := strings.Join(event.ItemIDs, ",")
 	dispatcher.registry.Broadcast(
-		protocol.EVT("UNIQUE_ITEMS_RETURNED", itemIDs),
+		protocol.EVT("UNIQUE", "ITEMS RETURNED "+itemIDs),
 	)
 }
 
@@ -270,7 +270,7 @@ func (dispatcher *NotificationDispatcher) handleParticipantDied(
 
 	notification := protocol.EVT(
 		"COMBAT",
-		participantType+"_DIED participant="+event.ParticipantName+
+		participantType+" DIED participant="+event.ParticipantName+
 			" killer="+event.KillerID,
 	)
 
@@ -349,7 +349,7 @@ func (dispatcher *NotificationDispatcher) handlePlayerFled(
 ) {
 	notification := protocol.EVT(
 		"COMBAT",
-		"PLAYER_FLED player="+event.PlayerName+
+		"PLAYER FLED player="+event.PlayerName+
 			" damage="+strconv.Itoa(event.Damage)+
 			" remaining_hp="+strconv.Itoa(event.RemainingHP),
 	)
@@ -402,7 +402,7 @@ func (dispatcher *NotificationDispatcher) handleItemUsed(
 
 	if err := dispatcher.registry.Queue(
 		session.ID,
-		protocol.EVT("ITEM_USED", data),
+		protocol.EVT("ITEM", "USED "+data),
 	); err != nil {
 		dispatcher.log.Error("notification.queue_failed",
 			slog.String("player", event.PlayerName),
@@ -417,7 +417,7 @@ func (dispatcher *NotificationDispatcher) handleCombatHelpRequested(
 ) {
 	notification := protocol.EVT(
 		"COMBAT",
-		"HELP_REQUESTED player="+event.PlayerName+
+		"HELP REQUESTED player="+event.PlayerName+
 			" combat="+event.CombatID+
 			" room="+event.RoomID,
 	)
@@ -432,7 +432,7 @@ func (dispatcher *NotificationDispatcher) handleCombatHelpRequested(
 func (dispatcher *NotificationDispatcher) handleCombatPlayerJoined(
 	event world.CombatPlayerJoined,
 ) {
-	data := "PLAYER_JOINED player=" + event.PlayerName +
+	data := "PLAYER JOINED player=" + event.PlayerName +
 		" combat=" + event.CombatID
 	if event.MaxHP > 0 {
 		data += " hp=" + strconv.Itoa(event.HP) +

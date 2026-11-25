@@ -690,12 +690,17 @@ const App = {
             return;
         }
 
-        if (category === 'ITEM_DROPPED' || category === 'UNIQUE_ITEMS_RETURNED') {
-            UI.addChatLine('ROOM', '🧰 World', `Items updated in room (${parts.slice(2).join(' ')}).`, 'chat-sys');
+        if (category === 'ITEM' && parts[2] === 'DROPPED') {
+            UI.addChatLine('ROOM', '🧰 World', `Items updated in room (${parts.slice(3).join(' ')}).`, 'chat-sys');
             this.sendCommand('LOOK');
             return;
         }
-        if (category === 'ITEM_USED') {
+        if (category === 'UNIQUE' && parts[2] === 'ITEMS' && parts[3] === 'RETURNED') {
+            UI.addChatLine('ROOM', '🧰 World', `Items updated in room (${parts.slice(4).join(' ')}).`, 'chat-sys');
+            this.sendCommand('LOOK');
+            return;
+        }
+        if (category === 'ITEM' && parts[2] === 'USED') {
             this.sendCommand('STATUS');
             return;
         }
@@ -726,8 +731,11 @@ const App = {
         }
 
         if (category === 'COMBAT') {
-            const sub = parts[2];
-            const rest = parts.slice(3).join(' ');
+            const spacedSub = `${parts[2]} ${parts[3]}`;
+            const spacedCombatEvents = ['PLAYER DIED', 'NPC DIED', 'PLAYER FLED', 'PLAYER JOINED', 'HELP REQUESTED'];
+            const hasSpacedSub = spacedCombatEvents.includes(spacedSub);
+            const sub = hasSpacedSub ? spacedSub : parts[2];
+            const rest = parts.slice(hasSpacedSub ? 4 : 3).join(' ');
 
             if (sub === 'STARTED') {
                 const cMatch = rest.match(/combat=([^\s]+)/);
@@ -829,7 +837,7 @@ const App = {
                 return;
             }
 
-            if (sub === 'HELP_REQUESTED') {
+            if (sub === 'HELP REQUESTED') {
                 const pMatch = rest.match(/player=([^\s]+)/);
                 const cMatch = rest.match(/combat=([^\s]+)/);
                 const rMatch = rest.match(/room=([^\s]+)/);
@@ -845,7 +853,7 @@ const App = {
                 return;
             }
 
-            if (sub === 'PLAYER_JOINED') {
+            if (sub === 'PLAYER JOINED') {
                 const pMatch = rest.match(/player=([^\s]+)/);
                 const ally = pMatch ? pMatch[1] : '';
                 if (ally) {
@@ -855,7 +863,7 @@ const App = {
                 return;
             }
 
-            if (sub === 'PLAYER_FLED') {
+            if (sub === 'PLAYER FLED') {
                 const pMatch = rest.match(/player=([^\s]+)/);
                 const runner = pMatch ? pMatch[1] : 'A player';
                 UI.addChatLine('COMBAT', '🏃 Ally Fled', `${runner} fled from the battle!`, 'chat-err');
@@ -898,7 +906,7 @@ const App = {
                 return;
             }
 
-            if (sub === 'NPC_DIED') {
+            if (sub === 'NPC DIED') {
                 const loot = CombatModal.pendingCombatRewards || [];
                 const lootMsg = loot.length > 0
                     ? `${CombatModal.enemyName} defeated! Obtained: ${loot.join(', ')}.`
@@ -911,7 +919,7 @@ const App = {
                 return;
             }
 
-            if (sub === 'PLAYER_DIED') {
+            if (sub === 'PLAYER DIED') {
                 const pMatch = rest.match(/^participant=(.+?)\s+killer=/);
                 const fallenName = pMatch ? pMatch[1].trim() : '';
                 const diedIsMe = (fallenName.toLowerCase() === GameState.playerName.toLowerCase());
