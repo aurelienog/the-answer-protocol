@@ -4,6 +4,10 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"the-answer-protocol/internal/abuse"
@@ -18,6 +22,9 @@ import (
 func main() {
 	log := logger.New()
 	cfg := config.LoadConfig(log)
+	serverContext, stopServer := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopServer()
+
 	guard := abuse.NewAbuseGuard(abuse.Config{
 		MaxConnections:                cfg.MaxConnections,
 		MaxConnectionsPerIP:           cfg.MaxConnectionsPerIP,
@@ -25,8 +32,19 @@ func main() {
 		MaxUnauthenticatedConnections: cfg.MaxUnauthenticatedConnections,
 	})
 	cleanupContext, stopCleanup := context.WithCancel(context.Background())
-	defer stopCleanup()
-	go guard.RunCleanup(cleanupContext, time.Minute)
+	var maintenance sync.WaitGroup
+	runMaintenance := func(run func()) {
+		maintenance.Add(1)
+		go func() {
+			defer maintenance.Done()
+			run()
+		}()
+	}
+	defer func() {
+		stopCleanup()
+		maintenance.Wait()
+	}()
+	runMaintenance(func() { guard.RunCleanup(cleanupContext, time.Minute) })
 
 	gameWorld, err := world.Load(cfg.WorldPath)
 	if err != nil {
@@ -51,13 +69,13 @@ func main() {
 		commands.NewCombatTurnTimeoutHandler(gameWorld, eventBus, log),
 	)
 	eventBus.Subscribe(combatTurnTimeouts.Handle)
-	go combatTurnTimeouts.Run(cleanupContext)
+	runMaintenance(func() { combatTurnTimeouts.Run(cleanupContext) })
 
 	npcRespawns := server.NewNPCRespawnManager(
 		server.NewNPCRespawnHandler(gameWorld, eventBus, log),
 	)
 	eventBus.Subscribe(npcRespawns.Handle)
-	go npcRespawns.Run(cleanupContext)
+	runMaintenance(func() { npcRespawns.Run(cleanupContext) })
 
 	dispatcher := commands.NewDispatcher(log)
 	commands.RegisterCommands(dispatcher)
@@ -76,15 +94,7 @@ func main() {
 		slog.String("address", cfg.ServerAddr()),
 	)
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Error("connection.accept_failed",
-				slog.String("error", err.Error()),
-			)
-			continue
-		}
-
+	err = server.Serve(serverContext, listener, func(conn net.Conn) {
 		lease, rejection := guard.AcquireConnection(conn.RemoteAddr())
 		if rejection != "" {
 			log.Warn("connection.rejected",
@@ -92,23 +102,26 @@ func main() {
 				slog.String("reason", string(rejection)),
 			)
 			_ = conn.Close()
-			continue
+			return
 		}
 		log.Info("connection.accepted",
 			slog.String("remote_ip", abuse.RemoteIP(conn.RemoteAddr())),
 		)
 
-		go func(conn net.Conn, lease *abuse.ConnectionLease) {
-			server.HandleAdmittedConnection(
-				conn,
-				dispatcher,
-				registry,
-				gameWorld,
-				eventBus,
-				lease,
-				cfg.IdleTimeout,
-				log,
-			)
-		}(conn, lease)
+		server.HandleAdmittedConnection(
+			conn,
+			dispatcher,
+			registry,
+			gameWorld,
+			eventBus,
+			lease,
+			cfg.IdleTimeout,
+			log,
+		)
+	})
+	if err != nil {
+		log.Error("connection.accept_failed",
+			slog.String("error", err.Error()),
+		)
 	}
 }

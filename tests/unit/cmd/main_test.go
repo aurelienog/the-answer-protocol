@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -186,4 +189,132 @@ func TestHandleConnectionConnectAndQuit(t *testing.T) {
 	if _, err := gameWorld.GetPlayerRoom("Alice"); err == nil {
 		t.Fatal("expected Alice to be removed from the world")
 	}
+}
+
+func TestServeShutdownCleansActiveSessions(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	serveDone := make(chan error, 1)
+	serveFinished := false
+
+	gameWorld := createTestWorld(t)
+	registry := server.NewRegistry(slog.Default())
+	eventBus := events.NewBus()
+	dispatcher := commands.NewDispatcher(slog.Default())
+	commands.RegisterCommands(dispatcher)
+	guard := abuse.NewAbuseGuard(abuse.DefaultConfig())
+
+	go func() {
+		serveDone <- server.Serve(ctx, listener, func(conn net.Conn) {
+			lease, rejection := guard.AcquireConnection(conn.RemoteAddr())
+			if rejection != "" {
+				_ = conn.Close()
+				return
+			}
+			server.HandleAdmittedConnection(
+				conn,
+				dispatcher,
+				registry,
+				gameWorld,
+				eventBus,
+				lease,
+				0,
+				slog.Default(),
+			)
+		})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if serveFinished {
+			return
+		}
+		select {
+		case <-serveDone:
+		case <-time.After(testTimeout):
+			t.Error("serve did not stop during test cleanup")
+		}
+	})
+
+	client, err := net.Dial("tcp", listener.Addr().String())
+	if err != nil {
+		cancel()
+		t.Fatalf("dial test server: %v", err)
+	}
+	defer client.Close()
+	if err := client.SetDeadline(time.Now().Add(testTimeout)); err != nil {
+		t.Fatalf("set client deadline: %v", err)
+	}
+	reader := bufio.NewReader(client)
+
+	if got := readTestMessage(t, client, reader); got != "OK hello proto=1" {
+		t.Fatalf("unexpected greeting: %q", got)
+	}
+	if _, err := fmt.Fprint(client, "CONNECT Alice\n"); err != nil {
+		t.Fatalf("send CONNECT: %v", err)
+	}
+	if got := readTestMessage(t, client, reader); got != "OK connected" {
+		t.Fatalf("unexpected CONNECT response: %q", got)
+	}
+	if _, exists := registry.GetByName("Alice"); !exists {
+		t.Fatal("expected Alice to be registered before shutdown")
+	}
+
+	cancel()
+	select {
+	case serveErr := <-serveDone:
+		serveFinished = true
+		if serveErr != nil {
+			t.Fatalf("serve returned an error during shutdown: %v", serveErr)
+		}
+	case <-time.After(testTimeout):
+		t.Fatal("serve did not stop after cancellation")
+	}
+
+	if _, exists := registry.GetByName("Alice"); exists {
+		t.Fatal("expected Alice's session to be removed during shutdown")
+	}
+	if _, err := gameWorld.GetPlayerRoom("Alice"); err == nil {
+		t.Fatal("expected Alice to be removed from the world during shutdown")
+	}
+}
+
+func TestServeReturnsOnUnexpectedAcceptError(t *testing.T) {
+	acceptErr := errors.New("listener failure")
+	listener := &failingListener{err: acceptErr}
+
+	var handlerCalls atomic.Int32
+	err := server.Serve(context.Background(), listener, func(net.Conn) {
+		handlerCalls.Add(1)
+	})
+	if !errors.Is(err, acceptErr) {
+		t.Fatalf("serve error = %v, want wrapped %v", err, acceptErr)
+	}
+	if got := listener.acceptCalls.Load(); got != 1 {
+		t.Fatalf("Accept called %d times, want exactly once", got)
+	}
+	if got := handlerCalls.Load(); got != 0 {
+		t.Fatalf("handler called %d times, want zero", got)
+	}
+}
+
+type failingListener struct {
+	err         error
+	acceptCalls atomic.Int32
+}
+
+func (listener *failingListener) Accept() (net.Conn, error) {
+	listener.acceptCalls.Add(1)
+	return nil, listener.err
+}
+
+func (*failingListener) Close() error {
+	return nil
+}
+
+func (*failingListener) Addr() net.Addr {
+	return &net.TCPAddr{}
 }
