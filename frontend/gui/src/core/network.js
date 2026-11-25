@@ -228,6 +228,7 @@ const App = {
         if (raw.includes('COMBAT_NOT_FOUND'))        return ['⚔️ Combat Ended', 'That battle has already concluded.'];
         if (raw.includes('NOT_YOUR_TURN'))           return ['⏳ Wait Your Turn', 'It is not your turn to act yet!'];
         if (raw.includes('NOT_IN_COMBAT_ROOM'))      return ['🧭 Wrong Location', 'You must be in the same room as the battle to join it.'];
+        if (raw.includes('NOT_IN_COMBAT'))           return ['⚔️ Combat Ended', 'You are no longer in an active combat.'];
         if (failedVerb === 'COMBAT_JOIN' && raw.includes('INTERNAL_ERROR')) {
             return ['⚔️ Combat Ended', 'That battle has already concluded.'];
         }
@@ -309,7 +310,7 @@ const App = {
                 return;
             }
 
-            if (raw.includes('NOT_IN_COMBAT') && GameState.inCombat) {
+            if (raw.includes('NOT_IN_COMBAT') && !raw.includes('NOT_IN_COMBAT_ROOM') && GameState.inCombat) {
                 if (CombatModal.combatId) {
                     GameState.removeKnownCombat(CombatModal.combatId);
                 }
@@ -705,6 +706,18 @@ const App = {
             return;
         }
 
+        if (category === 'NPC' && parts[2] === 'RESPAWN') {
+            const rest = parts.slice(3).join(' ');
+            const npcMatch = rest.match(/npc=([^\s]+)/);
+            const nameMatch = rest.match(/name=(.+?)(?:\s+room=|$)/);
+            const npcId = npcMatch ? npcMatch[1] : '';
+            const npcName = (nameMatch && nameMatch[1].trim()) || (npcId ? GameState.getNpcMeta(npcId).name : 'An enemy');
+
+            UI.addChatLine('ROOM', '⚔️ Respawn', `${npcName} has returned to the area!`, 'chat-sys');
+            this.sendCommand('LOOK');
+            return;
+        }
+
         if (category === 'RESPAWN') {
             const rest = parts.slice(2).join(' ');
             const pMatch = rest.match(/player=([^\s]+)/);
@@ -877,8 +890,6 @@ const App = {
                 if (endedCombatId) {
                     GameState.removeKnownCombat(endedCombatId);
                 }
-                GameState.activeHelpCombatId = null;
-                GameState.activeHelpPlayer = null;
 
                 const rewardNames = [];
                 const rewIdx = rest.indexOf('rewards=');

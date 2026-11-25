@@ -279,6 +279,8 @@ const UI = {
             } else {
                 this.closeAllModals();
             }
+        } else if (this.activeModalId === 'attack') {
+            SelectorModal.open('attack');
         }
     },
     renderPlayersInRoom()   { PlayersDockView.renderPlayersInRoom(); },
