@@ -33,7 +33,7 @@ func (m Model) renderGroup(detailed bool) string {
 		if detailed {
 			sections = append(
 				sections,
-				layout.MutedStyle.Render("ID: "+group.ID),
+				layout.MutedStyle.Render("ID: "+friendlyID(group.ID)),
 				"",
 				layout.TitleStyle.Render("MEMBERS"),
 			)

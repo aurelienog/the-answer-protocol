@@ -28,7 +28,7 @@ func TestQuestDialogueMatchesQuestChainAndWorldJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("world.Load(): %v", err)
 	}
-	if _, err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.apothecary_shop"); err != nil {
 		t.Fatalf("AddPlayer(): %v", err)
 	}
 
@@ -73,18 +73,18 @@ func TestQuestDialogueMatchesQuestChainAndWorldJSON(t *testing.T) {
 		}
 	}
 
-	assertDialogue("initial", "herbalist", "quest.gather_herbs", world.QuestStatusAvailable)
-	if err := gameWorld.AcceptQuest("Alice", "quest.gather_herbs"); err != nil {
+	assertDialogue("initial", "npc.apprentice_lina", "quest.remedies_of_the_whispering_woods", world.QuestStatusAvailable)
+	if err := gameWorld.AcceptQuest("Alice", "quest.remedies_of_the_whispering_woods"); err != nil {
 		t.Fatalf("AcceptQuest(gather herbs): %v", err)
 	}
-	assertDialogue("accepted", "herbalist", "quest.gather_herbs", world.QuestStatusActive)
+	assertDialogue("accepted", "npc.apprentice_lina", "quest.remedies_of_the_whispering_woods", world.QuestStatusActive)
 
 	for _, direction := range []string{"west", "north", "north"} {
 		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
 			t.Fatalf("MovePlayer(%s): %v", direction, err)
 		}
 	}
-	if err := gameWorld.TakeItem("Alice", "item.herbs"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.healing_herbs"); err != nil {
 		t.Fatalf("TakeItem(herbs): %v", err)
 	}
 	for _, direction := range []string{"south", "south", "east"} {
@@ -93,6 +93,6 @@ func TestQuestDialogueMatchesQuestChainAndWorldJSON(t *testing.T) {
 		}
 	}
 
-	assertDialogue("first quest validated", "herbalist", "quest.gather_herbs", world.QuestStatusCompleted)
-	assertDialogue("next quest offered", "herbalist", "quest.repeatable_herbs", world.QuestStatusAvailable)
+	assertDialogue("first quest validated", "npc.apprentice_lina", "quest.remedies_of_the_whispering_woods", world.QuestStatusCompleted)
+	assertDialogue("next quest offered", "npc.apprentice_lina", "quest.alchemists_herb_supply", world.QuestStatusAvailable)
 }

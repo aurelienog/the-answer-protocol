@@ -62,12 +62,12 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 			event: world.NPCRespawned{
 				NPCID:       "dock_warden",
 				NPCName:     "Dock Warden",
-				RoomID:      "docks",
+				RoomID:      "loc.the_great_pier",
 				RoomPlayers: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT NPC RESPAWN npc=dock_warden name=Dock Warden room=docks\n",
-				"Bob":   "EVT NPC RESPAWN npc=dock_warden name=Dock Warden room=docks\n",
+				"Alice": "EVT NPC RESPAWN npc=dock_warden name=Dock Warden room=loc.the_great_pier\n",
+				"Bob":   "EVT NPC RESPAWN npc=dock_warden name=Dock Warden room=loc.the_great_pier\n",
 			},
 		},
 		{
@@ -173,7 +173,7 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 			name: "combat started",
 			event: world.CombatStarted{
 				CombatID: "combat-1",
-				RoomID:   "docks",
+				RoomID:   "loc.the_great_pier",
 				Participants: []world.CombatParticipantInfo{
 					{ID: "Alice", Name: "Alice", IsPlayer: true, HP: 100, MaxHP: 100, Alive: true},
 					{ID: "dock_warden", Name: "Dock Warden", IsPlayer: false, HP: 80, MaxHP: 80, Alive: true},
@@ -181,8 +181,8 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 				Recipients: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Alice": "EVT COMBAT STARTED combat=combat-1 room=docks participants=[{\"id\":\"Alice\",\"name\":\"Alice\",\"is_player\":true,\"hp\":100,\"max_hp\":100,\"alive\":true},{\"id\":\"dock_warden\",\"name\":\"Dock Warden\",\"is_player\":false,\"hp\":80,\"max_hp\":80,\"alive\":true}]\n",
-				"Bob":   "EVT COMBAT STARTED combat=combat-1 room=docks participants=[{\"id\":\"Alice\",\"name\":\"Alice\",\"is_player\":true,\"hp\":100,\"max_hp\":100,\"alive\":true},{\"id\":\"dock_warden\",\"name\":\"Dock Warden\",\"is_player\":false,\"hp\":80,\"max_hp\":80,\"alive\":true}]\n",
+				"Alice": "EVT COMBAT STARTED combat=combat-1 room=loc.the_great_pier participants=[{\"id\":\"Alice\",\"name\":\"Alice\",\"is_player\":true,\"hp\":100,\"max_hp\":100,\"alive\":true},{\"id\":\"dock_warden\",\"name\":\"Dock Warden\",\"is_player\":false,\"hp\":80,\"max_hp\":80,\"alive\":true}]\n",
+				"Bob":   "EVT COMBAT STARTED combat=combat-1 room=loc.the_great_pier participants=[{\"id\":\"Alice\",\"name\":\"Alice\",\"is_player\":true,\"hp\":100,\"max_hp\":100,\"alive\":true},{\"id\":\"dock_warden\",\"name\":\"Dock Warden\",\"is_player\":false,\"hp\":80,\"max_hp\":80,\"alive\":true}]\n",
 			},
 		},
 		{
@@ -268,11 +268,11 @@ func TestNotificationDispatcherEncodesAndRoutesEvents(t *testing.T) {
 			event: world.CombatHelpRequested{
 				PlayerName: "Alice",
 				CombatID:   "combat-1",
-				RoomID:     "docks",
+				RoomID:     "loc.the_great_pier",
 				Recipients: []string{"Alice", "Bob"},
 			},
 			expected: map[string]string{
-				"Bob": "EVT COMBAT HELP REQUESTED player=Alice combat=combat-1 room=docks\n",
+				"Bob": "EVT COMBAT HELP REQUESTED player=Alice combat=combat-1 room=loc.the_great_pier\n",
 			},
 		},
 		{

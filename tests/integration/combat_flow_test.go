@@ -39,15 +39,15 @@ func TestHandleConnectionGroupStartsCooperativeCombat(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to the docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to the loc.the_great_pier = %q", got)
 	}
 	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
 		t.Fatalf("Bob's Alice-leave event = %q", got)
 	}
 	bob.sendRequest(t, "MOVE south")
-	if got := bob.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Bob's move to the docks = %q", got)
+	if got := bob.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Bob's move to the loc.the_great_pier = %q", got)
 	}
 	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Bob" {
 		t.Fatalf("Alice's Bob-enter event = %q", got)
@@ -66,7 +66,7 @@ func TestHandleConnectionGroupStartsCooperativeCombat(t *testing.T) {
 	readInitialAttackEvents(t, bob)
 	if !strings.Contains(aliceStarted, `"name":"Alice"`) ||
 		!strings.Contains(aliceStarted, `"name":"Bob"`) ||
-		!strings.Contains(aliceStarted, "room=docks") {
+		!strings.Contains(aliceStarted, "room=loc.the_great_pier") {
 		t.Errorf("combat-start event does not include both group members: %q", aliceStarted)
 	}
 
@@ -134,15 +134,15 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to loc.the_great_pier = %q", got)
 	}
 	if got := carol.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
 		t.Fatalf("Carol's Alice-leave event = %q", got)
 	}
 	carol.sendRequest(t, "MOVE south")
-	if got := carol.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Carol's move to docks = %q", got)
+	if got := carol.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Carol's move to loc.the_great_pier = %q", got)
 	}
 	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Carol" {
 		t.Fatalf("Alice's Carol-enter event = %q", got)
@@ -175,7 +175,7 @@ func TestHandleConnectionCombatHelpAllowsAnotherPlayerToJoin(t *testing.T) {
 	if got := alice.readResponse(t); got != "OK combat="+attackResult.CombatID {
 		t.Fatalf("combat-help response = %q", got)
 	}
-	if got := carol.readResponse(t); got != "EVT COMBAT HELP REQUESTED player=Alice combat="+attackResult.CombatID+" room=docks" {
+	if got := carol.readResponse(t); got != "EVT COMBAT HELP REQUESTED player=Alice combat="+attackResult.CombatID+" room=loc.the_great_pier" {
 		t.Fatalf("combat-help notification = %q", got)
 	}
 
@@ -303,8 +303,8 @@ func TestHandleConnectionCombatEndsWhenAllParticipantsDisconnect(t *testing.T) {
 	ended := captureCombatEnded(alice)
 	connectTestPlayer(t, alice, "Alice")
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to loc.the_great_pier = %q", got)
 	}
 
 	alice.sendRequest(t, "ATTACK Dock Warden")
@@ -350,9 +350,9 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 		direction string
 		room      string
 	}{
-		{"north", "market_street"},
-		{"north", "town_gate"},
-		{"north", "forest_edge"},
+		{"north", "loc.market_street"},
+		{"north", "loc.north_town_gate"},
+		{"north", "loc.whispering_forest_edge"},
 	} {
 		alice.sendRequest(t, "MOVE "+step.direction)
 		if got := alice.readResponse(t); got != "OK room="+step.room {
@@ -390,7 +390,7 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 
 		alice.sendRequest(t, "COMBAT ATTACK Dire Wolf")
 		response := readUntilResponse(t, alice)
-		if !strings.HasPrefix(response, "OK target=dire_wolf ") {
+		if !strings.HasPrefix(response, "OK target=npc.dire_wolf ") {
 			t.Fatalf("combat attack response = %q", response)
 		}
 	}
@@ -404,7 +404,7 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 	}
 	wolfDefeated := false
 	for _, participant := range combat.Participants {
-		if participant.ID == "dire_wolf" && !participant.Alive {
+		if participant.ID == "npc.dire_wolf" && !participant.Alive {
 			wolfDefeated = true
 		}
 	}
@@ -418,7 +418,7 @@ func TestHandleConnectionCombatVictoryAwardsReward(t *testing.T) {
 	}
 	herbCount := 0
 	for _, item := range inventory {
-		if item.ID == "item.herbs" {
+		if item.ID == "item.healing_herbs" {
 			herbCount++
 		}
 	}
@@ -432,8 +432,8 @@ func TestHandleConnectionCombatDefeatRespawnsPlayer(t *testing.T) {
 	connectTestPlayer(t, alice, "Alice")
 	ended := captureCombatEnded(alice)
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to loc.the_great_pier = %q", got)
 	}
 
 	alice.sendRequest(t, "ATTACK Dock Warden")
@@ -466,7 +466,7 @@ func TestHandleConnectionCombatDefeatRespawnsPlayer(t *testing.T) {
 
 		alice.sendRequest(t, "COMBAT ATTACK Dock Warden")
 		response := readUntilResponse(t, alice)
-		if !strings.HasPrefix(response, "OK target=dock_warden ") {
+		if !strings.HasPrefix(response, "OK target=npc.dock_warden ") {
 			t.Fatalf("combat attack response = %q", response)
 		}
 	}
@@ -478,8 +478,8 @@ func TestHandleConnectionCombatDefeatRespawnsPlayer(t *testing.T) {
 	if combat.Active {
 		t.Fatal("combat remains active after Alice should have been defeated")
 	}
-	if got, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || got != "harbor_square" {
-		t.Fatalf("Alice's room after defeat = (%q, %v), want harbor_square", got, err)
+	if got, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || got != "loc.central_harbor_square" {
+		t.Fatalf("Alice's room after defeat = (%q, %v), want loc.central_harbor_square", got, err)
 	}
 	if _, err := alice.gameWorld.GetActiveCombatForPlayer("Alice"); err == nil {
 		t.Fatal("defeated Alice still has an active combat")
@@ -492,8 +492,8 @@ func TestHandleConnectionCombatFleeEndsSoloEncounter(t *testing.T) {
 	connectTestPlayer(t, alice, "Alice")
 	ended := captureCombatEnded(alice)
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to loc.the_great_pier = %q", got)
 	}
 
 	alice.sendRequest(t, "ATTACK Dock Warden")
@@ -527,8 +527,8 @@ func TestHandleConnectionCombatFleeEndsSoloEncounter(t *testing.T) {
 		t.Fatal("combat remains active after the only participant flees")
 	}
 	assertCombatEndedEvent(t, ended, start.CombatID)
-	if got, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || got != "docks" {
-		t.Fatalf("Alice's room after fleeing = (%q, %v), want docks", got, err)
+	if got, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || got != "loc.the_great_pier" {
+		t.Fatalf("Alice's room after fleeing = (%q, %v), want loc.the_great_pier", got, err)
 	}
 }
 
@@ -565,16 +565,16 @@ func newGroupAtDocks(t *testing.T) (*connectionTestEnv, *connectionTestEnv) {
 	}
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to docks response = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to loc.the_great_pier response = %q", got)
 	}
 	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
 		t.Fatalf("Bob's Alice-leave event = %q", got)
 	}
 
 	bob.sendRequest(t, "MOVE south")
-	if got := bob.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Bob's move to docks response = %q", got)
+	if got := bob.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Bob's move to loc.the_great_pier response = %q", got)
 	}
 	if got := alice.readResponse(t); got != "EVT ROOM PRESENCE ENTER Bob" {
 		t.Fatalf("Alice's Bob-enter event = %q", got)
@@ -610,12 +610,12 @@ func TestHandleConnectionRejectsNonCombatActionsDuringCombat(t *testing.T) {
 	connectTestPlayer(t, alice, "Alice")
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to the docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to the loc.the_great_pier = %q", got)
 	}
 
 	alice.sendRequest(t, "TAKE Brass Lantern")
-	if got, want := alice.readResponse(t), "OK taken=item.lantern"; got != want {
+	if got, want := alice.readResponse(t), "OK taken=item.brass_lantern"; got != want {
 		t.Fatalf("take lantern response = %q, want %q", got, want)
 	}
 
@@ -644,8 +644,8 @@ func TestHandleConnectionRejectsNonCombatActionsDuringCombat(t *testing.T) {
 		}
 	}
 
-	if roomID, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || roomID != "docks" {
-		t.Errorf("Alice's room after rejected actions = (%q, %v), want docks", roomID, err)
+	if roomID, err := alice.gameWorld.GetPlayerRoom("Alice"); err != nil || roomID != "loc.the_great_pier" {
+		t.Errorf("Alice's room after rejected actions = (%q, %v), want loc.the_great_pier", roomID, err)
 	}
 	if _, err := alice.gameWorld.GetActiveCombatForPlayer("Alice"); err != nil {
 		t.Errorf("Alice no longer has an active combat after rejected actions: %v", err)
@@ -665,8 +665,8 @@ func TestHandleConnectionRejectsJoiningCombatFromAnotherRoom(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to the docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to the loc.the_great_pier = %q", got)
 	}
 	if got := carol.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
 		t.Fatalf("Carol's Alice-leave event = %q", got)

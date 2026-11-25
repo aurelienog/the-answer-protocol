@@ -25,7 +25,7 @@ func TestHandleConnectionMovementBroadcastsRoomPresence(t *testing.T) {
 	}
 
 	carol.sendRequest(t, "MOVE north")
-	if got := carol.readResponse(t); got != "OK room=market_street" {
+	if got := carol.readResponse(t); got != "OK room=loc.market_street" {
 		t.Fatalf("Carol's move response = %q", got)
 	}
 	for _, observer := range []*connectionTestEnv{alice, bob} {
@@ -35,7 +35,7 @@ func TestHandleConnectionMovementBroadcastsRoomPresence(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "MOVE north")
-	if got := alice.readResponse(t); got != "OK room=market_street" {
+	if got := alice.readResponse(t); got != "OK room=loc.market_street" {
 		t.Fatalf("Alice's move response = %q", got)
 	}
 	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
@@ -46,9 +46,9 @@ func TestHandleConnectionMovementBroadcastsRoomPresence(t *testing.T) {
 	}
 
 	for player, wantRoom := range map[string]string{
-		"Alice": "market_street",
-		"Bob":   "harbor_square",
-		"Carol": "market_street",
+		"Alice": "loc.market_street",
+		"Bob":   "loc.central_harbor_square",
+		"Carol": "loc.market_street",
 	} {
 		if got, err := alice.gameWorld.GetPlayerRoom(player); err != nil || got != wantRoom {
 			t.Errorf("GetPlayerRoom(%q) = (%q, %v), want %q", player, got, err, wantRoom)
@@ -78,7 +78,7 @@ func TestHandleConnectionRoutesRoomAndGlobalChat(t *testing.T) {
 		}
 	}
 	carol.sendRequest(t, "MOVE north")
-	if got := carol.readResponse(t); got != "OK room=market_street" {
+	if got := carol.readResponse(t); got != "OK room=loc.market_street" {
 		t.Fatalf("Carol's move response = %q", got)
 	}
 	for _, observer := range []*connectionTestEnv{alice, bob} {

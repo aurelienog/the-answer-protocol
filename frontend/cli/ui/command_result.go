@@ -217,13 +217,13 @@ func (m Model) handleCommandResult(msg commandResultMsg) (tea.Model, tea.Cmd) {
 
 	case "USE":
 		fields := parsePayloadFields(msg.response.Payload)
-		m.communication.StatusMessage = "Used " + fields["used"]
+		m.communication.StatusMessage = "Used " + friendlyID(fields["used"])
 		m.ui.PendingRefresh = RefreshInventory
 		return m, sendCommand(m.client, "INVENTORY")
 
 	case "COMBAT USE":
 		fields := parsePayloadFields(msg.response.Payload)
-		m.communication.StatusMessage = "Used " + fields["used"] + " during combat"
+		m.communication.StatusMessage = "Used " + friendlyID(fields["used"]) + " during combat"
 		m.ui.PendingRefresh = RefreshInventory
 		return m, sendCommand(m.client, "INVENTORY")
 	}

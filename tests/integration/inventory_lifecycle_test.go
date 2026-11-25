@@ -30,19 +30,19 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "TAKE Purse of Gold Coins")
-	if got := alice.readResponse(t); got != "OK taken=item.gold_coins" {
+	if got := alice.readResponse(t); got != "OK taken=item.purse_of_gold_coins" {
 		t.Fatalf("take unique item response = %q", got)
 	}
 	inventory, err := gameWorld.GetInventory("Alice")
 	if err != nil {
 		t.Fatalf("GetInventory(Alice) returned an error: %v", err)
 	}
-	if len(inventory) != 1 || inventory[0].ID != "item.gold_coins" {
+	if len(inventory) != 1 || inventory[0].ID != "item.purse_of_gold_coins" {
 		t.Fatalf("Alice's inventory before disconnect = %+v, want the unique gold coins", inventory)
 	}
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("Alice's move to the docks = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("Alice's move to the loc.the_great_pier = %q", got)
 	}
 	if got := bob.readResponse(t); got != "EVT ROOM PRESENCE LEAVE Alice" {
 		t.Fatalf("Bob's Alice-leave event = %q", got)
@@ -83,20 +83,20 @@ func TestHandleConnectionReturnsUniqueItemsToRoomOnDisconnect(t *testing.T) {
 	}
 	assertPlayerRemoved(t, bob, "Alice")
 
-	room, err := gameWorld.GetRoom("docks")
+	room, err := gameWorld.GetRoom("loc.the_great_pier")
 	if err != nil {
-		t.Fatalf("GetRoom(docks) returned an error: %v", err)
+		t.Fatalf("GetRoom(loc.the_great_pier) returned an error: %v", err)
 	}
-	if got := room.Items["item.gold_coins"]; got != 1 {
-		t.Fatalf("gold coins in docks after disconnect = %d, want 1", got)
+	if got := room.Items["item.purse_of_gold_coins"]; got != 1 {
+		t.Fatalf("gold coins in loc.the_great_pier after disconnect = %d, want 1", got)
 	}
-	items, err := gameWorld.GetRoomItems("docks")
+	items, err := gameWorld.GetRoomItems("loc.the_great_pier")
 	if err != nil {
-		t.Fatalf("GetRoomItems(docks) returned an error: %v", err)
+		t.Fatalf("GetRoomItems(loc.the_great_pier) returned an error: %v", err)
 	}
 	returnedCount := 0
 	for _, item := range items {
-		if item.ID == "item.gold_coins" {
+		if item.ID == "item.purse_of_gold_coins" {
 			returnedCount++
 		}
 	}
@@ -122,14 +122,14 @@ func loadWorldWithUniqueHarborItem(t *testing.T) *world.World {
 		t.Fatalf("decode world rooms: %v", err)
 	}
 	var harbor map[string]json.RawMessage
-	if err := json.Unmarshal(rooms["harbor_square"], &harbor); err != nil {
+	if err := json.Unmarshal(rooms["loc.central_harbor_square"], &harbor); err != nil {
 		t.Fatalf("decode harbor square: %v", err)
 	}
 	var items map[string]int
 	if err := json.Unmarshal(harbor["items"], &items); err != nil {
 		t.Fatalf("decode harbor items: %v", err)
 	}
-	items["item.gold_coins"] = 1
+	items["item.purse_of_gold_coins"] = 1
 
 	harborItems, err := json.Marshal(items)
 	if err != nil {
@@ -140,7 +140,7 @@ func loadWorldWithUniqueHarborItem(t *testing.T) *world.World {
 	if err != nil {
 		t.Fatalf("encode harbor square: %v", err)
 	}
-	rooms["harbor_square"] = harborData
+	rooms["loc.central_harbor_square"] = harborData
 	roomsData, err := json.Marshal(rooms)
 	if err != nil {
 		t.Fatalf("encode world rooms: %v", err)

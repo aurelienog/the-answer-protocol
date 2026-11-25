@@ -104,7 +104,7 @@ func renderInventoryColumn(title string, items []InventoryItem, width int) strin
 		for _, item := range items {
 			name := item.Name
 			if name == "" {
-				name = item.ID
+				name = friendlyID(item.ID)
 			}
 
 			entry := fmt.Sprintf("%s x%d", name, item.Quantity)

@@ -25,35 +25,35 @@ func TestLoadWorld(t *testing.T) {
 		t.Fatalf("expected 9 rooms, got %d", got)
 	}
 
-	room, err := gameWorld.GetRoom("harbor_square")
+	room, err := gameWorld.GetRoom("loc.central_harbor_square")
 	if err != nil {
-		t.Fatalf("expected harbor_square to exist: %v", err)
+		t.Fatalf("expected loc.central_harbor_square to exist: %v", err)
 	}
 
-	if room.ID != "harbor_square" {
-		t.Errorf("expected room ID %q, got %q", "harbor_square", room.ID)
+	if room.ID != "loc.central_harbor_square" {
+		t.Errorf("expected room ID %q, got %q", "loc.central_harbor_square", room.ID)
 	}
 
 	if room.Name != "Central Harbor Square" {
 		t.Errorf("unexpected room name: %q", room.Name)
 	}
 
-	if got := room.Exits["north"]; got != "market_street" {
-		t.Errorf("expected north exit to market_street, got %q", got)
+	if got := room.Exits["north"]; got != "loc.market_street" {
+		t.Errorf("expected north exit to loc.market_street, got %q", got)
 	}
 
-	items, err := gameWorld.GetRoomItems("harbor_square")
+	items, err := gameWorld.GetRoomItems("loc.central_harbor_square")
 	if err != nil {
-		t.Fatalf("expected to get items in harbor_square: %v", err)
+		t.Fatalf("expected to get items in loc.central_harbor_square: %v", err)
 	}
 
 	if len(items) != 1 {
-		t.Fatalf("expected 1 item in harbor_square, got %d", len(items))
+		t.Fatalf("expected 1 item in loc.central_harbor_square, got %d", len(items))
 	}
 
 	item := items[0]
-	if item.ID != "item.rope" {
-		t.Errorf("expected item ID %q, got %q", "item.rope", item.ID)
+	if item.ID != "item.hempen_rope" {
+		t.Errorf("expected item ID %q, got %q", "item.hempen_rope", item.ID)
 	}
 
 	if item.Name != "Hempen Rope" {
@@ -86,67 +86,67 @@ func TestLoadWorldPopulatesCurrentRooms(t *testing.T) {
 		npcIDs []string
 	}{
 		{
-			roomID: "harbor_square",
+			roomID: "loc.central_harbor_square",
 			name:   "Central Harbor Square",
-			items:  map[string]int{"item.rope": 1},
-			npcIDs: []string{"captain_eliza"},
+			items:  map[string]int{"item.hempen_rope": 1},
+			npcIDs: []string{"npc.captain_eliza"},
 		},
 		{
-			roomID: "market_street",
+			roomID: "loc.market_street",
 			name:   "Market Street",
-			items:  map[string]int{"item.pouch": 2},
-			npcIDs: []string{"town_guide", "quest_advisor"},
+			items:  map[string]int{"item.leather_pouch": 2},
+			npcIDs: []string{"npc.town_guide", "npc.quest_advisor"},
 		},
 		{
-			roomID: "blacksmith_forge",
+			roomID: "loc.royal_blacksmith_forge",
 			name:   "Royal Blacksmith Forge",
 			items: map[string]int{
 				"item.iron_sword": 1,
 				"item.oak_shield": 1,
 			},
-			npcIDs: []string{"blacksmith"},
+			npcIDs: []string{"npc.master_borin"},
 		},
 		{
-			roomID: "apothecary",
+			roomID: "loc.apothecary_shop",
 			name:   "Apothecary Shop",
-			items:  map[string]int{"item.healing_potion": 3},
-			npcIDs: []string{"herbalist"},
+			items:  map[string]int{"item.healing_elixir": 3},
+			npcIDs: []string{"npc.apprentice_lina"},
 		},
 		{
-			roomID: "tavern",
+			roomID: "loc.the_salty_siren_tavern",
 			name:   "The Salty Siren Tavern",
 			items: map[string]int{
-				"item.bread": 3,
-				"item.wine":  2,
+				"item.fresh_bread":         3,
+				"item.harbor_vintage_wine": 2,
 			},
-			npcIDs: []string{"tavern_keeper"},
+			npcIDs: []string{"npc.mara"},
 		},
 		{
-			roomID: "docks",
+			roomID: "loc.the_great_pier",
 			name:   "The Great Pier",
 			items: map[string]int{
-				"item.lantern":              2,
+				"item.brass_lantern":        2,
 				"item.missing_ships_report": 1,
 			},
-			npcIDs: []string{"dock_warden"},
+			npcIDs: []string{"npc.dock_warden"},
 		},
 		{
-			roomID: "warehouse",
+			roomID: "loc.abandoned_warehouse",
 			name:   "Abandoned Warehouse",
-			items:  map[string]int{"item.compromise_letter": 1},
-			npcIDs: []string{"smuggler"},
+			items:  map[string]int{"item.incriminating_letter": 1},
+			npcIDs: []string{"npc.shadow_smuggler"},
 		},
 		{
-			roomID: "town_gate",
+			roomID: "loc.north_town_gate",
 			name:   "North Town Gate",
-			items:  map[string]int{"item.explorer_token": 2},
-			npcIDs: []string{"gate_guard"},
+			items:  map[string]int{"item.northern_gate_seal": 2},
+			npcIDs: []string{"npc.north_gate_guard"},
 		},
 		{
-			roomID: "forest_edge",
+			roomID: "loc.whispering_forest_edge",
 			name:   "Whispering Forest Edge",
-			items:  map[string]int{"item.herbs": 2},
-			npcIDs: []string{"dire_wolf"},
+			items:  map[string]int{"item.healing_herbs": 2},
+			npcIDs: []string{"npc.dire_wolf"},
 		},
 	}
 
@@ -259,7 +259,7 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 		},
 		{
 			name: "quest is not in giver NPC's quest chain",
-			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+			definition: `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square",` +
 				`"name":"Room","npcs":["npc"]}},"npcs":{"npc":{"id":"npc",` +
 				`"name":"NPC","combat_stats":{"hp":1,"max_hp":1,"attack":1,` +
 				`"defense":0,"speed":1},"quest_id":"quest.root"}},` +
@@ -270,7 +270,7 @@ func TestLoadWorldRejectsInvalidDefinitions(t *testing.T) {
 		},
 		{
 			name: "quest chain giver disagrees with existing NPC",
-			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+			definition: `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square",` +
 				`"name":"Room","npcs":["npc.first","npc.second"]}},` +
 				`"npcs":{"npc.first":{"id":"npc.first","name":"First",` +
 				`"quest_id":"quest.first","combat_stats":{"hp":1,"max_hp":1,` +
@@ -323,18 +323,18 @@ func TestLoadWorldRejectsMissingRequiredFields(t *testing.T) {
 		},
 		{
 			name:            "missing room name",
-			definition:      `{"rooms":{"harbor_square":{"id":"harbor_square"}}}`,
-			expectedInError: `world.rooms["harbor_square"].name is missing or null`,
+			definition:      `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square"}}}`,
+			expectedInError: `world.rooms["loc.central_harbor_square"].name is missing or null`,
 		},
 		{
 			name: "missing item type",
-			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+			definition: `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square",` +
 				`"name":"Room"}},"items":{"item":{"id":"item","name":"Item"}}}`,
 			expectedInError: `world.items["item"].type is missing or null`,
 		},
 		{
 			name: "missing NPC combat statistic",
-			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+			definition: `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square",` +
 				`"name":"Room"}},"npcs":{"npc":{"id":"npc","name":"NPC",` +
 				`"combat_stats":{"hp":1,"max_hp":1,"attack":1,` +
 				`"speed":1}}}}`,
@@ -342,7 +342,7 @@ func TestLoadWorldRejectsMissingRequiredFields(t *testing.T) {
 		},
 		{
 			name: "missing quest giver",
-			definition: `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+			definition: `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square",` +
 				`"name":"Room"}},"quests":{"quest":{"id":"quest",` +
 				`"name":"Quest"}}}`,
 			expectedInError: `world.quests["quest"].giver_npc_id is missing or null`,
@@ -364,7 +364,7 @@ func TestLoadWorldRejectsMissingRequiredFields(t *testing.T) {
 
 func TestLoadWorldRejectsAdditionalInvalidDefinitions(t *testing.T) {
 	const validDefinition = `{
-		"rooms":{"harbor_square":{"id":"harbor_square","name":"Room","npcs":["npc"],"exits":{},"items":{}}},
+		"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square","name":"Room","npcs":["npc"],"exits":{},"items":{}}},
 		"items":{"item":{"id":"item","name":"Item","type":"common"}},
 		"npcs":{"npc":{"id":"npc","name":"NPC","quest_id":"quest","combat_stats":{"hp":1,"max_hp":1,"attack":1,"defense":0,"speed":1}}},
 		"quests":{"quest":{"id":"quest","name":"Quest","giver_npc_id":"npc"}}
@@ -375,17 +375,17 @@ func TestLoadWorldRejectsAdditionalInvalidDefinitions(t *testing.T) {
 		value           interface{}
 		expectedInError string
 	}{
-		{name: "room ID mismatch", path: []string{"rooms", "harbor_square", "id"}, value: "different", expectedInError: `does not match room ID`},
-		{name: "empty room name", path: []string{"rooms", "harbor_square", "name"}, value: " ", expectedInError: `has an empty name`},
-		{name: "invalid exit direction", path: []string{"rooms", "harbor_square", "exits"}, value: map[string]interface{}{"up": "harbor_square"}, expectedInError: `invalid exit direction "up"`},
-		{name: "empty exit destination", path: []string{"rooms", "harbor_square", "exits"}, value: map[string]interface{}{"north": " "}, expectedInError: `empty destination for exit "north"`},
-		{name: "unknown room NPC", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{"missing"}, expectedInError: `references unknown NPC "missing"`},
-		{name: "duplicate room NPC", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{"npc", "npc"}, expectedInError: `contains duplicate NPC "npc"`},
-		{name: "empty room NPC", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{""}, expectedInError: `contains an empty NPC ID`},
-		{name: "unknown room item", path: []string{"rooms", "harbor_square", "items"}, value: map[string]interface{}{"missing": 1}, expectedInError: `references nonexistent item "missing"`},
-		{name: "negative room item quantity", path: []string{"rooms", "harbor_square", "items"}, value: map[string]interface{}{"item": -1}, expectedInError: `invalid quantity -1 for item "item"`},
-		{name: "multiple unique items in room", path: []string{"rooms", "harbor_square", "items"}, value: map[string]interface{}{"item": 2}, expectedInError: `contains multiple instances of unique item "item"`},
-		{name: "unique item in multiple rooms", path: []string{"rooms"}, value: map[string]interface{}{"harbor_square": map[string]interface{}{"id": "harbor_square", "name": "Room", "npcs": []interface{}{"npc"}, "items": map[string]interface{}{"item": 1}}, "other": map[string]interface{}{"id": "other", "name": "Other", "items": map[string]interface{}{"item": 1}}}, expectedInError: `duplicate item instance ID`},
+		{name: "room ID mismatch", path: []string{"rooms", "loc.central_harbor_square", "id"}, value: "different", expectedInError: `does not match room ID`},
+		{name: "empty room name", path: []string{"rooms", "loc.central_harbor_square", "name"}, value: " ", expectedInError: `has an empty name`},
+		{name: "invalid exit direction", path: []string{"rooms", "loc.central_harbor_square", "exits"}, value: map[string]interface{}{"up": "loc.central_harbor_square"}, expectedInError: `invalid exit direction "up"`},
+		{name: "empty exit destination", path: []string{"rooms", "loc.central_harbor_square", "exits"}, value: map[string]interface{}{"north": " "}, expectedInError: `empty destination for exit "north"`},
+		{name: "unknown room NPC", path: []string{"rooms", "loc.central_harbor_square", "npcs"}, value: []interface{}{"missing"}, expectedInError: `references unknown NPC "missing"`},
+		{name: "duplicate room NPC", path: []string{"rooms", "loc.central_harbor_square", "npcs"}, value: []interface{}{"npc", "npc"}, expectedInError: `contains duplicate NPC "npc"`},
+		{name: "empty room NPC", path: []string{"rooms", "loc.central_harbor_square", "npcs"}, value: []interface{}{""}, expectedInError: `contains an empty NPC ID`},
+		{name: "unknown room item", path: []string{"rooms", "loc.central_harbor_square", "items"}, value: map[string]interface{}{"missing": 1}, expectedInError: `references nonexistent item "missing"`},
+		{name: "negative room item quantity", path: []string{"rooms", "loc.central_harbor_square", "items"}, value: map[string]interface{}{"item": -1}, expectedInError: `invalid quantity -1 for item "item"`},
+		{name: "multiple unique items in room", path: []string{"rooms", "loc.central_harbor_square", "items"}, value: map[string]interface{}{"item": 2}, expectedInError: `contains multiple instances of unique item "item"`},
+		{name: "unique item in multiple rooms", path: []string{"rooms"}, value: map[string]interface{}{"loc.central_harbor_square": map[string]interface{}{"id": "loc.central_harbor_square", "name": "Room", "npcs": []interface{}{"npc"}, "items": map[string]interface{}{"item": 1}}, "other": map[string]interface{}{"id": "other", "name": "Other", "items": map[string]interface{}{"item": 1}}}, expectedInError: `duplicate item instance ID`},
 		{name: "item ID mismatch", path: []string{"items", "item", "id"}, value: "different", expectedInError: `does not match item ID`},
 		{name: "empty item name", path: []string{"items", "item", "name"}, value: "", expectedInError: `has an empty name`},
 		{name: "invalid item type", path: []string{"items", "item", "type"}, value: "invalid", expectedInError: `has invalid type "invalid"`},
@@ -412,11 +412,11 @@ func TestLoadWorldRejectsAdditionalInvalidDefinitions(t *testing.T) {
 		{name: "unknown quest dialogue", path: []string{"npcs", "npc", "quest_dialogues"}, value: map[string]interface{}{"missing": map[string]interface{}{}}, expectedInError: `references nonexistent quest "missing" in quest dialogues`},
 		{name: "NPC references unknown quest", path: []string{"npcs", "npc", "quest_id"}, value: "missing", expectedInError: `references nonexistent quest "missing"`},
 		{name: "quest giver disagrees with NPC chain", path: []string{"quests", "quest", "giver_npc_id"}, value: "other", expectedInError: `references nonexistent giver NPC "other"`},
-		{name: "NPC has no room", path: []string{"rooms", "harbor_square", "npcs"}, value: []interface{}{}, expectedInError: `is not assigned to any room`},
-		{name: "unknown exit destination", path: []string{"rooms", "harbor_square", "exits"}, value: map[string]interface{}{"north": "missing"}, expectedInError: `references unknown destination room "missing"`},
-		{name: "room disconnected from initial room", path: []string{"rooms"}, value: map[string]interface{}{"harbor_square": map[string]interface{}{"id": "harbor_square", "name": "Room", "npcs": []interface{}{"npc"}}, "isolated": map[string]interface{}{"id": "isolated", "name": "Isolated"}}, expectedInError: `rooms are not reachable from initial room`},
-		{name: "missing initial room", path: []string{"rooms"}, value: map[string]interface{}{"other": map[string]interface{}{"id": "other", "name": "Other", "npcs": []interface{}{"npc"}}}, expectedInError: `initial room "harbor_square" does not exist`},
-		{name: "exit missing reverse connection", path: []string{"rooms"}, value: map[string]interface{}{"harbor_square": map[string]interface{}{"id": "harbor_square", "name": "Room", "npcs": []interface{}{"npc"}, "exits": map[string]interface{}{"north": "other"}}, "other": map[string]interface{}{"id": "other", "name": "Other"}}, expectedInError: `reverse exit "south" is missing`},
+		{name: "NPC has no room", path: []string{"rooms", "loc.central_harbor_square", "npcs"}, value: []interface{}{}, expectedInError: `is not assigned to any room`},
+		{name: "unknown exit destination", path: []string{"rooms", "loc.central_harbor_square", "exits"}, value: map[string]interface{}{"north": "missing"}, expectedInError: `references unknown destination room "missing"`},
+		{name: "room disconnected from initial room", path: []string{"rooms"}, value: map[string]interface{}{"loc.central_harbor_square": map[string]interface{}{"id": "loc.central_harbor_square", "name": "Room", "npcs": []interface{}{"npc"}}, "isolated": map[string]interface{}{"id": "isolated", "name": "Isolated"}}, expectedInError: `rooms are not reachable from initial room`},
+		{name: "missing initial room", path: []string{"rooms"}, value: map[string]interface{}{"other": map[string]interface{}{"id": "other", "name": "Other", "npcs": []interface{}{"npc"}}}, expectedInError: `initial room "loc.central_harbor_square" does not exist`},
+		{name: "exit missing reverse connection", path: []string{"rooms"}, value: map[string]interface{}{"loc.central_harbor_square": map[string]interface{}{"id": "loc.central_harbor_square", "name": "Room", "npcs": []interface{}{"npc"}, "exits": map[string]interface{}{"north": "other"}}, "other": map[string]interface{}{"id": "other", "name": "Other"}}, expectedInError: `reverse exit "south" is missing`},
 		{name: "quest ID mismatch", path: []string{"quests", "quest", "id"}, value: "different", expectedInError: `does not match quest ID`},
 		{name: "NPC key mismatch", path: []string{"npcs"}, value: map[string]interface{}{"different": map[string]interface{}{"id": "npc", "name": "NPC", "quest_id": "quest", "combat_stats": map[string]interface{}{"hp": 1, "max_hp": 1, "attack": 1, "defense": 0, "speed": 1}}}, expectedInError: `NPC key "different" does not match NPC ID "npc"`},
 	}
@@ -458,7 +458,7 @@ func TestLoadWorldRejectsAdditionalInvalidDefinitions(t *testing.T) {
 }
 
 func TestLoadWorldAllowsQuestChainsForSameNPC(t *testing.T) {
-	definition := `{"rooms":{"harbor_square":{"id":"harbor_square",` +
+	definition := `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square",` +
 		`"name":"Room","npcs":["npc"]}},"npcs":{"npc":{"id":"npc",` +
 		`"name":"NPC","combat_stats":{"hp":1,"max_hp":1,"attack":1,` +
 		`"defense":0,"speed":1},"quest_id":"quest.first"}},` +
@@ -503,7 +503,7 @@ func TestLoadWorldReportsFileAndJSONErrors(t *testing.T) {
 }
 
 func TestLoadWorldJSONParsing(t *testing.T) {
-	validDefinition := `{"rooms":{"harbor_square":{"id":"harbor_square","name":"Room"}}}`
+	validDefinition := `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square","name":"Room"}}}`
 
 	tests := []struct {
 		name            string
@@ -527,12 +527,12 @@ func TestLoadWorldJSONParsing(t *testing.T) {
 		},
 		{
 			name:            "duplicate nested key",
-			definition:      `{"rooms":{"harbor_square":{"id":"harbor_square","name":"Room","name":"Other"}}}`,
+			definition:      `{"rooms":{"loc.central_harbor_square":{"id":"loc.central_harbor_square","name":"Room","name":"Other"}}}`,
 			expectedInError: `duplicate JSON object key "name"`,
 		},
 		{
 			name:            "incompatible JSON field type",
-			definition:      `{"rooms":{"harbor_square":{"id":1,"name":"Room"}}}`,
+			definition:      `{"rooms":{"loc.central_harbor_square":{"id":1,"name":"Room"}}}`,
 			expectedInError: "cannot unmarshal number into Go struct field",
 		},
 		{

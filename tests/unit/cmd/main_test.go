@@ -23,7 +23,7 @@ import (
 )
 
 const testTimeout = 3 * time.Second
-const testInitialRoomID = "harbor_square"
+const testInitialRoomID = "loc.central_harbor_square"
 
 func createTestWorld(t *testing.T) *world.World {
 	t.Helper()

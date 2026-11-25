@@ -13,7 +13,7 @@ import (
 
 func TestInventoryDropAndStatusCommands(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.central_harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	ctx := &commands.Context{PlayerName: "Alice", World: gameWorld}
@@ -38,12 +38,12 @@ func TestInventoryDropAndStatusCommands(t *testing.T) {
 		t.Fatalf("STATUS payload = %+v, want full healthy HP", statusPayload)
 	}
 
-	if err := gameWorld.TakeItem("Alice", "item.rope"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.hempen_rope"); err != nil {
 		t.Fatalf("TakeItem(rope) returned an error: %v", err)
 	}
 	ctx.RawText = "Hempen Rope"
 	drop, err := commands.NewDropCommand().Execute(ctx)
-	if err != nil || drop.Kind != protocol.KindOK || drop.Payload != "dropped=item.rope" {
+	if err != nil || drop.Kind != protocol.KindOK || drop.Payload != "dropped=item.hempen_rope" {
 		t.Fatalf("DROP response = (%+v, %v)", drop, err)
 	}
 
@@ -58,7 +58,7 @@ func TestInventoryDropAndStatusCommands(t *testing.T) {
 
 func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.market_street"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	ctx := &commands.Context{PlayerName: "Alice", World: gameWorld}
@@ -69,7 +69,7 @@ func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 		t.Fatalf("TALK response = (%+v, %v), want OK", talk, err)
 	}
 
-	if err := gameWorld.AcceptQuest("Alice", "quest.explore_arvendale"); err != nil {
+	if err := gameWorld.AcceptQuest("Alice", "quest.scout_the_realm_of_arvendale"); err != nil {
 		t.Fatalf("AcceptQuest() returned an error: %v", err)
 	}
 	ctx.RawArgs = nil
@@ -79,14 +79,14 @@ func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 		t.Fatalf("QUESTS response = (%+v, %v), want active quest JSON", quests, err)
 	}
 
-	ctx.RawArgs = []string{"quest.explore_arvendale"}
+	ctx.RawArgs = []string{"quest.scout_the_realm_of_arvendale"}
 	complete, err := commands.NewCompleteCommand().Execute(ctx)
 	if err != nil || complete.Kind != protocol.KindERR ||
 		complete.Code != protocol.CodeCommandFailed ||
 		complete.Name != "REQUIRED_ITEM_MISSING" {
 		t.Fatalf("early COMPLETE response = (%+v, %v), want missing-item error", complete, err)
 	}
-	if progress, err := gameWorld.GetPlayerQuest("Alice", "quest.explore_arvendale"); err != nil ||
+	if progress, err := gameWorld.GetPlayerQuest("Alice", "quest.scout_the_realm_of_arvendale"); err != nil ||
 		progress.Status != world.QuestStatusActive {
 		t.Fatalf("quest after failed COMPLETE = (%+v, %v), want active", progress, err)
 	}
@@ -102,7 +102,7 @@ func TestTalkQuestsAndCompleteCommands(t *testing.T) {
 
 func TestAttackCommandMapsHostileAndTargetErrors(t *testing.T) {
 	gameWorld := loadCommandTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.central_harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	ctx := &commands.Context{PlayerName: "Alice", World: gameWorld}

@@ -17,7 +17,7 @@ func TestCombatTurnTimeoutContinuesAfterPlayerJoinsMidRound(t *testing.T) {
 		t.Fatalf("load world: %v", err)
 	}
 	for _, name := range []string{"Alice", "Bob"} {
-		if _, err := gameWorld.AddPlayer(name, "forest_edge"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "loc.whispering_forest_edge"); err != nil {
 			t.Fatalf("AddPlayer(%s): %v", name, err)
 		}
 	}

@@ -67,6 +67,35 @@ func TestUseCommandRefreshesInventory(t *testing.T) {
 	}
 }
 
+func TestInventoryFormatsIDsFromJSON(t *testing.T) {
+	client, requests := newUICommandClient(t)
+	model := ui.NewModel(client)
+	model, authCmd := enterText(t, model, "Alice")
+	model, _ = updateModel(t, model, authCmd())
+	model, _ = updateModel(t, model, tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	model, inventoryCmd := enterText(t, model, "INVENTORY")
+	if inventoryCmd == nil {
+		t.Fatal("INVENTORY did not send a command")
+	}
+
+	model, responseCmd := updateModel(t, model, inventoryCmd())
+	if request := <-requests; request != "INVENTORY" {
+		t.Fatalf("server request = %q, want INVENTORY", request)
+	}
+
+	model, transitionCmd := updateModel(t, model, nextMessage(t, responseCmd))
+	model, _ = updateModel(t, model, transitionCmd())
+
+	view := model.View()
+	if !strings.Contains(view, "healing potion x2") {
+		t.Errorf("inventory view = %q, want a friendly item ID from JSON", view)
+	}
+	if strings.Contains(view, "item.healing_potion") {
+		t.Errorf("inventory view = %q, should not expose the raw item ID", view)
+	}
+}
+
 func TestTakeCommandAddsFriendlyEvent(t *testing.T) {
 	client, requests := newUICommandClient(t)
 	model := ui.NewModel(client)
@@ -93,7 +122,7 @@ func TestTakeCommandAddsFriendlyEvent(t *testing.T) {
 	}
 	model, _ = updateModel(t, model, eventsCmd())
 
-	if view := model.View(); !strings.Contains(view, "You picked up item.rope") {
+	if view := model.View(); !strings.Contains(view, "You picked up rope") {
 		t.Fatalf("event history = %q, want successful TAKE feedback", view)
 	}
 }
@@ -143,7 +172,7 @@ func newUICommandClient(t *testing.T) (*network.Client, <-chan string) {
 				response = "OK taken=item.rope"
 			case request == "INVENTORY":
 				requests <- request
-				response = "OK []"
+				response = `OK [{"id":"item.healing_potion","type":"consumable","quantity":2}]`
 			default:
 				response = "ERR 400 INVALID_ARGUMENTS"
 			}

@@ -57,7 +57,7 @@ func renderCombatInfo(combat CombatState) string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		fmt.Sprintf("%s %s", layout.StatusStyle.Render("Combat:"), layout.InfoStyle.Render(combat.ID)),
+		fmt.Sprintf("%s %s", layout.StatusStyle.Render("Combat:"), layout.InfoStyle.Render(friendlyID(combat.ID))),
 		fmt.Sprintf("%s %d", layout.StatusStyle.Render("Round:"), combat.Round),
 		fmt.Sprintf("%s %s", layout.StatusStyle.Render("Status:"), status),
 		fmt.Sprintf("%s %s", layout.StatusStyle.Render("You:"), playerStatus),
@@ -85,7 +85,7 @@ func (m Model) renderCombatParticipants(participants []CombatParticipantState, w
 func (m Model) renderCombatParticipant(participant CombatParticipantState, width int) string {
 	name := participant.Name
 	if name == "" {
-		name = participant.ID
+		name = friendlyID(participant.ID)
 	}
 
 	participantType := "NPC"

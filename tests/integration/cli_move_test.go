@@ -100,10 +100,10 @@ func TestCLIClientRepeatedMoveNorthSouth(t *testing.T) {
 
 	for i := 0; i < moveCount; i++ {
 		direction := "north"
-		wantRoom := "market_street"
+		wantRoom := "loc.market_street"
 		if i%2 == 1 {
 			direction = "south"
-			wantRoom = "harbor_square"
+			wantRoom = "loc.central_harbor_square"
 		}
 
 		response, err := client.Send(ctx, "MOVE "+direction)

@@ -51,7 +51,7 @@ func TestJoinedPlayerGetsNextRoundAfterOriginalPlayerDies(t *testing.T) {
 	if _, _, err := gameWorld.RequestCombatHelp("Alice"); !errors.Is(err, world.ErrInvalidCombatTurn) {
 		t.Fatalf("RequestCombatHelp(Alice) after death returned %v, want ErrInvalidCombatTurn", err)
 	}
-	assertPlayerRemainsDeadInRoom(t, gameWorld, "Alice", "docks")
+	assertPlayerRemainsDeadInRoom(t, gameWorld, "Alice", "loc.the_great_pier")
 
 	// The NPC acts first on the tie; Bob must then get his first action.
 	combat, err = gameWorld.GetCombat(combat.ID)
@@ -169,7 +169,7 @@ func TestNonGroupPlayerWaitsForCombatToEndAfterDeath(t *testing.T) {
 	if _, err := gameWorld.GetActiveCombatForPlayer("Bob"); err != nil {
 		t.Fatalf("dead Bob's active combat lookup returned an error: %v", err)
 	}
-	assertPlayerRemainsDeadInRoom(t, gameWorld, "Bob", "docks")
+	assertPlayerRemainsDeadInRoom(t, gameWorld, "Bob", "loc.the_great_pier")
 
 	if current := combat.Participants[combat.TurnIndex]; !current.IsPlayer || current.ID != "Alice" {
 		t.Fatalf("round 2 turn = %+v, want Alice", current)
@@ -192,7 +192,7 @@ func addPlayersAtDocks(
 	t.Helper()
 
 	for _, name := range playerNames {
-		if _, err := gameWorld.AddPlayer(name, "docks"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "loc.the_great_pier"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}

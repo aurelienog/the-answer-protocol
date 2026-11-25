@@ -10,16 +10,16 @@ import (
 
 func TestWorldInventoryTakeDropAndQuantities(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.central_harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
-	if err := gameWorld.TakeItem("Alice", "item.rope"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.hempen_rope"); err != nil {
 		t.Fatalf("TakeItem(rope) returned an error: %v", err)
 	}
 	if _, err := gameWorld.MovePlayer("Alice", "north"); err != nil {
 		t.Fatalf("MovePlayer(market street) returned an error: %v", err)
 	}
-	if err := gameWorld.TakeItem("Alice", "item.pouch"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.leather_pouch"); err != nil {
 		t.Fatalf("TakeItem(pouch) returned an error: %v", err)
 	}
 	inventory, err := gameWorld.GetInventoryWithQuantities("Alice")
@@ -33,15 +33,15 @@ func TestWorldInventoryTakeDropAndQuantities(t *testing.T) {
 	for _, item := range inventory {
 		quantities[item.ID] = item.Quantity
 	}
-	if quantities["item.rope"] != 1 || quantities["item.pouch"] != 1 {
+	if quantities["item.hempen_rope"] != 1 || quantities["item.leather_pouch"] != 1 {
 		t.Fatalf("inventory quantities = %+v, want one rope and one pouch", inventory)
 	}
 
-	event, err := gameWorld.DropItem("Alice", "item.pouch")
+	event, err := gameWorld.DropItem("Alice", "item.leather_pouch")
 	if err != nil {
 		t.Fatalf("DropItem(pouch) returned an error: %v", err)
 	}
-	if event.PlayerName != "Alice" || event.RoomID != "market_street" ||
+	if event.PlayerName != "Alice" || event.RoomID != "loc.market_street" ||
 		len(event.RoomPlayers) != 1 || event.RoomPlayers[0] != "Alice" {
 		t.Fatalf("drop event = %+v", event)
 	}
@@ -49,18 +49,18 @@ func TestWorldInventoryTakeDropAndQuantities(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetInventoryWithQuantities() after drop returned an error: %v", err)
 	}
-	if len(inventory) != 1 || inventory[0].ID != "item.rope" || inventory[0].Quantity != 1 {
+	if len(inventory) != 1 || inventory[0].ID != "item.hempen_rope" || inventory[0].Quantity != 1 {
 		t.Fatalf("inventory after dropping pouch = %+v, want one rope", inventory)
 	}
-	room, err := gameWorld.GetRoom("market_street")
+	room, err := gameWorld.GetRoom("loc.market_street")
 	if err != nil {
-		t.Fatalf("GetRoom(market_street) returned an error: %v", err)
+		t.Fatalf("GetRoom(loc.market_street) returned an error: %v", err)
 	}
-	if room.Items["item.pouch"] != 2 {
-		t.Fatalf("pouches in room after drop = %d, want 2", room.Items["item.pouch"])
+	if room.Items["item.leather_pouch"] != 2 {
+		t.Fatalf("pouches in room after drop = %d, want 2", room.Items["item.leather_pouch"])
 	}
 
-	if _, err := gameWorld.DropItem("Alice", "item.leather_boots"); !errors.Is(err, world.ErrItemNotInInventory) {
+	if _, err := gameWorld.DropItem("Alice", "item.pathfinder_boots"); !errors.Is(err, world.ErrItemNotInInventory) {
 		t.Fatalf("DropItem(missing boots) error = %v, want ErrItemNotInInventory", err)
 	}
 }
@@ -68,7 +68,7 @@ func TestWorldInventoryTakeDropAndQuantities(t *testing.T) {
 func TestWorldGroupInvitationJoinAndLeaveLifecycle(t *testing.T) {
 	gameWorld := loadTestWorld(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "loc.central_harbor_square"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
@@ -126,7 +126,7 @@ func TestWorldGroupInvitationJoinAndLeaveLifecycle(t *testing.T) {
 
 func TestWorldGroupNameMaximumLength(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.central_harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 
@@ -135,7 +135,7 @@ func TestWorldGroupNameMaximumLength(t *testing.T) {
 	}
 
 	otherWorld := loadTestWorld(t)
-	if _, err := otherWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := otherWorld.AddPlayer("Alice", "loc.central_harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	if _, err := otherWorld.CreateGroup("Alice", strings.Repeat("é", world.MaxGroupNameLength+1)); !errors.Is(err, world.ErrInvalidArgument) {
@@ -145,7 +145,7 @@ func TestWorldGroupNameMaximumLength(t *testing.T) {
 
 func TestWorldChatMessageMaximumLength(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.central_harbor_square"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 
@@ -160,14 +160,14 @@ func TestWorldChatMessageMaximumLength(t *testing.T) {
 func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	gameWorld := loadWorldWithUniqueItemInHarbor(t)
 	for _, name := range []string{"Alice", "Bob"} {
-		if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+		if _, err := gameWorld.AddPlayer(name, "loc.central_harbor_square"); err != nil {
 			t.Fatalf("AddPlayer(%s) returned an error: %v", name, err)
 		}
 	}
-	if err := gameWorld.TakeItem("Alice", "item.rope"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.hempen_rope"); err != nil {
 		t.Fatalf("TakeItem(rope) returned an error: %v", err)
 	}
-	if err := gameWorld.TakeItem("Alice", "item.gold_coins"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.purse_of_gold_coins"); err != nil {
 		t.Fatalf("TakeItem(gold coins) returned an error: %v", err)
 	}
 	if _, err := gameWorld.MovePlayer("Alice", "north"); err != nil {
@@ -176,7 +176,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	if _, err := gameWorld.TalkToNPC("Alice", "Quest Advisor"); err != nil {
 		t.Fatalf("TalkToNPC(Quest Advisor) returned an error: %v", err)
 	}
-	if err := gameWorld.AcceptQuest("Alice", "quest.explore_arvendale"); err != nil {
+	if err := gameWorld.AcceptQuest("Alice", "quest.scout_the_realm_of_arvendale"); err != nil {
 		t.Fatalf("AcceptQuest() returned an error: %v", err)
 	}
 	if _, err := gameWorld.CreateGroup("Bob", "Adventurers"); err != nil {
@@ -189,7 +189,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 		t.Fatalf("MovePlayer(harbor square) returned an error: %v", err)
 	}
 	if _, err := gameWorld.MovePlayer("Alice", "south"); err != nil {
-		t.Fatalf("MovePlayer(docks) returned an error: %v", err)
+		t.Fatalf("MovePlayer(loc.the_great_pier) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
 	if err != nil {
@@ -200,7 +200,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RemovePlayer(Alice) returned an error: %v", err)
 	}
-	if len(returned.ItemIDs) != 1 || returned.ItemIDs[0] == "item.gold_coins" {
+	if len(returned.ItemIDs) != 1 || returned.ItemIDs[0] == "item.purse_of_gold_coins" {
 		t.Fatalf("unique items returned = %v, want one concrete gold-coins instance", returned.ItemIDs)
 	}
 	if len(combatEvents) == 0 {
@@ -219,7 +219,7 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 		}
 	}
 
-	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.market_street"); err != nil {
 		t.Fatalf("AddPlayer(Alice) after removal returned an error: %v", err)
 	}
 	quests, err := gameWorld.GetPlayerQuests("Alice")
@@ -237,17 +237,17 @@ func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	if _, err := gameWorld.GetPlayerGroup("Alice"); !errors.Is(err, world.ErrPlayerNotInGroup) {
 		t.Fatalf("GetPlayerGroup(Alice) after reconnect error = %v, want ErrPlayerNotInGroup", err)
 	}
-	if room, err := gameWorld.GetRoom("docks"); err != nil || room.Items["item.gold_coins"] != 1 {
-		t.Fatalf("gold coins in docks after disconnect = (%d, %v), want 1", room.Items["item.gold_coins"], err)
+	if room, err := gameWorld.GetRoom("loc.the_great_pier"); err != nil || room.Items["item.purse_of_gold_coins"] != 1 {
+		t.Fatalf("gold coins in loc.the_great_pier after disconnect = (%d, %v), want 1", room.Items["item.purse_of_gold_coins"], err)
 	}
-	if room, err := gameWorld.GetRoom("harbor_square"); err != nil || room.Items["item.rope"] != 0 {
-		t.Fatalf("rope in harbor after disconnect = (%d, %v), want 0", room.Items["item.rope"], err)
+	if room, err := gameWorld.GetRoom("loc.central_harbor_square"); err != nil || room.Items["item.hempen_rope"] != 0 {
+		t.Fatalf("rope in harbor after disconnect = (%d, %v), want 0", room.Items["item.hempen_rope"], err)
 	}
 }
 
 func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "market_street"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.market_street"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 
@@ -260,17 +260,17 @@ func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	}
 	availableQuest := false
 	for _, quest := range available {
-		if quest.ID == "quest.explore_arvendale" {
+		if quest.ID == "quest.scout_the_realm_of_arvendale" {
 			availableQuest = true
 		}
 	}
 	if !availableQuest {
 		t.Fatalf("available quests = %+v, want explore quest", available)
 	}
-	if err := gameWorld.AcceptQuest("Alice", "quest.explore_arvendale"); err != nil {
+	if err := gameWorld.AcceptQuest("Alice", "quest.scout_the_realm_of_arvendale"); err != nil {
 		t.Fatalf("AcceptQuest() returned an error: %v", err)
 	}
-	summary, err := gameWorld.GetPlayerQuestSummary("Alice", "quest.explore_arvendale")
+	summary, err := gameWorld.GetPlayerQuestSummary("Alice", "quest.scout_the_realm_of_arvendale")
 	if err != nil {
 		t.Fatalf("GetPlayerQuestSummary() returned an error: %v", err)
 	}
@@ -281,17 +281,17 @@ func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetPlayerQuests() returned an error: %v", err)
 	}
-	if len(quests) != 1 || quests[0].ID != "quest.explore_arvendale" {
+	if len(quests) != 1 || quests[0].ID != "quest.scout_the_realm_of_arvendale" {
 		t.Fatalf("player quests = %+v", quests)
 	}
 
 	if _, err := gameWorld.MovePlayer("Alice", "north"); err != nil {
 		t.Fatalf("MovePlayer(town gate) returned an error: %v", err)
 	}
-	if err := gameWorld.TakeItem("Alice", "item.explorer_token"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.northern_gate_seal"); err != nil {
 		t.Fatalf("TakeItem(explorer token) returned an error: %v", err)
 	}
-	summary, err = gameWorld.GetPlayerQuestSummary("Alice", "quest.explore_arvendale")
+	summary, err = gameWorld.GetPlayerQuestSummary("Alice", "quest.scout_the_realm_of_arvendale")
 	if err != nil {
 		t.Fatalf("GetPlayerQuestSummary() after collecting objective returned an error: %v", err)
 	}
@@ -301,10 +301,10 @@ func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	if _, err := gameWorld.MovePlayer("Alice", "south"); err != nil {
 		t.Fatalf("MovePlayer(market street) returned an error: %v", err)
 	}
-	if err := gameWorld.CompleteQuest("Alice", "quest.explore_arvendale"); err != nil {
+	if err := gameWorld.CompleteQuest("Alice", "quest.scout_the_realm_of_arvendale"); err != nil {
 		t.Fatalf("CompleteQuest() returned an error: %v", err)
 	}
-	progress, err := gameWorld.GetPlayerQuest("Alice", "quest.explore_arvendale")
+	progress, err := gameWorld.GetPlayerQuest("Alice", "quest.scout_the_realm_of_arvendale")
 	if err != nil || progress.Status != world.QuestStatusCompleted {
 		t.Fatalf("GetPlayerQuest() = (%+v, %v), want completed", progress, err)
 	}
@@ -320,29 +320,29 @@ func TestWorldQuestDiscoveryProgressAndCompletionQueries(t *testing.T) {
 	for _, item := range inventory {
 		rewards[item.ID] = item.Quantity
 	}
-	if rewards["item.leather_boots"] != 1 || rewards["item.explorer_token"] != 0 {
+	if rewards["item.pathfinder_boots"] != 1 || rewards["item.northern_gate_seal"] != 0 {
 		t.Fatalf("inventory after quest completion = %+v", inventory)
 	}
 }
 
 func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "apothecary"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.apothecary_shop"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 
-	conversation, err := gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err := gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
-		t.Fatalf("TalkToNPC(herbalist) returned an error: %v", err)
+		t.Fatalf("TalkToNPC(npc.apprentice_lina) returned an error: %v", err)
 	}
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
-		conversation.Quest == nil || conversation.Quest.ID != "quest.gather_herbs" {
-		t.Fatalf("initial herbalist conversation = %+v, want first quest available", conversation)
+		conversation.Quest == nil || conversation.Quest.ID != "quest.remedies_of_the_whispering_woods" {
+		t.Fatalf("initial npc.apprentice_lina conversation = %+v, want first quest available", conversation)
 	}
-	if err := gameWorld.AcceptQuest("Alice", "quest.gather_herbs"); err != nil {
+	if err := gameWorld.AcceptQuest("Alice", "quest.remedies_of_the_whispering_woods"); err != nil {
 		t.Fatalf("AcceptQuest(gather herbs) returned an error: %v", err)
 	}
-	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err = gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
 		t.Fatalf("TalkToNPC(active herb quest) returned an error: %v", err)
 	}
@@ -355,34 +355,34 @@ func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testi
 			t.Fatalf("MovePlayer(%s) toward forest returned an error: %v", direction, err)
 		}
 	}
-	if err := gameWorld.TakeItem("Alice", "item.herbs"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.healing_herbs"); err != nil {
 		t.Fatalf("TakeItem(first herbs) returned an error: %v", err)
 	}
 	for _, direction := range []string{"south", "south", "east"} {
 		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
-			t.Fatalf("MovePlayer(%s) back to apothecary returned an error: %v", direction, err)
+			t.Fatalf("MovePlayer(%s) back to loc.apothecary_shop returned an error: %v", direction, err)
 		}
 	}
-	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err = gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
 		t.Fatalf("TalkToNPC(completed first quest) returned an error: %v", err)
 	}
 	if conversation.QuestStatus != world.QuestStatusCompleted ||
-		conversation.Quest == nil || conversation.Quest.ID != "quest.gather_herbs" {
+		conversation.Quest == nil || conversation.Quest.ID != "quest.remedies_of_the_whispering_woods" {
 		t.Fatalf("completed first quest conversation = %+v, want completed quest dialogue", conversation)
 	}
-	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err = gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
 		t.Fatalf("TalkToNPC(after completed first quest) returned an error: %v", err)
 	}
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
-		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
+		conversation.Quest == nil || conversation.Quest.ID != "quest.alchemists_herb_supply" {
 		t.Fatalf("quest-chain conversation = %+v, want repeatable quest available", conversation)
 	}
-	if err := gameWorld.AcceptQuest("Alice", "quest.repeatable_herbs"); err != nil {
+	if err := gameWorld.AcceptQuest("Alice", "quest.alchemists_herb_supply"); err != nil {
 		t.Fatalf("AcceptQuest(repeatable herbs) returned an error: %v", err)
 	}
-	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err = gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
 		t.Fatalf("TalkToNPC(active repeatable quest) returned an error: %v", err)
 	}
@@ -395,39 +395,39 @@ func TestWorldQuestGiverAdvancesQuestChainAndRediscoversRepeatableQuest(t *testi
 			t.Fatalf("MovePlayer(%s) toward forest returned an error: %v", direction, err)
 		}
 	}
-	if err := gameWorld.TakeItem("Alice", "item.herbs"); err != nil {
+	if err := gameWorld.TakeItem("Alice", "item.healing_herbs"); err != nil {
 		t.Fatalf("TakeItem(second herbs) returned an error: %v", err)
 	}
 	for _, direction := range []string{"south", "south", "east"} {
 		if _, err := gameWorld.MovePlayer("Alice", direction); err != nil {
-			t.Fatalf("MovePlayer(%s) back to apothecary returned an error: %v", direction, err)
+			t.Fatalf("MovePlayer(%s) back to loc.apothecary_shop returned an error: %v", direction, err)
 		}
 	}
-	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err = gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
 		t.Fatalf("TalkToNPC(completed repeatable quest) returned an error: %v", err)
 	}
 	if conversation.QuestStatus != world.QuestStatusCompleted ||
-		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
+		conversation.Quest == nil || conversation.Quest.ID != "quest.alchemists_herb_supply" {
 		t.Fatalf("repeatable quest conversation = %+v, want completed state preserved", conversation)
 	}
 	if len(conversation.Dialogue) == 0 ||
 		!strings.Contains(conversation.Dialogue[0], "Thank you for your hard work!") {
 		t.Fatalf("completed repeatable dialogue = %v, want completed quest dialogue", conversation.Dialogue)
 	}
-	conversation, err = gameWorld.TalkToNPC("Alice", "herbalist")
+	conversation, err = gameWorld.TalkToNPC("Alice", "npc.apprentice_lina")
 	if err != nil {
 		t.Fatalf("TalkToNPC(next interaction with repeatable quest) returned an error: %v", err)
 	}
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
-		conversation.Quest == nil || conversation.Quest.ID != "quest.repeatable_herbs" {
+		conversation.Quest == nil || conversation.Quest.ID != "quest.alchemists_herb_supply" {
 		t.Fatalf("repeatable quest conversation = %+v, want quest rediscovered", conversation)
 	}
 }
 
 func TestWorldCombatEffectsAndDefendAction(t *testing.T) {
 	gameWorld := loadTestWorld(t)
-	if _, err := gameWorld.AddPlayer("Alice", "docks"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.the_great_pier"); err != nil {
 		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
 	}
 	combat, _, err := gameWorld.StartCombat("Alice", "Dock Warden")
@@ -469,7 +469,7 @@ func TestWorldCombatEffectsAndDefendAction(t *testing.T) {
 	var dockWardenTurn bool
 	for _, event := range combatEvents {
 		if turn, ok := event.(world.CombatTurnChanged); ok &&
-			!turn.IsPlayer && turn.ParticipantID == "dock_warden" {
+			!turn.IsPlayer && turn.ParticipantID == "npc.dock_warden" {
 			dockWardenTurn = true
 		}
 	}

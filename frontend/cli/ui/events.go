@@ -192,22 +192,22 @@ func formatCombatEvent(data string) (string, lipgloss.Style) {
 		room := parseKeyValuesOrdered(body, "combat", "room", "participants")["room"]
 		summary := "Combat started"
 		if room != "" {
-			summary += " in " + room
+			summary += " in " + friendlyID(room)
 		}
 		return summary, layout.CombatStartStyle
 	case "TURN":
 		fields := parseKeyValuesOrdered(body, "participant_type", "participant", "round", "actions")
-		summary := fields["participant"] + "'s turn"
+		summary := friendlyID(fields["participant"]) + "'s turn"
 		if fields["round"] != "" {
 			summary = "Round " + fields["round"] + ": " + summary
 		}
 		return summary, layout.CombatTurnStyle
 	case "ATTACK":
 		fields := parseKeyValuesOrdered(body, "attacker_type", "attacker", "target")
-		return fields["attacker"] + " attacked " + fields["target"], layout.CombatAttackStyle
+		return friendlyID(fields["attacker"]) + " attacked " + friendlyID(fields["target"]), layout.CombatAttackStyle
 	case "DAMAGE":
 		fields := parseKeyValuesOrdered(body, "attacker", "target", "amount", "remaining_hp")
-		summary := fields["attacker"] + " dealt " + fields["amount"] + " damage to " + fields["target"]
+		summary := friendlyID(fields["attacker"]) + " dealt " + fields["amount"] + " damage to " + friendlyID(fields["target"])
 		return summary, layout.CombatDamageStyle
 	case "NPC DIED", "PLAYER DIED":
 		participant := parseKeyValuesOrdered(body, "participant", "killer")["participant"]
@@ -215,7 +215,7 @@ func formatCombatEvent(data string) (string, lipgloss.Style) {
 		if name == "PLAYER DIED" {
 			style = layout.DangerStyle
 		}
-		return participant + " was defeated", style
+		return friendlyID(participant) + " was defeated", style
 	case "PLAYER FLED":
 		player := parseKeyValuesOrdered(body, "player", "damage", "remaining_hp")["player"]
 		return player + " fled combat", layout.WarningStyle
@@ -238,15 +238,15 @@ func formatItemEvent(data string) (string, lipgloss.Style) {
 	case "DROPPED":
 		summary := "Item dropped"
 		if item := strings.TrimSpace(body); item != "" {
-			summary += ": " + item
+			summary += ": " + friendlyID(item)
 		}
 		return summary, layout.AccentStyle
 	case "USED":
 		fields := parseKeyValuesOrdered(body, "player", "item", "hp")
-		return fields["player"] + " used " + fields["item"], layout.SuccessStyle
+		return fields["player"] + " used " + friendlyID(fields["item"]), layout.SuccessStyle
 	case "TAKEN":
 		item := parseKeyValuesOrdered(body, "item")["item"]
-		return "You picked up " + item, layout.SuccessStyle
+		return "You picked up " + friendlyID(item), layout.SuccessStyle
 	default:
 		return formatUnknownEvent("ITEM", data)
 	}
@@ -273,7 +273,7 @@ func formatQuestEvent(data string) (string, lipgloss.Style) {
 
 	summary := "Quest completed"
 	if quest := parseKeyValuesOrdered(body, "quest")["quest"]; quest != "" {
-		summary += ": " + quest
+		summary += ": " + friendlyID(quest)
 	}
 	return summary, layout.SuccessStyle
 }
@@ -287,7 +287,7 @@ func formatNPCEvent(data string) (string, lipgloss.Style) {
 	fields := parseKeyValuesOrdered(body, "npc", "name", "room")
 	summary := fields["name"] + " returned"
 	if fields["room"] != "" {
-		summary += " to " + fields["room"]
+		summary += " to " + friendlyID(fields["room"])
 	}
 	return summary, layout.InfoStyle
 }
@@ -296,7 +296,7 @@ func formatRespawnEvent(data string) (string, lipgloss.Style) {
 	fields := parseKeyValuesOrdered(data, "player", "room", "hp", "max_hp", "combat")
 	summary := fields["player"] + " respawned"
 	if fields["room"] != "" {
-		summary += " in " + fields["room"]
+		summary += " in " + friendlyID(fields["room"])
 	}
 	return summary, layout.InfoStyle
 }
@@ -532,7 +532,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 
 		participant := fields["participant"]
 		m.world.Combat.CurrentTurn = participant
-		m.appendCombatLog(fmt.Sprintf("Turn: %s (actions: %d)", participant, m.world.Combat.AvailableActions))
+		m.appendCombatLog(fmt.Sprintf("Turn: %s (actions: %d)", friendlyID(participant), m.world.Combat.AvailableActions))
 
 	case "ATTACK":
 		if !m.world.Combat.Active {
@@ -540,7 +540,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 		}
 
 		fields := parseKeyValuesOrdered(body, "attacker_type", "attacker", "target")
-		m.appendCombatLog(fmt.Sprintf("%s attacks %s.", fields["attacker"], fields["target"]))
+		m.appendCombatLog(fmt.Sprintf("%s attacks %s.", friendlyID(fields["attacker"]), friendlyID(fields["target"])))
 
 	case "DAMAGE":
 		if !m.world.Combat.Active {
@@ -561,7 +561,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 			m.updateCombatParticipantHP(target, remainingHP)
 		}
 
-		m.appendCombatLog(fmt.Sprintf("%s deals %d damage to %s.", attacker, amount, target))
+		m.appendCombatLog(fmt.Sprintf("%s deals %d damage to %s.", friendlyID(attacker), amount, friendlyID(target)))
 
 	case "PLAYER DIED", "NPC DIED":
 		if !m.world.Combat.Active {
@@ -574,9 +574,9 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 
 		m.updateCombatParticipantHP(participant, 0)
 		if killer != "" {
-			m.appendCombatLog(fmt.Sprintf("%s was defeated by %s.", participant, killer))
+			m.appendCombatLog(fmt.Sprintf("%s was defeated by %s.", friendlyID(participant), friendlyID(killer)))
 		} else {
-			m.appendCombatLog(fmt.Sprintf("%s was defeated.", participant))
+			m.appendCombatLog(fmt.Sprintf("%s was defeated.", friendlyID(participant)))
 		}
 
 	case "PLAYER FLED":
@@ -658,7 +658,7 @@ func (m *Model) handleCombatEvent(payload string) tea.Cmd {
 		player := fields["player"]
 		combatID := fields["combat"]
 		room := fields["room"]
-		m.appendCombatLog(fmt.Sprintf("%s requested combat assistance (%s) in %s.", player, combatID, room))
+		m.appendCombatLog(fmt.Sprintf("%s requested combat assistance (%s) in %s.", player, friendlyID(combatID), friendlyID(room)))
 
 	case "ENDED":
 		header, rewardsJSON, hasRewards := strings.Cut(body, " rewards=")
@@ -715,8 +715,8 @@ func (m *Model) handleRespawnEvent(payload string) tea.Cmd {
 		m.setCombatPlayerHealth(hp)
 	}
 
-	m.communication.StatusMessage = "You respawned in " + room
-	m.appendCombatLog("You respawned in " + room + ".")
+	m.communication.StatusMessage = "You respawned in " + friendlyID(room)
+	m.appendCombatLog("You respawned in " + friendlyID(room) + ".")
 
 	m.ui.PendingRefresh = RefreshRoom
 	return sendCommand(m.client, "LOOK")

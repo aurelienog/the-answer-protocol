@@ -13,7 +13,7 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 	connectTestPlayer(t, alice, "Alice")
 
 	alice.sendRequest(t, "MOVE north")
-	if got := alice.readResponse(t); got != "OK room=market_street" {
+	if got := alice.readResponse(t); got != "OK room=loc.market_street" {
 		t.Fatalf("move to Quest Advisor response = %q", got)
 	}
 
@@ -23,7 +23,7 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 		t.Fatalf("quest acceptance response = %q, want OK JSON response", questResponse)
 	}
 
-	progress, err := alice.gameWorld.GetPlayerQuest("Alice", "quest.explore_arvendale")
+	progress, err := alice.gameWorld.GetPlayerQuest("Alice", "quest.scout_the_realm_of_arvendale")
 	if err != nil {
 		t.Fatalf("GetPlayerQuest() returned an error: %v", err)
 	}
@@ -32,21 +32,21 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 	}
 
 	alice.sendRequest(t, "MOVE north")
-	if got := alice.readResponse(t); got != "OK room=town_gate" {
+	if got := alice.readResponse(t); got != "OK room=loc.north_town_gate" {
 		t.Fatalf("move to town gate response = %q", got)
 	}
 	alice.sendRequest(t, "TAKE Northern Gate Seal")
-	if got := alice.readResponse(t); got != "OK taken=item.explorer_token" {
+	if got := alice.readResponse(t); got != "OK taken=item.northern_gate_seal" {
 		t.Fatalf("take objective response = %q", got)
 	}
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=market_street" {
+	if got := alice.readResponse(t); got != "OK room=loc.market_street" {
 		t.Fatalf("return to Quest Advisor response = %q", got)
 	}
 	alice.sendRequest(t, "TALK Quest Advisor")
 	conversationResponse := alice.readResponse(t)
-	if conversationResponse == "EVT QUEST COMPLETED quest=quest.explore_arvendale" {
+	if conversationResponse == "EVT QUEST COMPLETED quest=quest.scout_the_realm_of_arvendale" {
 		conversationResponse = alice.readResponse(t)
 	}
 	if !strings.HasPrefix(conversationResponse, "OK ") {
@@ -64,7 +64,7 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 		t.Fatalf("conversation quest status = %q, want %q", conversation.QuestStatus, world.QuestStatusCompleted)
 	}
 
-	progress, err = alice.gameWorld.GetPlayerQuest("Alice", "quest.explore_arvendale")
+	progress, err = alice.gameWorld.GetPlayerQuest("Alice", "quest.scout_the_realm_of_arvendale")
 	if err != nil {
 		t.Fatalf("GetPlayerQuest() after completion returned an error: %v", err)
 	}
@@ -80,10 +80,10 @@ func TestHandleConnectionQuestAwardsRewardAndConsumesObjective(t *testing.T) {
 	for _, item := range inventory {
 		itemCounts[item.ID]++
 	}
-	if got := itemCounts["item.leather_boots"]; got != 1 {
+	if got := itemCounts["item.pathfinder_boots"]; got != 1 {
 		t.Errorf("Pathfinder Boots quantity = %d, want 1", got)
 	}
-	if got := itemCounts["item.explorer_token"]; got != 0 {
+	if got := itemCounts["item.northern_gate_seal"]; got != 0 {
 		t.Errorf("Northern Gate Seal quantity = %d after completion, want 0", got)
 	}
 }
@@ -104,7 +104,7 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 		conversation.Quest.Progress != "0/1" {
 		t.Fatalf("quest before collecting objective = %+v, want active at 0/1", conversation)
 	}
-	progress, err := alice.gameWorld.GetPlayerQuest("Alice", "quest.expose_smugglers")
+	progress, err := alice.gameWorld.GetPlayerQuest("Alice", "quest.expose_the_harbor_smugglers")
 	if err != nil {
 		t.Fatalf("GetPlayerQuest() before objective delivery returned an error: %v", err)
 	}
@@ -116,30 +116,30 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 		t.Fatalf("GetInventory() before objective delivery returned an error: %v", err)
 	}
 	for _, item := range inventory {
-		if item.ID == "item.steel_breastplate" {
+		if item.ID == "item.royal_guard_breastplate" {
 			t.Fatal("quest reward was granted before objective delivery")
 		}
 	}
 
 	alice.sendRequest(t, "MOVE south")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("move to docks response = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("move to loc.the_great_pier response = %q", got)
 	}
 	alice.sendRequest(t, "MOVE east")
-	if got := alice.readResponse(t); got != "OK room=warehouse" {
-		t.Fatalf("move to warehouse response = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.abandoned_warehouse" {
+		t.Fatalf("move to loc.abandoned_warehouse response = %q", got)
 	}
 	alice.sendRequest(t, "TAKE Incriminating Letter")
-	if got := alice.readResponse(t); got != "OK taken=item.compromise_letter" {
+	if got := alice.readResponse(t); got != "OK taken=item.incriminating_letter" {
 		t.Fatalf("take quest objective response = %q", got)
 	}
 
 	alice.sendRequest(t, "MOVE west")
-	if got := alice.readResponse(t); got != "OK room=docks" {
-		t.Fatalf("return to docks response = %q", got)
+	if got := alice.readResponse(t); got != "OK room=loc.the_great_pier" {
+		t.Fatalf("return to loc.the_great_pier response = %q", got)
 	}
 	alice.sendRequest(t, "MOVE north")
-	if got := alice.readResponse(t); got != "OK room=harbor_square" {
+	if got := alice.readResponse(t); got != "OK room=loc.central_harbor_square" {
 		t.Fatalf("return to Captain Eliza response = %q", got)
 	}
 
@@ -147,7 +147,7 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 	conversation = readQuestConversation(t, alice)
 	if conversation.QuestStatus != world.QuestStatusCompleted ||
 		conversation.Quest == nil ||
-		conversation.Quest.ID != "quest.expose_smugglers" {
+		conversation.Quest.ID != "quest.expose_the_harbor_smugglers" {
 		t.Fatalf("quest immediately after objective delivery = %+v, want completed quest dialogue", conversation)
 	}
 
@@ -155,11 +155,11 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 	conversation = readQuestConversation(t, alice)
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
 		conversation.Quest == nil ||
-		conversation.Quest.ID != "quest.investigate_missing_ships" {
+		conversation.Quest.ID != "quest.the_vanishing_fleet" {
 		t.Fatalf("quest after objective delivery = %+v, want next quest available", conversation)
 	}
 
-	progress, err = alice.gameWorld.GetPlayerQuest("Alice", "quest.expose_smugglers")
+	progress, err = alice.gameWorld.GetPlayerQuest("Alice", "quest.expose_the_harbor_smugglers")
 	if err != nil {
 		t.Fatalf("GetPlayerQuest() returned an error: %v", err)
 	}
@@ -175,18 +175,18 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 	for _, item := range inventory {
 		itemCounts[item.ID]++
 	}
-	if itemCounts["item.compromise_letter"] != 0 {
-		t.Errorf("Incriminating Letter quantity after delivery = %d, want 0", itemCounts["item.compromise_letter"])
+	if itemCounts["item.incriminating_letter"] != 0 {
+		t.Errorf("Incriminating Letter quantity after delivery = %d, want 0", itemCounts["item.incriminating_letter"])
 	}
-	if itemCounts["item.steel_breastplate"] != 1 {
-		t.Errorf("Royal Guard Breastplate quantity = %d, want 1", itemCounts["item.steel_breastplate"])
+	if itemCounts["item.royal_guard_breastplate"] != 1 {
+		t.Errorf("Royal Guard Breastplate quantity = %d, want 1", itemCounts["item.royal_guard_breastplate"])
 	}
 
 	alice.sendRequest(t, "TALK Captain Eliza")
 	conversation = readQuestConversation(t, alice)
 	if conversation.QuestStatus != world.QuestStatusAvailable ||
 		conversation.Quest == nil ||
-		conversation.Quest.ID != "quest.investigate_missing_ships" {
+		conversation.Quest.ID != "quest.the_vanishing_fleet" {
 		t.Fatalf("quest after repeated talk = %+v, want next quest still available", conversation)
 	}
 	inventory, err = alice.gameWorld.GetInventory("Alice")
@@ -195,7 +195,7 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 	}
 	rewardCount := 0
 	for _, item := range inventory {
-		if item.ID == "item.steel_breastplate" {
+		if item.ID == "item.royal_guard_breastplate" {
 			rewardCount++
 		}
 	}
@@ -207,7 +207,7 @@ func TestHandleConnectionAdvancesQuestChainAfterObjectiveDelivery(t *testing.T) 
 	if got := alice.readResponse(t); !strings.HasPrefix(got, "OK ") {
 		t.Fatalf("next quest acceptance response = %q, want OK JSON response", got)
 	}
-	progress, err = alice.gameWorld.GetPlayerQuest("Alice", "quest.investigate_missing_ships")
+	progress, err = alice.gameWorld.GetPlayerQuest("Alice", "quest.the_vanishing_fleet")
 	if err != nil {
 		t.Fatalf("GetPlayerQuest(next quest) returned an error: %v", err)
 	}

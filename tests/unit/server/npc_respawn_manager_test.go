@@ -59,12 +59,12 @@ func TestNPCRespawnManagerStopCancelsPendingCallbacks(t *testing.T) {
 }
 
 func TestNPCRespawnManagerRestoresNPCAndPublishesEvent(t *testing.T) {
-	worldPath := worldWithRespawnSeconds(t, "dire_wolf", 1)
+	worldPath := worldWithRespawnSeconds(t, "npc.dire_wolf", 1)
 	gameWorld, err := world.Load(worldPath)
 	if err != nil {
 		t.Fatalf("load test world: %v", err)
 	}
-	if _, err := gameWorld.AddPlayer("Alice", "forest_edge"); err != nil {
+	if _, err := gameWorld.AddPlayer("Alice", "loc.whispering_forest_edge"); err != nil {
 		t.Fatalf("AddPlayer(Alice): %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestNPCRespawnManagerRestoresNPCAndPublishesEvent(t *testing.T) {
 		_, _, combatEvents, err = gameWorld.AttackCombatParticipant(
 			combat.ID,
 			participant.ID,
-			"dire_wolf",
+			"npc.dire_wolf",
 		)
 		if err != nil {
 			t.Fatalf("AttackCombatParticipant(): %v", err)
@@ -121,19 +121,19 @@ func TestNPCRespawnManagerRestoresNPCAndPublishesEvent(t *testing.T) {
 
 	select {
 	case event := <-respawned:
-		if event.NPCID != "dire_wolf" || event.RoomID != "forest_edge" {
+		if event.NPCID != "npc.dire_wolf" || event.RoomID != "loc.whispering_forest_edge" {
 			t.Fatalf("NPC respawn event = %+v", event)
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("NPC did not respawn after its configured delay")
 	}
 
-	npcs, err := gameWorld.GetNPCsInRoom("forest_edge")
+	npcs, err := gameWorld.GetNPCsInRoom("loc.whispering_forest_edge")
 	if err != nil {
-		t.Fatalf("GetNPCsInRoom(forest_edge): %v", err)
+		t.Fatalf("GetNPCsInRoom(loc.whispering_forest_edge): %v", err)
 	}
 	for _, npc := range npcs {
-		if npc.ID == "dire_wolf" &&
+		if npc.ID == "npc.dire_wolf" &&
 			(npc.CombatStats.HP != npc.CombatStats.MaxHP || !npc.RespawnAt.IsZero()) {
 			t.Fatalf("NPC after respawn = %+v, want full health and no pending deadline", npc)
 		}

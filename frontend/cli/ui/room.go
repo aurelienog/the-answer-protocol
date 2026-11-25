@@ -6,73 +6,32 @@ import (
 	"strings"
 
 	"the-answer-protocol/frontend/cli/ui/layout"
-	"github.com/charmbracelet/lipgloss"
 )
 
+func renderRoom(response LookResponse, availableWidth int) string {
+	content := renderLocation(response, availableWidth)
+	content += renderPlayers(response.Players)
+	content += renderNPCs(response.NPCs)
+	content += renderObjects(response.Items)
+	content += renderExits(response.Room.Exits)
+	return content
+}
 
-func renderRoom(response LookResponse, availableWidth, availableHeight int) string {
-	contentWithoutArt := renderLocation(response, "", availableWidth)
-	contentWithoutArt += renderPlayers(response.Players)
-	contentWithoutArt += renderNPCs(response.NPCs)
-	contentWithoutArt += renderObjects(response.Items)
-	contentWithoutArt += renderExits(response.Room.Exits)
+func renderLocation(response LookResponse, availableWidth int) string {
+	var content strings.Builder
 
-	art := layout.GetRoomASCIIArt(response.Room.Name)
-	if art == "" {
-		return contentWithoutArt
-	}
-
-	renderedArt := layout.RenderASCIIArt(
-		art,
+	content.WriteString(layout.TitleStyle.Render(
+		layout.IconLocation + " LOCATION: " + response.Room.Name,
+	))
+	content.WriteString("\n\n")
+	content.WriteString(layout.WrapText(
+		response.Room.Description,
 		availableWidth,
-		availableHeight,
-	)
+	))
+	content.WriteString("\n\n")
 
-	if renderedArt == "" {
-		return contentWithoutArt
-	}
-
-	contentWithArt := renderLocation(response, renderedArt, availableWidth)
-	contentWithArt += renderPlayers(response.Players)
-	contentWithArt += renderNPCs(response.NPCs)
-	contentWithArt += renderObjects(response.Items)
-	contentWithArt += renderExits(response.Room.Exits)
-
-	// Comprobar altura y ancho de todo el contenido.
-	if lipgloss.Height(contentWithArt) > availableHeight {
-		return contentWithoutArt
-	}
-
-	return contentWithArt
+	return content.String()
 }
-
-
-func renderLocation(
-    response LookResponse,
-    renderedArt string,
-    availableWidth int,
-) string {
-    var content strings.Builder
-
-    content.WriteString(layout.TitleStyle.Render(
-        layout.IconLocation + " LOCATION: " + response.Room.Name,
-    ))
-    content.WriteString("\n\n")
-
-    if renderedArt != "" {
-        content.WriteString(renderedArt)
-        content.WriteString("\n\n")
-    }
-
-    content.WriteString(layout.WrapText(
-        response.Room.Description,
-        availableWidth,
-    ))
-    content.WriteString("\n\n")
-
-    return content.String()
-}
-
 
 func renderPlayers(players []string) string {
 	var content strings.Builder
@@ -172,7 +131,7 @@ func renderExits(exits map[string]string) string {
 				"  %s %s -> %s\n",
 				layout.InfoStyle.Render(layout.ExitMarker),
 				layout.TitleStyle.Render(strings.ToUpper(direction)),
-				exits[direction],
+				friendlyID(exits[direction]),
 			))
 		}
 	}

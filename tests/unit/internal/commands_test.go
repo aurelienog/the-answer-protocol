@@ -19,8 +19,8 @@ func createCommandTestWorld(t *testing.T) *world.World {
 
 	worldData := `{
 		"rooms": {
-			"harbor_square": {
-				"id": "harbor_square",
+			"loc.central_harbor_square": {
+				"id": "loc.central_harbor_square",
 				"name": "Harbor Square",
 				"description": "A small harbor square.",
 				"exits": {
@@ -36,7 +36,7 @@ func createCommandTestWorld(t *testing.T) *world.World {
 				"name": "Market",
 				"description": "A busy market.",
 				"exits": {
-					"south": "harbor_square"
+					"south": "loc.central_harbor_square"
 				},
 				"items": {},
 				"npcs": []
@@ -82,7 +82,7 @@ func createCommandTestWorld(t *testing.T) *world.World {
 func addTestPlayer(t *testing.T, gameWorld *world.World, name string) {
 	t.Helper()
 
-	if _, err := gameWorld.AddPlayer(name, "harbor_square"); err != nil {
+	if _, err := gameWorld.AddPlayer(name, "loc.central_harbor_square"); err != nil {
 		t.Fatalf("add test player: %v", err)
 	}
 }
@@ -145,8 +145,8 @@ func TestLookCommandReturnsCurrentRoom(t *testing.T) {
 		t.Fatalf("decode LOOK response: %v; payload: %q", err, message.Payload)
 	}
 
-	if response.Room.ID != "harbor_square" {
-		t.Errorf("expected room harbor_square, got %q", response.Room.ID)
+	if response.Room.ID != "loc.central_harbor_square" {
+		t.Errorf("expected room loc.central_harbor_square, got %q", response.Room.ID)
 	}
 
 	if len(response.Players) != 1 || response.Players[0] != "Alice" {
@@ -298,8 +298,8 @@ func TestMoveCommandChangesRoom(t *testing.T) {
 		t.Errorf("expected moving player Alice, got %q", moved.PlayerName)
 	}
 
-	if moved.PreviousRoomID != "harbor_square" {
-		t.Errorf("expected previous room harbor_square, got %q", moved.PreviousRoomID)
+	if moved.PreviousRoomID != "loc.central_harbor_square" {
+		t.Errorf("expected previous room loc.central_harbor_square, got %q", moved.PreviousRoomID)
 	}
 
 	if moved.NewRoomID != "market" {
@@ -342,8 +342,8 @@ func TestMoveCommandRejectsMissingExit(t *testing.T) {
 		t.Fatalf("get player's room: %v", err)
 	}
 
-	if roomID != "harbor_square" {
-		t.Errorf("player should remain in harbor_square, got %q", roomID)
+	if roomID != "loc.central_harbor_square" {
+		t.Errorf("player should remain in loc.central_harbor_square, got %q", roomID)
 	}
 
 	if publishedEvents != 0 {

@@ -60,7 +60,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.ui.Width = msg.Width
 		m.ui.Height = msg.Height
-	
+
 	case animations.CursorBlinkMsg:
 		m.ui.CursorVisible = !m.ui.CursorVisible
 		return refreshResult(m, animations.CursorBlink())
@@ -82,7 +82,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		return refreshResult(m, nil)
-	
+
 	case TransitionMsg:
 		switch msg.Phase {
 		case TransitionReveal:
@@ -310,7 +310,6 @@ func (m *Model) refreshViewports() {
 		content = renderRoom(
 			m.world.Room,
 			m.ui.MainViewport.Width,
-			m.ui.MainViewport.Height,
 		)
 
 	case ViewInventory:

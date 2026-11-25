@@ -55,7 +55,7 @@ func TestEventHistoryShowsConciseSummaries(t *testing.T) {
 	events := []string{
 		"EVT ITEM DROPPED item.rope",
 		"EVT COMBAT DAMAGE attacker=Alice target=Dock Warden amount=12 remaining_hp=28",
-		`EVT COMBAT STARTED combat=combat:2 room=forest_edge participants=[{"id":"Bob","name":"Bob","is_player":true,"hp":100,"max_hp":100,"alive":true}]`,
+		`EVT COMBAT STARTED combat=combat:2 room=loc.forest_edge participants=[{"id":"Bob","name":"Bob","is_player":true,"hp":100,"max_hp":100,"alive":true}]`,
 		"EVT QUEST COMPLETED quest=quest.explore_arvendale",
 	}
 	model := ui.NewModel(newHistoryClient(t, len(events), func(index int) string {
@@ -85,10 +85,10 @@ func TestEventHistoryShowsConciseSummaries(t *testing.T) {
 
 	view := model.View()
 	for _, expected := range []string{
-		"Item dropped: item.rope",
+		"Item dropped: rope",
 		"Alice dealt 12 damage to Dock Warden",
-		"Combat started in forest_edge",
-		"Quest completed: quest.explore_arvendale",
+		"Combat started in forest edge",
+		"Quest completed: explore arvendale",
 	} {
 		if !strings.Contains(view, expected) {
 			t.Errorf("event history = %q, want %q", view, expected)
