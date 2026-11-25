@@ -77,21 +77,32 @@ func handleUseResponse(m *Model, payload string) error {
 }
 
 func handleQuestResponse(m *Model, payload string) error {
-    var quest QuestSummary
+	var quest QuestSummary
 
-    return json.Unmarshal([]byte(payload), &quest)
+	return json.Unmarshal([]byte(payload), &quest)
+}
+
+func upsertQuest(m *Model, quest Quest) {
+	for i := range m.player.Quests {
+		if m.player.Quests[i].ID == quest.ID {
+			m.player.Quests[i] = quest
+			return
+		}
+	}
+
+	m.player.Quests = append(m.player.Quests, quest)
 }
 
 func handleQuestsResponse(m *Model, payload string) error {
-    var quests []Quest
+	var quests []Quest
 
-    if err := json.Unmarshal([]byte(payload), &quests); err != nil {
-        return err
-    }
+	if err := json.Unmarshal([]byte(payload), &quests); err != nil {
+		return err
+	}
 
-    m.player.Quests = quests
+	m.player.Quests = quests
 
 	m.ui.PendingRefresh = RefreshNone
 
-    return nil
+	return nil
 }

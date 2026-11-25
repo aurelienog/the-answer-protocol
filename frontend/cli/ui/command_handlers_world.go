@@ -33,6 +33,16 @@ func handleTalkResponse(m *Model, payload string) error {
 	}
 
 	m.world.Conversation = &conversation
+	if conversation.Quest != nil && conversation.Quest.ID != "" {
+		upsertQuest(m, Quest{
+			ID:           conversation.Quest.ID,
+			Name:         conversation.Quest.Name,
+			Description:  conversation.Quest.Description,
+			GiverNPCName: conversation.NPC.Name,
+			Status:       conversation.QuestStatus,
+			Progress:     conversation.Quest.Progress,
+		})
+	}
 
 	return nil
 }
