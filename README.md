@@ -400,7 +400,7 @@ You can verify the server and client mechanics end-to-end by running a local ser
 
 ### 1. Multiplayer Functionality (Presence, Chat & Groups)
 
-1. **Concurrent Connections & Presence:** Connect two clients in separate terminals (`CONNECT alice` and `CONNECT bob`) in the same starting room. Verify that `bob` triggers an asynchronous `EVT ROOM_PRESENCE_ENTER bob` notification on `alice`'s screen, and that `WHO` reflects the updated player count.
+1. **Concurrent Connections & Presence:** Connect two clients in separate terminals (`CONNECT alice` and `CONNECT bob`) in the same starting room. Verify that `bob` triggers an asynchronous `EVT ROOM PRESENCE ENTER bob` notification on `alice`'s screen, and that `WHO` reflects the updated player count.
 
 2. **Scoped Chat:**
    - Run `CHAT ROOM Hello` — verify only players in the same room receive `EVT ROOM CHAT`.
