@@ -56,6 +56,14 @@ func (m Model) handleServerEvent(
 
 			case "GROUP":
 				cmd = m.handleGroupEvent(event.Data)
+
+			case "QUEST":
+				name, _ := splitEventName(event.Data, "COMPLETED")
+				if name == "COMPLETED" {
+					m.communication.StatusMessage = "Quest completed. Updating quests..."
+					m.ui.PendingRefresh = RefreshQuests
+					cmd = sendCommand(m.client, "QUESTS")
+				}
 			}
 		}
 	}
