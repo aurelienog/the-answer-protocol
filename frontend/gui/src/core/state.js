@@ -35,14 +35,14 @@ const GameState = {
     lastAttackEnemyId: null,
 
     serverPlayerCount: 1,
-    activeChatScope: "ROOM",
+    activeChatScope: "GLOBAL",
     commandQueue: [],
 
     chats: {
-        ROOM: [],
         GLOBAL: [],
+        ROOM: [],
         GROUP: [],
-        COMBAT: [],
+        EVENTS: [],
         LOG: []
     },
 

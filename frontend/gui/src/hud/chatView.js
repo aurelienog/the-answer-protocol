@@ -8,7 +8,7 @@ const ChatView = {
         document.querySelectorAll('.chat-panel .chat-tab').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.chatScope === scope);
         });
-        const badgeScope = scope === 'COMBAT' ? 'ROOM' : scope;
+        const badgeScope = scope === 'EVENTS' ? 'ROOM' : scope;
         document.getElementById('chat-scope-badge').textContent = `[${badgeScope}]`;
         this.renderChatMessages();
     },
@@ -17,9 +17,10 @@ const ChatView = {
         const now = new Date();
         const time = now.toTimeString().slice(0, 5);
         const entry = { time, author, text, styleClass };
+        const targetScope = scope === 'COMBAT' ? 'EVENTS' : scope;
 
-        if (GameState.chats[scope]) {
-            GameState.chats[scope].push(entry);
+        if (GameState.chats[targetScope]) {
+            GameState.chats[targetScope].push(entry);
         }
         this.renderChatMessages();
     },

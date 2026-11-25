@@ -9,7 +9,7 @@ const GroupModal = {
             const groupName = nameInput ? nameInput.value.trim() : '';
             if (!groupName) return;
             if (Array.from(groupName).length > 12) {
-                UI.addChatLine('ROOM', '👥 Invalid Name', 'Group name must be at most 12 characters.', 'chat-err');
+                UI.addChatLine('EVENTS', '👥 Invalid Name', 'Group name must be at most 12 characters.', 'chat-err');
                 return;
             }
             App.sendCommand(`GROUP ${type} ${groupName}`);
@@ -20,7 +20,7 @@ const GroupModal = {
             const target = playerInput ? playerInput.value.trim() : '';
             if (!target) return;
             if (Array.from(target).length > 12) {
-                UI.addChatLine('ROOM', '👥 Invalid Username', 'Player username must be at most 12 characters.', 'chat-err');
+                UI.addChatLine('EVENTS', '👥 Invalid Username', 'Player username must be at most 12 characters.', 'chat-err');
                 return;
             }
             App.sendCommand(`GROUP INVITE ${target}`);

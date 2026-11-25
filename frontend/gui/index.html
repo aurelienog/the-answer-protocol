@@ -687,12 +687,12 @@
             <!-- 1. LEFT: CHAT PANEL -->
             <section id="dock-chat-panel" class="chat-panel gold-panel" aria-label="Communications">
                 <nav class="chat-tabs" role="tablist">
-                    <button type="button" class="chat-tab active" data-chat-scope="ROOM">Room</button>
-                    <button type="button" class="chat-tab" data-chat-scope="GLOBAL">World</button>
-                    <button type="button" class="chat-tab" data-chat-scope="GROUP">Party</button>
-                    <button type="button" class="chat-tab" data-chat-scope="COMBAT">Combat</button>
+                    <button type="button" class="chat-tab active" data-chat-scope="GLOBAL">Global</button>
+                    <button type="button" class="chat-tab" data-chat-scope="ROOM">Room</button>
+                    <button type="button" class="chat-tab" data-chat-scope="GROUP">Group</button>
+                    <button type="button" class="chat-tab" data-chat-scope="EVENTS">Events</button>
                     <button type="button" class="chat-tab system-tab" data-chat-scope="LOG">
-                        <img src="/assets/icons/command/system-log.png" alt="" class="tab-mini-icon"> System
+                        <img src="/assets/icons/command/system-log.png" alt="" class="tab-mini-icon"> Log
                     </button>
 
                     <!-- Chat height and collapse controls -->
@@ -705,7 +705,7 @@
                 <section id="chat-messages" class="chat-history" role="log" aria-live="polite"></section>
 
                 <form id="chat-form" class="chat-input-row">
-                    <output id="chat-scope-badge" class="scope-tag">[ROOM]</output>
+                    <output id="chat-scope-badge" class="scope-tag">[GLOBAL]</output>
                     <input type="text" id="chat-input" placeholder="Type a message or command..." autocomplete="off">
                     <button type="submit" class="btn-send" aria-label="Send">➤</button>
                 </form>

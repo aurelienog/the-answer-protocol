@@ -191,7 +191,7 @@ const CombatModal = {
                     .sort((a, b) => (b.meta.hp || 0) - (a.meta.hp || 0));
 
                 if (consumables.length === 0) {
-                    UI.addChatLine('COMBAT', '🧪 No Consumables', 'You have no healing consumables in your bag!', 'chat-err');
+                    UI.addChatLine('EVENTS', '🧪 No Consumables', 'You have no healing consumables in your bag!', 'chat-err');
                     return;
                 }
                 App.sendCommand(`COMBAT USE ${consumables[0].id}`);

@@ -99,7 +99,7 @@ const DialogueModal = {
             return q;
         });
 
-        UI.addChatLine('ROOM', '🏆 Quest Completed!', `Completed "${questName}"! ${rewardStr}`, 'chat-sys');
+        UI.addChatLine('EVENTS', '🏆 Quest Completed!', `Completed "${questName}"! ${rewardStr}`, 'chat-sys');
         App.sendCommand('INVENTORY');
         App.sendCommand('QUESTS');
     },
