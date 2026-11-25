@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
+
+const MaxGroupNameLength = 12
 
 // CreateGroup creates a group with the player as its first member.
 func (w *World) CreateGroup(playerName, groupName string) (string, error) {
@@ -31,6 +34,14 @@ func (w *World) CreateGroup(playerName, groupName string) (string, error) {
 
 	if _, exists := w.playerGroups[playerName]; exists {
 		return "", fmt.Errorf("%w: %q", ErrPlayerAlreadyInGroup, playerName)
+	}
+
+	if utf8.RuneCountInString(groupName) > MaxGroupNameLength {
+		return "", fmt.Errorf(
+			"%w: group name exceeds maximum length of %d characters",
+			ErrInvalidArgument,
+			MaxGroupNameLength,
+		)
 	}
 
 	if w.groups == nil {

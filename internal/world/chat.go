@@ -4,7 +4,10 @@ import (
     "fmt"
     "sort"
     "strings"
+    "unicode/utf8"
 )
+
+const MaxChatMessageLength = 100
 
 // SendChat validates a chat message and returns the event to publish.
 func (w *World) SendChat(playerName, scope, message string) (ChatMessage, error) {
@@ -16,7 +19,8 @@ func (w *World) SendChat(playerName, scope, message string) (ChatMessage, error)
     scope = strings.ToUpper(strings.TrimSpace(scope))
     message = strings.TrimSpace(message)
 
-    if playerName == "" || message == "" {
+    if playerName == "" || message == "" ||
+        utf8.RuneCountInString(message) > MaxChatMessageLength {
         return ChatMessage{}, fmt.Errorf("%w: invalid chat arguments", ErrInvalidArgument)
     }
 

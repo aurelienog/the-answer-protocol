@@ -218,6 +218,8 @@ Communication uses UTF-8, `\n`-terminated lines over TCP with three message pref
 | `STATUS` | `STATUS` | Retrieves the player's health and status as JSON. | `OK <JSON>` |
 | `COMBAT` | `COMBAT <action> [arguments]` | Performs an action in an active combat. | Depends on action |
 
+Group names are limited to 12 Unicode code points, and chat messages are limited to 100 Unicode code points. Requests exceeding either limit are rejected with `ERR 422 INVALID_ARGUMENTS`.
+
 ### RFC 42TAP Deviations & Extensions
 
 The following response shapes and command semantics intentionally extend or differ from the RFC examples.

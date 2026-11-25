@@ -124,6 +124,39 @@ func TestWorldGroupInvitationJoinAndLeaveLifecycle(t *testing.T) {
 	}
 }
 
+func TestWorldGroupNameMaximumLength(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+
+	if _, err := gameWorld.CreateGroup("Alice", strings.Repeat("é", world.MaxGroupNameLength)); err != nil {
+		t.Fatalf("CreateGroup() rejected a name at the maximum rune length: %v", err)
+	}
+
+	otherWorld := loadTestWorld(t)
+	if _, err := otherWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+	if _, err := otherWorld.CreateGroup("Alice", strings.Repeat("é", world.MaxGroupNameLength+1)); !errors.Is(err, world.ErrInvalidArgument) {
+		t.Fatalf("CreateGroup() error = %v, want ErrInvalidArgument for an overlong name", err)
+	}
+}
+
+func TestWorldChatMessageMaximumLength(t *testing.T) {
+	gameWorld := loadTestWorld(t)
+	if _, err := gameWorld.AddPlayer("Alice", "harbor_square"); err != nil {
+		t.Fatalf("AddPlayer(Alice) returned an error: %v", err)
+	}
+
+	if _, err := gameWorld.SendChat("Alice", "GLOBAL", strings.Repeat("界", world.MaxChatMessageLength)); err != nil {
+		t.Fatalf("SendChat() rejected a message at the maximum rune length: %v", err)
+	}
+	if _, err := gameWorld.SendChat("Alice", "GLOBAL", strings.Repeat("界", world.MaxChatMessageLength+1)); !errors.Is(err, world.ErrInvalidArgument) {
+		t.Fatalf("SendChat() error = %v, want ErrInvalidArgument for an overlong message", err)
+	}
+}
+
 func TestWorldRemovePlayerClearsAllLivePlayerState(t *testing.T) {
 	gameWorld := loadWorldWithUniqueItemInHarbor(t)
 	for _, name := range []string{"Alice", "Bob"} {

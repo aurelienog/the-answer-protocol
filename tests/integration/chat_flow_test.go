@@ -1,6 +1,7 @@
 package internal_test
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -113,5 +114,33 @@ func TestHandleConnectionChatPreservesInternalSpacingAndUnicode(t *testing.T) {
 	}
 	if got := bob.readResponse(t); got != wantEvent {
 		t.Fatalf("Bob's chat event = %q, want %q", got, wantEvent)
+	}
+}
+
+func TestHandleConnectionRejectsOverlongGroupNamesAndChatMessages(t *testing.T) {
+	alice := newConnectionTestEnv(t)
+	connectTestPlayer(t, alice, "Alice")
+
+	alice.sendRequest(t, "GROUP CREATE "+strings.Repeat("a", 13))
+	if got := alice.readResponse(t); got != "ERR 422 INVALID_ARGUMENTS" {
+		t.Fatalf("overlong group-name response = %q, want ERR 422 INVALID_ARGUMENTS", got)
+	}
+
+	alice.sendRequest(t, "GROUP CREATE "+strings.Repeat("a", 12))
+	if got := alice.readResponse(t); got != "OK group=group:1 name="+strings.Repeat("a", 12) {
+		t.Fatalf("maximum-length group-name response = %q", got)
+	}
+
+	alice.sendRequest(t, "CHAT ROOM "+strings.Repeat("x", 101))
+	if got := alice.readResponse(t); got != "ERR 422 INVALID_ARGUMENTS" {
+		t.Fatalf("overlong chat-message response = %q, want ERR 422 INVALID_ARGUMENTS", got)
+	}
+
+	alice.sendRequest(t, "CHAT ROOM "+strings.Repeat("x", 100))
+	if got := alice.readResponse(t); got != "EVT ROOM CHAT player=Alice message="+strings.Repeat("x", 100) {
+		t.Fatalf("maximum-length chat event = %q", got)
+	}
+	if got := alice.readResponse(t); got != "OK" {
+		t.Fatalf("maximum-length chat response = %q, want OK", got)
 	}
 }
