@@ -52,7 +52,7 @@ Built upon RFC 42TAP, the project provides a shared-world environment where mult
    make clean
    ```
 
-Once connected, authenticate with a username (`CONNECT <username>`) and interact with the world (`LOOK`, `MOVE <dir>`, `TAKE <item>`, `TALK <npc>`, `ATTACK <npc>`, `CHAT GLOBAL <msg>`, `QUIT`). For detailed client controls, see [CLI_USER_GUIDE.md](CLI_USER_GUIDE.md) and [GUI_USER_GUIDE.md](GUI_USER_GUIDE.md).
+Once connected, authenticate with a username (`CONNECT <username>`) and interact with the world (`LOOK`, `MOVE <dir>`, `TAKE <item>`, `TALK <npc>`, `ATTACK <npc>`, `CHAT GLOBAL <msg>`, `QUIT`). For detailed client controls, see [CLI_USER_GUIDE.md](docs/CLI_USER_GUIDE.md) and [GUI_USER_GUIDE.md](docs/GUI_USER_GUIDE.md).
 
 ## Architecture
 
@@ -191,7 +191,7 @@ The Desktop GUI client (`cmd/desktop`, `internal/desktop`, `frontend/gui`) uses 
 - **Modular Frontend (`frontend/gui`):** Built with pure HTML5, modular CSS3 (ornate frame layers + responsive breakpoints for 2K, desktop, split-screen multi-client testing, and mobile), and ES6 JavaScript split across `core/` (`assets`, `state`, `audio`, `network`), `hud/` (`topHudView`, `chatView`, `playersDockView`, `stageView`), and `modals/` (`look`, `selector`, `dialogue`, `inventory`, `status`, `quests`, `group`, `combatModal`, `combatAnimator`).
 - **Cross-Server Interoperability:** `network.js` supports both TAP's enriched JSON payloads and baseline RFC 42TAP formats (string arrays for `LOOK`/`INVENTORY`, plain text `TALK`, space-delimited chat events).
 
-For full architectural details and user instructions, see [docs/gui-architecture.md](docs/gui-architecture.md) and [GUI_USER_GUIDE.md](GUI_USER_GUIDE.md).
+For full architectural details and user instructions, see [gui-architecture.md](docs/gui-architecture.md) and [GUI_USER_GUIDE.md](docs/GUI_USER_GUIDE.md).
 
 ## Protocol Implementation
 
@@ -362,7 +362,7 @@ Rejected connections are closed, and expired per-IP and rate-limit records are p
 ## Group Contributions
 
 - **`oshtohri`:**
-  - **Desktop GUI Client (`cmd/desktop`, `internal/desktop`, `frontend/gui`):** Designed and implemented the Go HTTP/SSE desktop bridge, modular web interface, responsive multi-screen layouts, animated turn-based combat arena, background music/audio manager, and GUI documentation (`GUI_USER_GUIDE.md`, `docs/gui-architecture.md`).
+  - **Desktop GUI Client (`cmd/desktop`, `internal/desktop`, `frontend/gui`):** Designed and implemented the Go HTTP/SSE desktop bridge, modular web interface, responsive multi-screen layouts, animated turn-based combat arena, background music/audio manager, and GUI documentation (`GUI_USER_GUIDE.md`, `gui-architecture.md`).
   - **World Design & Data (`data/world.json`):** Created the game world layout, room interconnections, NPC definitions and dialogue trees, item distributions, and quest chains.
 - **`aunoguei`:**
   - **TCP Server & Core Engine (`cmd/server`, `internal/`):** Implemented the protocol parser, command dispatcher, session management, concurrency model, combat/quest logic, event bus, and abuse/rate-limiting controls.

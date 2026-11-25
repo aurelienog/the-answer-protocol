@@ -21,13 +21,13 @@ The interface is organized into several views, with a main content area, a sideb
 From the project directory, run:
 
 ```bash
-make run-client / ./bin/tap-cli
+make run-client
 ```
 
 If the project provides a compiled executable, you can also start the client directly:
 
 ```bash
-./cli
+./bin/tap-cli
 ```
 
 ### Authentication
