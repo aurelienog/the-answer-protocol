@@ -76,6 +76,50 @@ func TestTalkingToNPCRefreshesSidebarQuests(t *testing.T) {
 	}
 }
 
+func TestQuestRefreshPreservesOtherDiscoveredAvailableQuests(t *testing.T) {
+	client, requests := newQuestDiscoveryClient(t)
+	model := ui.NewModel(client)
+	model, cmd := enterText(t, model, "Alice")
+	if cmd == nil {
+		t.Fatal("authentication command is nil")
+	}
+	model, _ = updateModel(t, model, cmd())
+	model, _ = updateModel(t, model, tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	for _, command := range []string{"TALK Quest Advisor", "TALK Harbor Guide"} {
+		model, cmd = enterText(t, model, command)
+		if cmd == nil {
+			t.Fatalf("%s did not send a command", command)
+		}
+		model, cmd = updateModel(t, model, cmd())
+		if request := <-requests; request != command {
+			t.Fatalf("server request = %q, want %q", request, command)
+		}
+		if cmd != nil {
+			model, cmd = updateModel(t, model, cmd())
+			if cmd != nil {
+				model, _ = updateModel(t, model, cmd())
+			}
+		}
+	}
+
+	model, cmd = enterText(t, model, "QUESTS")
+	if cmd == nil {
+		t.Fatal("QUESTS did not send a command")
+	}
+	model, cmd = updateModel(t, model, cmd())
+	if cmd != nil {
+		model, _ = updateModel(t, model, cmd())
+	}
+
+	view := model.View()
+	for _, want := range []string{"Scout the Realm", "Harbor Guide's Request", "completed", "available"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("quests view = %q, want %q", view, want)
+		}
+	}
+}
+
 func newQuestCompletionClient(t *testing.T) *network.Client {
 	t.Helper()
 
@@ -149,7 +193,7 @@ func newQuestDiscoveryClient(t *testing.T) (*network.Client, <-chan string) {
 		t.Fatalf("listen for quest discovery client: %v", err)
 	}
 
-	requests := make(chan string, 1)
+	requests := make(chan string, 2)
 	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -175,6 +219,17 @@ func newQuestDiscoveryClient(t *testing.T) (*network.Client, <-chan string) {
 				requests <- request
 				if _, err := fmt.Fprintln(conn, `OK {"npc":{"id":"npc.quest_advisor","name":"Quest Advisor"},"dialogue":["A quest awaits."],"quest":{"id":"quest.scout_the_realm_of_arvendale","name":"Scout the Realm"},"quest_status":"available"}`); err != nil {
 					t.Errorf("send NPC conversation: %v", err)
+					return
+				}
+			case "TALK Harbor Guide":
+				requests <- request
+				if _, err := fmt.Fprintln(conn, `OK {"npc":{"id":"npc.harbor_guide","name":"Harbor Guide"},"dialogue":["A second quest awaits."],"quest":{"id":"quest.harbor_guide_request","name":"Harbor Guide's Request"},"quest_status":"available"}`); err != nil {
+					t.Errorf("send second NPC conversation: %v", err)
+					return
+				}
+			case "QUESTS":
+				if _, err := fmt.Fprintln(conn, `OK [{"id":"quest.scout_the_realm_of_arvendale","name":"Scout the Realm","status":"completed"}]`); err != nil {
+					t.Errorf("send updated quest list: %v", err)
 					return
 				}
 			default:

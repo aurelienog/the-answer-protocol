@@ -100,6 +100,23 @@ func handleQuestsResponse(m *Model, payload string) error {
 		return err
 	}
 
+	questIDs := make(map[string]struct{}, len(quests))
+	for _, quest := range quests {
+		questIDs[quest.ID] = struct{}{}
+	}
+
+	for _, quest := range m.player.Quests {
+		if quest.Status != "available" {
+			continue
+		}
+		if _, exists := questIDs[quest.ID]; exists {
+			continue
+		}
+
+		quests = append(quests, quest)
+		questIDs[quest.ID] = struct{}{}
+	}
+
 	m.player.Quests = quests
 
 	m.ui.PendingRefresh = RefreshNone
