@@ -21,15 +21,15 @@ type worldMapNode struct {
 }
 
 var worldMapNodes = []worldMapNode{
-	{ID: "forest_edge", Name: "Whispering Forest", Row: 0, Col: 1},
-	{ID: "town_gate", Name: "North Town Gate", Row: 1, Col: 1},
-	{ID: "blacksmith_forge", Name: "Blacksmith Forge", Row: 2, Col: 0},
-	{ID: "market_street", Name: "Market Street", Row: 2, Col: 1},
-	{ID: "apothecary", Name: "Apothecary", Row: 2, Col: 2},
-	{ID: "harbor_square", Name: "Harbor Square", Row: 3, Col: 1},
-	{ID: "tavern", Name: "The Salty Siren", Row: 3, Col: 2},
-	{ID: "docks", Name: "The Great Pier", Row: 4, Col: 1},
-	{ID: "warehouse", Name: "Warehouse", Row: 4, Col: 2},
+	{ID: "loc.whispering_forest_edge", Name: "Whispering Forest", Row: 0, Col: 1},
+	{ID: "loc.north_town_gate", Name: "North Town Gate", Row: 1, Col: 1},
+	{ID: "loc.royal_blacksmith_forge", Name: "Blacksmith Forge", Row: 2, Col: 0},
+	{ID: "loc.market_street", Name: "Market Street", Row: 2, Col: 1},
+	{ID: "loc.apothecary_shop", Name: "Apothecary", Row: 2, Col: 2},
+	{ID: "loc.central_harbor_square", Name: "Harbor Square", Row: 3, Col: 1},
+	{ID: "loc.the_salty_siren_tavern", Name: "The Salty Siren", Row: 3, Col: 2},
+	{ID: "loc.the_great_pier", Name: "The Great Pier", Row: 4, Col: 1},
+	{ID: "loc.abandoned_warehouse", Name: "Warehouse", Row: 4, Col: 2},
 }
 
 func (m Model) renderWorld() string {

@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-const InitialRoomID = "harbor_square"
+const InitialRoomID = "loc.central_harbor_square"
 const DefaultNPCRespawnSeconds = 60
 
 // World represents the game world.

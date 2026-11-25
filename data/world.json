@@ -1,143 +1,85 @@
 {
   "rooms": {
-    "harbor_square": {
-      "id": "harbor_square",
+    "loc.central_harbor_square": {
+      "id": "loc.central_harbor_square",
       "name": "Central Harbor Square",
       "description": "A sunlit square paved with cobblestone overlooking the royal harbor. In the center stands the statue of Arvendale's founder. Captain Eliza watches over the docks.",
       "exits": {
-        "north": "market_street",
-        "east": "tavern",
-        "south": "docks"
+        "north": "loc.market_street",
+        "east": "loc.the_salty_siren_tavern",
+        "south": "loc.the_great_pier"
       },
-      "items": {
-        "item.rope": 1
-      },
-      "npcs": [
-        "captain_eliza"
-      ]
+      "items": { "item.hempen_rope": 1 },
+      "npcs": ["npc.captain_eliza"]
     },
-    "market_street": {
-      "id": "market_street",
+    "loc.market_street": {
+      "id": "loc.market_street",
       "name": "Market Street",
       "description": "A lively avenue lined with colorful merchant awnings and bustling stalls. To the west rings the hammer of the Blacksmith's Forge, while the Town Guide and Quest Advisor stand near the fountain.",
       "exits": {
-        "south": "harbor_square",
-        "east": "apothecary",
-        "west": "blacksmith_forge",
-        "north": "town_gate"
+        "south": "loc.central_harbor_square",
+        "east": "loc.apothecary_shop",
+        "west": "loc.royal_blacksmith_forge",
+        "north": "loc.north_town_gate"
       },
-      "items": {
-        "item.pouch": 2
-      },
-      "npcs": [
-        "town_guide",
-        "quest_advisor"
-      ]
+      "items": { "item.leather_pouch": 2 },
+      "npcs": ["npc.town_guide", "npc.quest_advisor"]
     },
-    "blacksmith_forge": {
-      "id": "blacksmith_forge",
+    "loc.royal_blacksmith_forge": {
+      "id": "loc.royal_blacksmith_forge",
       "name": "Royal Blacksmith Forge",
       "description": "Heat radiates from a roaring stone furnace. A newly forged Iron Sword and a reinforced Oak Shield rest beside Master Borin's anvil.",
-      "exits": {
-        "east": "market_street"
-      },
-      "items": {
-        "item.iron_sword": 1,
-        "item.oak_shield": 1
-      },
-      "npcs": [
-        "blacksmith"
-      ]
+      "exits": { "east": "loc.market_street" },
+      "items": { "item.iron_sword": 1, "item.oak_shield": 1 },
+      "npcs": ["npc.master_borin"]
     },
-    "apothecary": {
-      "id": "apothecary",
+    "loc.apothecary_shop": {
+      "id": "loc.apothecary_shop",
       "name": "Apothecary Shop",
       "description": "Sunlight streams through stained glass onto shelves of crimson healing elixirs, dried roots, and alchemical flasks.",
-      "exits": {
-        "west": "market_street",
-        "south": "tavern"
-      },
-      "items": {
-        "item.healing_potion": 3
-      },
-      "npcs": [
-        "herbalist"
-      ]
+      "exits": { "west": "loc.market_street", "south": "loc.the_salty_siren_tavern" },
+      "items": { "item.healing_elixir": 3 },
+      "npcs": ["npc.apprentice_lina"]
     },
-    "tavern": {
-      "id": "tavern",
+    "loc.the_salty_siren_tavern": {
+      "id": "loc.the_salty_siren_tavern",
       "name": "The Salty Siren Tavern",
       "description": "A cozy harbor inn filled with warm hearthlight, the aroma of fresh crusty bread, and bottles of aged port wine.",
-      "exits": {
-        "west": "harbor_square",
-        "north": "apothecary"
-      },
-      "items": {
-        "item.bread": 3,
-        "item.wine": 2
-      },
-      "npcs": [
-        "tavern_keeper"
-      ]
+      "exits": { "west": "loc.central_harbor_square", "north": "loc.apothecary_shop" },
+      "items": { "item.fresh_bread": 3, "item.harbor_vintage_wine": 2 },
+      "npcs": ["npc.mara"]
     },
-    "docks": {
-      "id": "docks",
+    "loc.the_great_pier": {
+      "id": "loc.the_great_pier",
       "name": "The Great Pier",
       "description": "Weathered timber planks creak above deep harbor waters. The corrupt and heavily armored Dock Warden blocks the pier near the eastern warehouse.",
-      "exits": {
-        "north": "harbor_square",
-        "east": "warehouse"
-      },
-      "items": {
-        "item.lantern": 2,
-        "item.missing_ships_report": 1
-      },
-      "npcs": [
-        "dock_warden"
-      ]
+      "exits": { "north": "loc.central_harbor_square", "east": "loc.abandoned_warehouse" },
+      "items": { "item.brass_lantern": 2, "item.missing_ships_report": 1 },
+      "npcs": ["npc.dock_warden"]
     },
-    "warehouse": {
-      "id": "warehouse",
+    "loc.abandoned_warehouse": {
+      "id": "loc.abandoned_warehouse",
       "name": "Abandoned Warehouse",
       "description": "A shadowy storehouse at the edge of the pier filled with stolen royal cargo. A dangerous Shadow Smuggler guards a desk with sealed documents.",
-      "exits": {
-        "west": "docks"
-      },
-      "items": {
-        "item.compromise_letter": 1
-      },
-      "npcs": [
-        "smuggler"
-      ]
+      "exits": { "west": "loc.the_great_pier" },
+      "items": { "item.incriminating_letter": 1 },
+      "npcs": ["npc.shadow_smuggler"]
     },
-    "town_gate": {
-      "id": "town_gate",
+    "loc.north_town_gate": {
+      "id": "loc.north_town_gate",
       "name": "North Town Gate",
       "description": "Massive iron-bound stone gates adorned with blue and gold banners, marking the boundary between the city and the northern forest. An Explorer's Seal rests on the guard post.",
-      "exits": {
-        "south": "market_street",
-        "north": "forest_edge"
-      },
-      "items": {
-        "item.explorer_token": 2
-      },
-      "npcs": [
-        "gate_guard"
-      ]
+      "exits": { "south": "loc.market_street", "north": "loc.whispering_forest_edge" },
+      "items": { "item.northern_gate_seal": 2 },
+      "npcs": ["npc.north_gate_guard"]
     },
-    "forest_edge": {
-      "id": "forest_edge",
+    "loc.whispering_forest_edge": {
+      "id": "loc.whispering_forest_edge",
       "name": "Whispering Forest Edge",
       "description": "Golden sunbeams filter through ancient pines onto mossy stones where rare medicinal herbs grow. A ferocious Dire Wolf prowls among the shadows.",
-      "exits": {
-        "south": "town_gate"
-      },
-      "items": {
-        "item.herbs": 2
-      },
-      "npcs": [
-        "dire_wolf"
-      ]
+      "exits": { "south": "loc.north_town_gate" },
+      "items": { "item.healing_herbs": 2 },
+      "npcs": ["npc.dire_wolf"]
     }
   },
   "items": {
@@ -155,72 +97,72 @@
       "type": "unique",
       "defense": 4
     },
-    "item.leather_boots": {
-      "id": "item.leather_boots",
+    "item.pathfinder_boots": {
+      "id": "item.pathfinder_boots",
       "name": "Pathfinder Boots",
       "description": "Reinforced leather boots awarded for scouting Arvendale. Increases Defense by +2 and Speed by +5.",
       "type": "equipment",
       "defense": 2,
       "speed": 5
     },
-    "item.iron_gauntlets": {
-      "id": "item.iron_gauntlets",
+    "item.alchemists_iron_gauntlets": {
+      "id": "item.alchemists_iron_gauntlets",
       "name": "Alchemist's Iron Gauntlets",
       "description": "Runed gauntlets gifted by Apprentice Lina. Increases Attack by +3 and Defense by +3.",
       "type": "equipment",
       "attack": 3,
       "defense": 3
     },
-    "item.steel_breastplate": {
-      "id": "item.steel_breastplate",
+    "item.royal_guard_breastplate": {
+      "id": "item.royal_guard_breastplate",
       "name": "Royal Guard Breastplate",
       "description": "Polished steel armor awarded by Captain Eliza. Increases Defense by +6 against heavy strikes.",
       "type": "equipment",
       "defense": 6
     },
-    "item.royal_helmet": {
-      "id": "item.royal_helmet",
+    "item.helm_of_arvendale": {
+      "id": "item.helm_of_arvendale",
       "name": "Helm of Arvendale",
       "description": "The champion's crested helm awarded for solving the harbor conspiracy. Increases Attack by +2 and Defense by +5.",
       "type": "equipment",
       "attack": 2,
       "defense": 5
     },
-    "item.healing_potion": {
-      "id": "item.healing_potion",
+    "item.healing_elixir": {
+      "id": "item.healing_elixir",
       "name": "Healing Elixir",
       "description": "A bright crimson alchemical elixir that restores 40 HP when used.",
       "type": "consumable",
       "hp": 40
     },
-    "item.bread": {
-      "id": "item.bread",
+    "item.fresh_bread": {
+      "id": "item.fresh_bread",
       "name": "Fresh Bread",
       "description": "A warm, crusty loaf baked at The Salty Siren Tavern. Restores 15 HP when eaten.",
       "type": "consumable",
       "hp": 15
     },
-    "item.wine": {
-      "id": "item.wine",
+    "item.harbor_vintage_wine": {
+      "id": "item.harbor_vintage_wine",
       "name": "Harbor Vintage Wine",
       "description": "A bottle of rich spiced wine from The Salty Siren. Restores 25 HP when used.",
       "type": "consumable",
       "hp": 25
     },
-    "item.explorer_token": {
-      "id": "item.explorer_token",
+    "item.northern_gate_seal": {
+      "id": "item.northern_gate_seal",
       "name": "Northern Gate Seal",
       "description": "A stamped brass token from the North Town Gate proving you have scouted the city perimeter.",
       "type": "quest"
     },
-    "item.herbs": {
-      "id": "item.herbs",
+    "item.healing_herbs": {
+      "id": "item.healing_herbs",
       "name": "Healing Herbs",
       "description": "Fragrant medicinal herbs gathered from the Whispering Forest or dropped by the Dire Wolf.",
       "type": "quest"
     },
-    "item.compromise_letter": {
-      "id": "item.compromise_letter",
+    "item.incriminating_letter": {
+      "id": "item.incriminating_letter",
       "name": "Incriminating Letter",
       "description": "A sealed letter proving the smuggling conspiracy. Bring it to Captain Eliza on Harbor Square.",
       "type": "quest"
@@ -231,486 +173,313 @@
       "description": "The Dock Warden's secret ledger detailing every ship that vanished from Arvendale.",
       "type": "quest"
     },
-    "item.gold_coins": {
-      "id": "item.gold_coins",
+    "item.purse_of_gold_coins": {
+      "id": "item.purse_of_gold_coins",
       "name": "Purse of Gold Coins",
       "description": "A heavy purse of royal gold coins looted from the harbor conspirators.",
       "type": "unique"
     },
-    "item.rope": {
-      "id": "item.rope",
+    "item.hempen_rope": {
+      "id": "item.hempen_rope",
       "name": "Hempen Rope",
       "description": "A strong coil of braided sailors' rope found on the harbor square.",
       "type": "common"
     },
-    "item.lantern": {
-      "id": "item.lantern",
+    "item.brass_lantern": {
+      "id": "item.brass_lantern",
       "name": "Brass Lantern",
       "description": "A polished brass oil lantern that illuminates dark piers and storehouses.",
       "type": "common"
     },
-    "item.pouch": {
-      "id": "item.pouch",
+    "item.leather_pouch": {
+      "id": "item.leather_pouch",
       "name": "Leather Pouch",
       "description": "A sturdy utility belt pouch sold at the market stalls.",
       "type": "common"
     }
   },
   "npcs": {
-    "captain_eliza": {
-      "id": "captain_eliza",
+    "npc.captain_eliza": {
+      "id": "npc.captain_eliza",
       "name": "Captain Eliza",
       "role": "quest_giver",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 100,
-        "max_hp": 100,
-        "attack": 15,
-        "defense": 10,
-        "speed": 10
-      },
-      "quest_id": "quest.expose_smugglers",
+      "combat_stats": { "hp": 100, "max_hp": 100, "attack": 15, "defense": 10, "speed": 10 },
+      "quest_id": "quest.expose_the_harbor_smugglers",
       "dialogue": {
-        "default": [
-          "The harbor holds dark secrets, adventurer. Stay vigilant."
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["The harbor holds dark secrets, adventurer. Stay vigilant."],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {
-        "quest.expose_smugglers": {
+        "quest.expose_the_harbor_smugglers": {
           "available": [
             "Smugglers have taken over the Abandoned Warehouse east of the docks.",
             "Defeat the Shadow Smuggler or search the warehouse for the Incriminating Letter, and I will reward you with a Royal Guard Breastplate!"
           ],
-          "active": [
-            "Have you recovered the Incriminating Letter from the Abandoned Warehouse yet?"
-          ],
-          "completed": [
-            "This letter confirms my worst fears! Take this Royal Guard Breastplate (+6 Defense) — you have earned it."
-          ],
-          "locked": [
-            "We have other matters to settle first."
-          ]
+          "active": ["Have you recovered the Incriminating Letter from the Abandoned Warehouse yet?"],
+          "completed": ["This letter confirms my worst fears! Take this Royal Guard Breastplate (+6 Defense) — you have earned it."],
+          "locked": ["We have other matters to settle first."]
         },
-        "quest.investigate_missing_ships": {
+        "quest.the_vanishing_fleet": {
           "available": [
             "Now that the smugglers are exposed, we know the Dock Warden on The Great Pier is behind the vanishing ships!",
             "He is heavily armored — make sure you have full armor and weapons before challenging him. Bring me the Missing Ships Report to claim the Helm of Arvendale!"
           ],
-          "active": [
-            "Defeat the corrupt Dock Warden or secure the Missing Ships Report to end this conspiracy once and for all."
-          ],
-          "completed": [
-            "You defeated the Warden and recovered the ledger! Wear the Helm of Arvendale (+2 Attack, +5 Defense) with pride, Champion!"
-          ],
-          "locked": [
-            "First help me expose the smugglers in the warehouse."
-          ]
+          "active": ["Defeat the corrupt Dock Warden or secure the Missing Ships Report to end this conspiracy once and for all."],
+          "completed": ["You defeated the Warden and recovered the ledger! Wear the Helm of Arvendale (+2 Attack, +5 Defense) with pride, Champion!"],
+          "locked": ["First help me expose the smugglers in the warehouse."]
         },
-        "quest.bounty_smugglers": {
-          "available": [
-            "The Shadow Smuggler still returns to the warehouse! Anytime you bring me another Incriminating Letter, I will reward your dedication with Harbor Vintage Wine and Fresh Bread!"
-          ],
-          "active": [
-            "Bring me any additional Incriminating Letters you confiscate from the Shadow Smuggler."
-          ],
-          "completed": [
-            "Thank you for your tireless service to Arvendale! Enjoy this Harbor Vintage Wine and Fresh Bread."
-          ],
+        "quest.keeping_the_warehouse_clear": {
+          "available": ["The Shadow Smuggler still returns to the warehouse! Anytime you bring me another Incriminating Letter, I will reward your dedication with Harbor Vintage Wine and Fresh Bread!"],
+          "active": ["Bring me any additional Incriminating Letters you confiscate from the Shadow Smuggler."],
+          "completed": ["Thank you for your tireless service to Arvendale! Enjoy this Harbor Vintage Wine and Fresh Bread."],
           "locked": []
         }
       }
     },
-    "quest_advisor": {
-      "id": "quest_advisor",
+    "npc.quest_advisor": {
+      "id": "npc.quest_advisor",
       "name": "Quest Advisor",
       "role": "quest_giver",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 80,
-        "max_hp": 80,
-        "attack": 6,
-        "defense": 5,
-        "speed": 10
-      },
-      "quest_id": "quest.explore_arvendale",
+      "combat_stats": { "hp": 80, "max_hp": 80, "attack": 6, "defense": 5, "speed": 10 },
+      "quest_id": "quest.scout_the_realm_of_arvendale",
       "dialogue": {
-        "default": [
-          "Looking for quests? I offer the scouting trial for Pathfinder Boots, Apprentice Lina in the Apothecary needs forest herbs, and Captain Eliza on Harbor Square leads the harbor investigation!"
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["Looking for quests? I offer the scouting trial for Pathfinder Boots, Apprentice Lina in the Apothecary needs forest herbs, and Captain Eliza on Harbor Square leads the harbor investigation!"],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {
-        "quest.explore_arvendale": {
-          "available": [
-            "Welcome, adventurer! Your first task is to scout our realm. Travel north to the North Town Gate, pick up the Northern Gate Seal, and bring it back to me for a pair of Pathfinder Boots!"
-          ],
-          "active": [
-            "Travel north to the North Town Gate, take the Northern Gate Seal, and return here to claim your Pathfinder Boots!"
-          ],
-          "completed": [
-            "Well done scouting the city! Here are your Pathfinder Boots (+2 Defense, +5 Speed). Now speak to Apprentice Lina in the Apothecary and Captain Eliza on Harbor Square!"
-          ],
+        "quest.scout_the_realm_of_arvendale": {
+          "available": ["Welcome, adventurer! Your first task is to scout our realm. Travel north to the North Town Gate, pick up the Northern Gate Seal, and bring it back to me for a pair of Pathfinder Boots!"],
+          "active": ["Travel north to the North Town Gate, take the Northern Gate Seal, and return here to claim your Pathfinder Boots!"],
+          "completed": ["Well done scouting the city! Here are your Pathfinder Boots (+2 Defense, +5 Speed). Now speak to Apprentice Lina in the Apothecary and Captain Eliza on Harbor Square!"],
           "locked": []
         }
       }
     },
-    "herbalist": {
-      "id": "herbalist",
+    "npc.apprentice_lina": {
+      "id": "npc.apprentice_lina",
       "name": "Apprentice Lina",
       "role": "quest_giver",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 60,
-        "max_hp": 60,
-        "attack": 4,
-        "defense": 5,
-        "speed": 10
-      },
-      "quest_id": "quest.gather_herbs",
+      "combat_stats": { "hp": 60, "max_hp": 60, "attack": 4, "defense": 5, "speed": 10 },
+      "quest_id": "quest.remedies_of_the_whispering_woods",
       "dialogue": {
-        "default": [
-          "The herbs from the Whispering Forest can heal any wound. Be careful of the Dire Wolf!"
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["The herbs from the Whispering Forest can heal any wound. Be careful of the Dire Wolf!"],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {
-        "quest.gather_herbs": {
+        "quest.remedies_of_the_whispering_woods": {
           "available": [
             "Many townsfolk are injured, and my supplies are low! Venture north past the Town Gate into the Whispering Forest.",
             "Slay the Dire Wolf or gather Healing Herbs there, and I will reward you with Alchemist's Iron Gauntlets and a Healing Elixir!"
           ],
-          "active": [
-            "Have you brought the Healing Herbs from the Whispering Forest? Watch out for the Dire Wolf!"
-          ],
-          "completed": [
-            "Marvelous! These herbs will save lives. Take these Alchemist's Iron Gauntlets (+3 Attack, +3 Defense) and a Healing Elixir!"
-          ],
+          "active": ["Have you brought the Healing Herbs from the Whispering Forest? Watch out for the Dire Wolf!"],
+          "completed": ["Marvelous! These herbs will save lives. Take these Alchemist's Iron Gauntlets (+3 Attack, +3 Defense) and a Healing Elixir!"],
           "locked": []
         },
-        "quest.repeatable_herbs": {
-          "available": [
-            "I always need more Healing Herbs to brew potions! Whenever you defeat the Dire Wolf and bring me more herbs, I'll brew you a fresh Healing Elixir (+40 HP)!"
-          ],
-          "active": [
-            "Bring me Healing Herbs from the Whispering Forest anytime you need another Healing Elixir."
-          ],
-          "completed": [
-            "Thank you for your hard work! Here is a freshly brewed Healing Elixir for your battles!"
-          ],
+        "quest.alchemists_herb_supply": {
+          "available": ["I always need more Healing Herbs to brew potions! Whenever you defeat the Dire Wolf and bring me more herbs, I'll brew you a fresh Healing Elixir (+40 HP)!"],
+          "active": ["Bring me Healing Herbs from the Whispering Forest anytime you need another Healing Elixir."],
+          "completed": ["Thank you for your hard work! Here is a freshly brewed Healing Elixir for your battles!"],
           "locked": []
         }
       }
     },
-    "tavern_keeper": {
-      "id": "tavern_keeper",
+    "npc.mara": {
+      "id": "npc.mara",
       "name": "Mara",
       "role": "tavern_keeper",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 60,
-        "max_hp": 60,
-        "attack": 5,
-        "defense": 5,
-        "speed": 10
-      },
-      "quest_id": "quest.bounty_warden",
+      "combat_stats": { "hp": 60, "max_hp": 60, "attack": 5, "defense": 5, "speed": 10 },
+      "quest_id": "quest.justice_for_the_sailors",
       "dialogue": {
-        "default": [
-          "Welcome to The Salty Siren! Help yourself to Fresh Bread (+15 HP) and Harbor Vintage Wine (+25 HP) to recover your strength."
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["Welcome to The Salty Siren! Help yourself to Fresh Bread (+15 HP) and Harbor Vintage Wine (+25 HP) to recover your strength."],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {
-        "quest.bounty_warden": {
-          "available": [
-            "Many of my regular sailor customers vanished because of the Dock Warden! Anytime you defeat him and bring me a Missing Ships Report, I'll treat you to Harbor Vintage Wine and Fresh Bread on the house!"
-          ],
-          "active": [
-            "Bring me a Missing Ships Report from the Dock Warden, and a feast of Wine and Bread is yours!"
-          ],
-          "completed": [
-            "Bless you for avenging our sailors! Here is your Harbor Vintage Wine (+25 HP) and Fresh Bread (+15 HP)!"
-          ],
+        "quest.justice_for_the_sailors": {
+          "available": ["Many of my regular sailor customers vanished because of the Dock Warden! Anytime you defeat him and bring me a Missing Ships Report, I'll treat you to Harbor Vintage Wine and Fresh Bread on the house!"],
+          "active": ["Bring me a Missing Ships Report from the Dock Warden, and a feast of Wine and Bread is yours!"],
+          "completed": ["Bless you for avenging our sailors! Here is your Harbor Vintage Wine (+25 HP) and Fresh Bread (+15 HP)!"],
           "locked": []
         }
       }
     },
-    "town_guide": {
-      "id": "town_guide",
+    "npc.town_guide": {
+      "id": "npc.town_guide",
       "name": "Town Guide",
       "role": "guide",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 60,
-        "max_hp": 60,
-        "attack": 5,
-        "defense": 5,
-        "speed": 10
-      },
+      "combat_stats": { "hp": 60, "max_hp": 60, "attack": 5, "defense": 5, "speed": 10 },
       "quest_id": "",
       "dialogue": {
-        "default": [
-          "Want to know where to find gear? Head West to the Blacksmith Forge for an Iron Sword and Oak Shield! Head East to the Apothecary for Healing Elixirs, or visit the Tavern for Bread and Wine. Documents lie in the Warehouse, and Herbs grow in the Northern Forest!"
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["Want to know where to find gear? Head West to the Blacksmith Forge for an Iron Sword and Oak Shield! Head East to the Apothecary for Healing Elixirs, or visit the Tavern for Bread and Wine. Documents lie in the Warehouse, and Herbs grow in the Northern Forest!"],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {}
     },
-    "blacksmith": {
-      "id": "blacksmith",
+    "npc.master_borin": {
+      "id": "npc.master_borin",
       "name": "Master Borin",
       "role": "blacksmith",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 90,
-        "max_hp": 90,
-        "attack": 10,
-        "defense": 8,
-        "speed": 10
-      },
+      "combat_stats": { "hp": 90, "max_hp": 90, "attack": 10, "defense": 8, "speed": 10 },
       "quest_id": "",
       "dialogue": {
-        "default": [
-          "Steel and oak keep an adventurer breathing! Take the Iron Sword and Oak Shield beside my anvil — you'll need every bit of armor before facing the Dock Warden."
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["Steel and oak keep an adventurer breathing! Take the Iron Sword and Oak Shield beside my anvil — you'll need every bit of armor before facing the Dock Warden."],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {}
     },
-    "gate_guard": {
-      "id": "gate_guard",
+    "npc.north_gate_guard": {
+      "id": "npc.north_gate_guard",
       "name": "North Gate Guard",
       "role": "guard",
       "hostile": false,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 85,
-        "max_hp": 85,
-        "attack": 8,
-        "defense": 6,
-        "speed": 10
-      },
+      "combat_stats": { "hp": 85, "max_hp": 85, "attack": 8, "defense": 6, "speed": 10 },
       "quest_id": "",
       "dialogue": {
-        "default": [
-          "I used to be an adventurer like you, then I took an arrow in the knee... Now I guard the northern gate while Dire Wolves prowl the woods beyond."
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["I used to be an adventurer like you, then I took an arrow in the knee... Now I guard the northern gate while Dire Wolves prowl the woods beyond."],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {}
     },
-    "dire_wolf": {
-      "id": "dire_wolf",
+    "npc.dire_wolf": {
+      "id": "npc.dire_wolf",
       "name": "Dire Wolf",
       "role": "beast",
       "hostile": true,
       "respawn_seconds": 45,
-      "combat_stats": {
-        "hp": 45,
-        "max_hp": 45,
-        "attack": 11,
-        "defense": 4,
-        "speed": 10
-      },
+      "combat_stats": { "hp": 45, "max_hp": 45, "attack": 11, "defense": 4, "speed": 10 },
       "quest_id": "",
-      "rewards": [
-        "item.herbs"
-      ],
+      "rewards": ["item.healing_herbs"],
       "dialogue": {
-        "default": [
-          "The wolf snarls fiercely, guarding the patch of medicinal herbs with bared fangs."
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["The wolf snarls fiercely, guarding the patch of medicinal herbs with bared fangs."],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {}
     },
-    "smuggler": {
-      "id": "smuggler",
+    "npc.shadow_smuggler": {
+      "id": "npc.shadow_smuggler",
       "name": "Shadow Smuggler",
       "role": "smuggler",
       "hostile": true,
       "respawn_seconds": 60,
-      "combat_stats": {
-        "hp": 75,
-        "max_hp": 75,
-        "attack": 14,
-        "defense": 7,
-        "speed": 10
-      },
+      "combat_stats": { "hp": 75, "max_hp": 75, "attack": 14, "defense": 7, "speed": 10 },
       "quest_id": "",
-      "rewards": [
-        "item.compromise_letter"
-      ],
+      "rewards": ["item.incriminating_letter"],
       "dialogue": {
-        "default": [
-          "You've seen too much! You won't leave this warehouse alive with our letters!"
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["You've seen too much! You won't leave this warehouse alive with our letters!"],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {}
     },
-    "dock_warden": {
-      "id": "dock_warden",
+    "npc.dock_warden": {
+      "id": "npc.dock_warden",
       "name": "Dock Warden",
       "role": "boss",
       "hostile": true,
       "respawn_seconds": 90,
-      "combat_stats": {
-        "hp": 140,
-        "max_hp": 140,
-        "attack": 24,
-        "defense": 14,
-        "speed": 10
-      },
+      "combat_stats": { "hp": 140, "max_hp": 140, "attack": 24, "defense": 14, "speed": 10 },
       "quest_id": "",
-      "rewards": [
-        "item.missing_ships_report"
-      ],
+      "rewards": ["item.missing_ships_report"],
       "dialogue": {
-        "default": [
-          "Foolish whelp! Without legendary armor and a forged blade, my halberd will crush you in seconds!"
-        ],
-        "available": [],
-        "active": [],
-        "completed": [],
-        "locked": []
+        "default": ["Foolish whelp! Without legendary armor and a forged blade, my halberd will crush you in seconds!"],
+        "available": [], "active": [], "completed": [], "locked": []
       },
       "quest_dialogues": {}
     }
   },
   "quests": {
-    "quest.explore_arvendale": {
-      "id": "quest.explore_arvendale",
+    "quest.scout_the_realm_of_arvendale": {
+      "id": "quest.scout_the_realm_of_arvendale",
       "name": "Scout the Realm of Arvendale",
       "description": "Explore the city to the North Town Gate, retrieve the Northern Gate Seal, and return to the Quest Advisor on Market Street.",
-      "giver_npc_id": "quest_advisor",
-      "required_item_id": "item.explorer_token",
+      "giver_npc_id": "npc.quest_advisor",
+      "required_item_id": "item.northern_gate_seal",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.leather_boots"
-      ],
+      "reward_item_ids": ["item.pathfinder_boots"],
       "next_quest_id": "",
       "repeatable": false
     },
-    "quest.expose_smugglers": {
-      "id": "quest.expose_smugglers",
+    "quest.expose_the_harbor_smugglers": {
+      "id": "quest.expose_the_harbor_smugglers",
       "name": "Expose the Harbor Smugglers",
       "description": "Defeat the Shadow Smuggler or recover the Incriminating Letter from the Abandoned Warehouse and bring it to Captain Eliza.",
-      "giver_npc_id": "captain_eliza",
-      "required_item_id": "item.compromise_letter",
+      "giver_npc_id": "npc.captain_eliza",
+      "required_item_id": "item.incriminating_letter",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.steel_breastplate"
-      ],
-      "next_quest_id": "quest.investigate_missing_ships",
+      "reward_item_ids": ["item.royal_guard_breastplate"],
+      "next_quest_id": "quest.the_vanishing_fleet",
       "repeatable": false
     },
-    "quest.investigate_missing_ships": {
-      "id": "quest.investigate_missing_ships",
+    "quest.the_vanishing_fleet": {
+      "id": "quest.the_vanishing_fleet",
       "name": "The Vanishing Fleet",
       "description": "Defeat the heavily armored Dock Warden on The Great Pier or secure the Missing Ships Report and deliver it to Captain Eliza.",
-      "giver_npc_id": "captain_eliza",
+      "giver_npc_id": "npc.captain_eliza",
       "required_item_id": "item.missing_ships_report",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.royal_helmet"
-      ],
-      "next_quest_id": "quest.bounty_smugglers",
+      "reward_item_ids": ["item.helm_of_arvendale"],
+      "next_quest_id": "quest.keeping_the_warehouse_clear",
       "repeatable": false
     },
-    "quest.bounty_smugglers": {
-      "id": "quest.bounty_smugglers",
+    "quest.keeping_the_warehouse_clear": {
+      "id": "quest.keeping_the_warehouse_clear",
       "name": "Keeping the Warehouse Clear (Repeatable)",
       "description": "Bring any additional Incriminating Letters from the Shadow Smuggler to Captain Eliza in exchange for Wine and Fresh Bread.",
-      "giver_npc_id": "captain_eliza",
-      "required_item_id": "item.compromise_letter",
+      "giver_npc_id": "npc.captain_eliza",
+      "required_item_id": "item.incriminating_letter",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.wine",
-        "item.bread"
-      ],
+      "reward_item_ids": ["item.harbor_vintage_wine", "item.fresh_bread"],
       "next_quest_id": "",
       "repeatable": true
     },
-    "quest.gather_herbs": {
-      "id": "quest.gather_herbs",
+    "quest.remedies_of_the_whispering_woods": {
+      "id": "quest.remedies_of_the_whispering_woods",
       "name": "Remedies of the Whispering Woods",
       "description": "Defeat the Dire Wolf or gather Healing Herbs from the Whispering Forest Edge and bring them to Apprentice Lina in the Apothecary.",
-      "giver_npc_id": "herbalist",
-      "required_item_id": "item.herbs",
+      "giver_npc_id": "npc.apprentice_lina",
+      "required_item_id": "item.healing_herbs",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.iron_gauntlets",
-        "item.healing_potion"
-      ],
-      "next_quest_id": "quest.repeatable_herbs",
+      "reward_item_ids": ["item.alchemists_iron_gauntlets", "item.healing_elixir"],
+      "next_quest_id": "quest.alchemists_herb_supply",
       "repeatable": false
     },
-    "quest.repeatable_herbs": {
-      "id": "quest.repeatable_herbs",
+    "quest.alchemists_herb_supply": {
+      "id": "quest.alchemists_herb_supply",
       "name": "Alchemist's Herb Supply (Repeatable)",
       "description": "Deliver Healing Herbs from the Dire Wolf to Apprentice Lina anytime to receive a fresh Healing Elixir (+40 HP).",
-      "giver_npc_id": "herbalist",
-      "required_item_id": "item.herbs",
+      "giver_npc_id": "npc.apprentice_lina",
+      "required_item_id": "item.healing_herbs",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.healing_potion"
-      ],
+      "reward_item_ids": ["item.healing_elixir"],
       "next_quest_id": "",
       "repeatable": true
     },
-    "quest.bounty_warden": {
-      "id": "quest.bounty_warden",
+    "quest.justice_for_the_sailors": {
+      "id": "quest.justice_for_the_sailors",
       "name": "Justice for the Sailors (Repeatable)",
       "description": "Bring a Missing Ships Report from the Dock Warden to Mara at The Salty Siren Tavern for Harbor Vintage Wine and Fresh Bread.",
-      "giver_npc_id": "tavern_keeper",
+      "giver_npc_id": "npc.mara",
       "required_item_id": "item.missing_ships_report",
       "required_item_quantity": 1,
       "consume_required_item": true,
-      "reward_item_ids": [
-        "item.wine",
-        "item.bread"
-      ],
+      "reward_item_ids": ["item.harbor_vintage_wine", "item.fresh_bread"],
       "next_quest_id": "",
       "repeatable": true
     }

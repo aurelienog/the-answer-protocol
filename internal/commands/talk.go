@@ -64,13 +64,13 @@ func (c *TalkCommand) Execute(ctx *Context) (protocol.Message, error) {
 				slog.String("progress", conversation.Quest.Progress),
 			)
 		}
+	}
 
-		if conversation.JustCompleted && conversation.CompletedQuestID != "" && ctx.Events != nil {
-			ctx.Events.Publish(world.QuestCompleted{
-				PlayerName: ctx.PlayerName,
-				QuestID:    conversation.CompletedQuestID,
-			})
-		}
+	if conversation.JustCompleted && conversation.CompletedQuestID != "" && ctx.Events != nil {
+		ctx.Events.Publish(world.QuestCompleted{
+			PlayerName: ctx.PlayerName,
+			QuestID:    conversation.CompletedQuestID,
+		})
 	}
 
 	return protocol.OKJSON(conversation)

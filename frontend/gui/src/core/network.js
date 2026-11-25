@@ -195,11 +195,11 @@ const App = {
             });
             const data = await res.json();
             if (data.status !== 'OK') {
-                GameState.commandQueue.shift();
+                GameState.commandQueue.pop();
                 UI.addChatLine('LOG', 'Error', data.error || 'Failed to send command', 'chat-err');
             }
         } catch (err) {
-            GameState.commandQueue.shift();
+            GameState.commandQueue.pop();
             UI.addChatLine('LOG', 'Error', 'Failed to send command', 'chat-err');
         }
     },
@@ -305,7 +305,7 @@ const App = {
             }
 
             if (raw.includes('PLAYER_ALREADY_IN_COMBAT')) {
-                const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || CombatModal.enemyId || 'dire_wolf';
+                const enemyInRoom = GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) || CombatModal.enemyId || 'npc.dire_wolf';
                 CombatModal.open(enemyInRoom, GameState.hp, undefined, true);
                 return;
             }
@@ -407,6 +407,9 @@ const App = {
         if (payload.startsWith('defended=')) {
             const redMatch = payload.match(/(?:reduction|defense_bonus)=(\d+)/);
             const pct = parseInt(redMatch ? redMatch[1] : '50', 10);
+            if (GameState.inCombat) {
+                CombatModal.playDefendEffect(pct);
+            }
             UI.addChatLine('COMBAT', '🛡️ Defend', `Defensive stance active (+${pct}% defense on next hit).`, 'chat-sys');
             return;
         }
@@ -446,7 +449,7 @@ const App = {
                     || GameState.lastAttackEnemyId
                     || GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile)
                     || GameState.npcsInRoom[0]
-                    || 'dire_wolf';
+                    || 'npc.dire_wolf';
                 sessionStorage.setItem('tap_combat_turn_owner', caller);
                 CombatModal.open(enemyInRoom, GameState.hp, currentEnemyHp, false, true);
                 CombatModal.setInitialParticipants([caller]);
@@ -537,10 +540,15 @@ const App = {
                     return;
                 }
 
-                if (data.quest_id && data.status) {
-                    UI.addChatLine('ROOM', '🏆 Quest Completed', `${data.message}: ${data.quest_id}`, 'chat-sys');
+                if (data.quest_id && data.status === 'completed') {
+                    UI.addChatLine('ROOM', '🏆 Quest Completed', `${data.message || 'Completed'}: ${data.quest_id}`, 'chat-sys');
                     if (DialogueModal.activeNpcId) this.sendCommand(`TALK ${DialogueModal.activeNpcId}`);
                     this.sendCommand('INVENTORY');
+                    this.sendCommand('QUESTS');
+                    return;
+                }
+                if (data.quest_id && data.status) {
+                    UI.addChatLine('ROOM', '📜 Quest', `${data.quest_id}: ${data.description || data.status}`, 'chat-sys');
                     this.sendCommand('QUESTS');
                     return;
                 }
@@ -593,14 +601,16 @@ const App = {
                 }
 
                 if (data.combat_id || data.attacker_hp !== undefined) {
-                    const startedEnemyId = CombatModal.enemyId || GameState.lastAttackEnemyId || 'dire_wolf';
+                    const startedEnemyId = CombatModal.enemyId || GameState.lastAttackEnemyId || 'npc.dire_wolf';
                     if (data.combat_id) {
                         CombatModal.combatId = data.combat_id;
                     }
                     if (data.combat_id && GameState.currentGroup) {
                         this.sendCommand(`CHAT GROUP [COMBAT_ID:${data.combat_id}|${GameState.room.id}|${startedEnemyId}]`);
                     }
-                    CombatModal.open(startedEnemyId, data.attacker_hp, data.target_hp);
+                    if (!GameState.inCombat) {
+                        CombatModal.open(startedEnemyId, data.attacker_hp, data.target_hp);
+                    }
                     UI.addChatLine('COMBAT', '⚔️ Combat', `Battle started against ${CombatModal.enemyName}!`, 'chat-sys');
                     return;
                 }
@@ -706,6 +716,18 @@ const App = {
             return;
         }
 
+        if (category === 'QUEST' && parts[2] === 'COMPLETED') {
+            const rest = parts.slice(3).join(' ');
+            const qMatch = rest.match(/quest=([^\s]+)/);
+            const qId = qMatch ? qMatch[1] : '';
+            if (qId) {
+                const qDef = GameState.worldQuests && GameState.worldQuests[qId];
+                const qName = (qDef && qDef.name) || qId;
+                DialogueModal.announceQuestCompletion(qId, qName);
+            }
+            return;
+        }
+
         if (category === 'NPC' && parts[2] === 'RESPAWN') {
             const rest = parts.slice(3).join(' ');
             const npcMatch = rest.match(/npc=([^\s]+)/);
@@ -729,7 +751,7 @@ const App = {
             if (respawnPlayer && respawnPlayer.toLowerCase() !== GameState.playerName.toLowerCase()) {
                 return;
             }
-            const respawnRoom = rMatch ? rMatch[1] : 'harbor_square';
+            const respawnRoom = rMatch ? rMatch[1] : 'loc.central_harbor_square';
             const newHp = hpMatch ? parseInt(hpMatch[1], 10) : GameState.hp;
             const newMaxHp = maxHpMatch ? parseInt(maxHpMatch[1], 10) : GameState.maxHp;
 
@@ -791,7 +813,7 @@ const App = {
                         const enemyId = (enemyInfo && enemyInfo.id) ||
                             GameState.npcsInRoom.find(n => GameState.getNpcMeta(n).hostile) ||
                             GameState.npcsInRoom[0] ||
-                            'dire_wolf';
+                            'npc.dire_wolf';
                         CombatModal.open(
                             enemyId,
                             GameState.hp,

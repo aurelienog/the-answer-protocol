@@ -15,7 +15,7 @@ const CombatAnimator = {
         defaultImpactDelayMs: 250,
 
         enemies: {
-            "dire_wolf": {
+            "npc.dire_wolf": {
                 enabled: true,
                 basePath: "/assets/combat/anims/dire_wolf",
                 scale: 1.0,
@@ -44,7 +44,7 @@ const CombatAnimator = {
                     }
                 }
             },
-            "smuggler": {
+            "npc.shadow_smuggler": {
                 enabled: true,
                 basePath: "/assets/combat/anims/smuggler",
                 scale: 1.2,
@@ -56,7 +56,7 @@ const CombatAnimator = {
                     death:  { frames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], fps: 8,  loop: false }
                 }
             },
-            "dock_warden": {
+            "npc.dock_warden": {
                 enabled: true,
                 basePath: "/assets/combat/anims/dock_warden",
                 scale: 1.2,
