@@ -32,7 +32,7 @@ type guiSimulationClient struct {
 	username string
 }
 
-func startFullSimulationServer(t *testing.T) (
+func startFullSimulationServer(t *testing.T, additionalHandlers ...events.Handler) (
 	string,
 	*world.World,
 	*server.Registry,
@@ -51,6 +51,9 @@ func startFullSimulationServer(t *testing.T) (
 	commands.RegisterCommands(dispatcher)
 	eventBus := events.NewBus()
 	eventBus.Subscribe(server.NewNotificationDispatcher(registry, log).Handle)
+	for _, handler := range additionalHandlers {
+		eventBus.Subscribe(handler)
+	}
 
 	guardConfig := abuse.DefaultConfig()
 	guardConfig.MaxConnections = 100
@@ -236,6 +239,7 @@ func TestFullSystemSimulationMixedCLIAndGUI(t *testing.T) {
 	for _, name := range cliNames {
 		clis[name] = connectSimulationCLI(t, address, name)
 	}
+
 	guis := make([]*guiSimulationClient, 0, len(guiNames))
 	for _, name := range guiNames {
 		guis = append(guis, connectSimulationGUI(t, address, name))
@@ -319,4 +323,130 @@ func TestFullSystemSimulationMixedCLIAndGUI(t *testing.T) {
 	if strings.TrimSpace(strings.Join(names, ",")) == "" {
 		t.Fatal("simulation names are empty")
 	}
+}
+
+func TestGUIConcurrentConnectRequestsDoNotOrphanSession(t *testing.T) {
+	firstEntered := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	var releaseFirstOnce sync.Once
+	releaseFirstEvent := func() {
+		releaseFirstOnce.Do(func() {
+			close(releaseFirst)
+		})
+	}
+
+	address, gameWorld, registry, _ := startFullSimulationServer(
+		t,
+		func(event any) {
+			entered, ok := event.(world.PlayerEntered)
+			if ok && entered.PlayerName == "GuiFirst" {
+				close(firstEntered)
+				<-releaseFirst
+			}
+		},
+	)
+	app := desktop.NewApp()
+	t.Cleanup(func() {
+		releaseFirstEvent()
+		for _, name := range []string{"GuiFirst", "GuiSecond"} {
+			if session, ok := registry.GetByName(name); ok {
+				_ = session.Connection.Close()
+			}
+		}
+	})
+
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatalf("split simulation server address: %v", err)
+	}
+
+	type connectResult struct {
+		username string
+		status   string
+		err      error
+	}
+	results := make(chan connectResult, 2)
+	connect := func(username string) {
+		body, err := json.Marshal(map[string]string{
+			"host":     host,
+			"port":     port,
+			"username": username,
+		})
+		if err != nil {
+			results <- connectResult{username: username, err: err}
+			return
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "/api/connect", bytes.NewReader(body))
+		recorder := httptest.NewRecorder()
+		app.HandleConnect(recorder, request)
+
+		var response struct {
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+			results <- connectResult{username: username, err: err}
+			return
+		}
+		results <- connectResult{username: username, status: response.Status}
+	}
+
+	go connect("GuiFirst")
+	select {
+	case <-firstEntered:
+	case <-time.After(fullSimulationTimeout):
+		t.Fatal("first GUI connection did not reach authentication")
+	}
+
+	go connect("GuiSecond")
+	var secondFinishedBeforeFirst bool
+	var completed []connectResult
+	select {
+	case result := <-results:
+		completed = append(completed, result)
+		secondFinishedBeforeFirst = result.username == "GuiSecond"
+	case <-time.After(200 * time.Millisecond):
+	}
+	releaseFirstEvent()
+
+	deadline := time.After(fullSimulationTimeout)
+	for len(completed) < 2 {
+		select {
+		case result := <-results:
+			completed = append(completed, result)
+		case <-deadline:
+			t.Fatal("concurrent GUI connection requests did not complete")
+		}
+	}
+	for _, result := range completed {
+		if result.err != nil {
+			t.Fatalf("GUI %s connect request: %v", result.username, result.err)
+		}
+		if result.status != "OK" {
+			t.Fatalf("GUI %s connect status = %q, want OK", result.username, result.status)
+		}
+	}
+	if secondFinishedBeforeFirst {
+		t.Fatal("second GUI connect completed before the first connect transaction")
+	}
+
+	sessionRecorder := httptest.NewRecorder()
+	app.HandleSession(sessionRecorder, httptest.NewRequest(http.MethodGet, "/api/session", nil))
+	var session struct {
+		Connected bool   `json:"connected"`
+		Username  string `json:"username"`
+	}
+	if err := json.Unmarshal(sessionRecorder.Body.Bytes(), &session); err != nil {
+		t.Fatalf("decode GUI session response: %v", err)
+	}
+	if !session.Connected || session.Username != "GuiSecond" {
+		t.Fatalf("GUI session = %+v, want connected as GuiSecond", session)
+	}
+	if _, ok := registry.GetByName("GuiFirst"); ok {
+		t.Fatal("first GUI player remains registered without being the active bridge session")
+	}
+	if _, ok := registry.GetByName("GuiSecond"); !ok {
+		t.Fatal("second GUI player is missing from the server registry")
+	}
+	waitForSimulationInvariants(t, gameWorld, registry, []string{"GuiSecond"})
 }

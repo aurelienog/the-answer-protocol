@@ -20,6 +20,7 @@ type ServerEvent struct {
 
 type App struct {
 	mu          sync.Mutex
+	connectMu   sync.Mutex
 	writeMu     sync.Mutex
 	conn        net.Conn
 	playerName  string
@@ -102,6 +103,9 @@ func (a *App) HandleConnect(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]string{"status": "ERR", "error": "Invalid JSON request"})
 		return
 	}
+
+	a.connectMu.Lock()
+	defer a.connectMu.Unlock()
 
 	// If the player refreshes the page or reconnects — first, we free the old session!
 	a.closeExisting()
