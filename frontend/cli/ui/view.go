@@ -16,6 +16,12 @@ func (m Model) View() string {
 }
 
 func (m Model) renderAuthentication() string {
+	if m.ui.Width > 0 &&
+		m.ui.Height > 0 &&
+		!m.calculateLayout().MainView.Visible {
+		return layout.WarningStyle.Render("Terminal too small")
+	}
+
 	title := layout.TitleStyle.Render("THE ANSWER PROTOCOL")
 
 	content := lipgloss.JoinVertical(
@@ -31,7 +37,14 @@ func (m Model) renderAuthentication() string {
 		layout.StatusStyle.Render(m.communication.StatusMessage),
 	)
 
-	return layout.PanelStyle.Render(content)
+	panelStyle := layout.PanelStyle
+	if m.ui.Width > 0 {
+		panelStyle = panelStyle.Width(
+			maxInt(0, m.ui.Width-layout.PanelBorderWidth),
+		)
+	}
+
+	return panelStyle.Render(content)
 }
 
 func (m Model) renderView() string {
@@ -206,59 +219,59 @@ func (m Model) renderAvailableCommands(width int) string {
 }
 
 func (m Model) inputText() string {
-    prefix := "> "
-    availableWidth := m.ui.Width - 4
+	prefix := "> "
+	availableWidth := m.ui.Width - 4
 
-    if availableWidth < 1 {
-        availableWidth = 1
-    }
+	if availableWidth < 1 {
+		availableWidth = 1
+	}
 
-    input := strings.ReplaceAll(m.ui.Input, "\n", " ")
-    input = strings.ReplaceAll(input, "\r", "")
+	input := strings.ReplaceAll(m.ui.Input, "\n", " ")
+	input = strings.ReplaceAll(input, "\r", "")
 
-    runes := []rune(input)
-    maxWidth := availableWidth - lipgloss.Width(prefix)
+	runes := []rune(input)
+	maxWidth := availableWidth - lipgloss.Width(prefix)
 
-    if m.ui.CursorVisible {
-        maxWidth--
-    }
+	if m.ui.CursorVisible {
+		maxWidth--
+	}
 
-    if maxWidth < 1 {
-        maxWidth = 1
-    }
+	if maxWidth < 1 {
+		maxWidth = 1
+	}
 
-    offset := m.ui.InputOffset
+	offset := m.ui.InputOffset
 
-    if offset < 0 {
-        offset = 0
-    }
+	if offset < 0 {
+		offset = 0
+	}
 
-    if offset > len(runes) {
-        offset = len(runes)
-    }
+	if offset > len(runes) {
+		offset = len(runes)
+	}
 
-    cursor := len(runes)
+	cursor := len(runes)
 
-    if cursor-offset >= maxWidth {
-        offset = cursor - maxWidth + 1
-    }
+	if cursor-offset >= maxWidth {
+		offset = cursor - maxWidth + 1
+	}
 
-    if cursor < offset {
-        offset = cursor
-    }
+	if cursor < offset {
+		offset = cursor
+	}
 
-    end := offset + maxWidth
-    if end > len(runes) {
-        end = len(runes)
-    }
+	end := offset + maxWidth
+	if end > len(runes) {
+		end = len(runes)
+	}
 
-    visibleInput := string(runes[offset:end])
+	visibleInput := string(runes[offset:end])
 
-    result := prefix + visibleInput
+	result := prefix + visibleInput
 
-    if m.ui.CursorVisible {
-        result += "█"
-    }
+	if m.ui.CursorVisible {
+		result += "█"
+	}
 
-    return result
+	return result
 }
