@@ -78,7 +78,7 @@ const CombatModal = {
     // Sets the dedicated combat arena background (.webp) by enemyId or roomId!
     syncRoomBackground() {
         const bgMap = (ASSETS.combat && ASSETS.combat.backgrounds) || {};
-        const roomMeta = ASSETS.rooms[GameState.room.id] || ASSETS.rooms.default;
+        const roomMeta = GameState.getRoomMeta(GameState.room.id);
 
         const bgUrl = bgMap[this.enemyId] || bgMap[GameState.room.id] || roomMeta.img;
         const combatBg = document.getElementById('combat-bg-img');
@@ -174,7 +174,6 @@ const CombatModal = {
                 if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
                 this.isMyTurn = false;
                 this.setButtonsDisabled(true);
-                this.playDefendEffect(50);
                 App.sendCommand('COMBAT DEFEND');
             });
         }
@@ -183,13 +182,16 @@ const CombatModal = {
         if (healBtn) {
             healBtn.addEventListener('click', () => {
                 if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
-                const healOrder = ['item.healing_potion', 'item.wine', 'item.bread'];
-                const itemToUse = healOrder.find(id => GameState.inventory.includes(id));
-                if (!itemToUse) {
-                    UI.addChatLine('COMBAT', '🧪 No Consumables', 'You have no Healing Elixir, Wine, or Bread in your bag!', 'chat-err');
+                const consumables = (GameState.inventory || [])
+                    .map(id => ({ id, meta: GameState.getItemMeta(id) }))
+                    .filter(entry => (entry.meta.type || '').toLowerCase() === 'consumable' && (entry.meta.hp || 0) > 0)
+                    .sort((a, b) => (b.meta.hp || 0) - (a.meta.hp || 0));
+
+                if (consumables.length === 0) {
+                    UI.addChatLine('COMBAT', '🧪 No Consumables', 'You have no healing consumables in your bag!', 'chat-err');
                     return;
                 }
-                App.sendCommand(`COMBAT USE ${itemToUse}`);
+                App.sendCommand(`COMBAT USE ${consumables[0].id}`);
             });
         }
 
@@ -450,7 +452,6 @@ const CombatModal = {
             if (typeof CombatAnimator !== 'undefined') {
                 CombatAnimator.triggerAction('hero', 'heal');
             }
-            GameState.hp = Math.min(GameState.maxHp, GameState.hp + healAmount);
             this.showFloatingDmg('dmg-on-hero', `+${healAmount} HP`, '#48bb78');
             this.updateBars();
         }, timing.totalMs);

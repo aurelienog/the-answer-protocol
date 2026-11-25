@@ -7,6 +7,7 @@ const DialogueModal = {
     activeQuestId: null,
     activeQuestName: null,
     activeQuestStatus: null,
+    justCompletedQuest: null,
 
     open(npcId) {
         UI.closeAllModals();
@@ -89,7 +90,8 @@ const DialogueModal = {
             rewardStr = `Received: ${rNames.join(' + ')}!`;
         }
 
-        // Update local state immediately so it doesn't trigger twice
+        this.justCompletedQuest = { id: questId, name: questName };
+
         GameState.quests = (GameState.quests || []).map(q => {
             if ((q.id || q.quest_id) === questId) {
                 return { ...q, status: 'completed' };
@@ -120,37 +122,34 @@ const DialogueModal = {
         // Why? Because on the server, if a completed quest has a `next_quest_id` or is `repeatable`,
         // TalkToNPC resolves the active quest and immediately advances to the next/repeatable quest with status="available"!
         const prevActive = this.findPlayerActiveQuestForNpc(npcId);
-        let completedDuringTalk = null;
-
-        if (data.quest && data.quest.id) {
-            const incomingId = data.quest.id;
-            const incomingStatus = data.quest_status || 'available';
-
-            if (incomingStatus === 'completed') {
-                completedDuringTalk = { id: incomingId, name: data.quest.name || incomingId };
-            } else if (prevActive) {
-                // Case A: Server advanced to the next quest in the chain (e.g. Captain Eliza, Apprentice Lina)
-                if (incomingId !== prevActive.id) {
-                    completedDuringTalk = { id: prevActive.id, name: prevActive.name };
-                }
-                // Case B: Server reset a repeatable quest from 'active' back to 'available' (e.g. Mara, Lina, Eliza)
-                else if (incomingStatus === 'available') {
-                    completedDuringTalk = { id: prevActive.id, name: prevActive.name };
+        let completedBanner = null;
+        if (this.justCompletedQuest) {
+            completedBanner = this.justCompletedQuest;
+            this.justCompletedQuest = null;
+        } else {
+            // Fallback for third-party servers lacking EVT QUEST COMPLETED:
+            // triggers ONLY if the quest was actually 'active' prior to this TALK!
+            const prevActive = this.findPlayerActiveQuestForNpc(npcId);
+            if (prevActive && data.quest && data.quest.id) {
+                const incomingId = data.quest.id;
+                const incomingStatus = data.quest_status || 'available';
+                if (incomingStatus === 'completed' || incomingId !== prevActive.id || incomingStatus === 'available') {
+                    completedBanner = { id: prevActive.id, name: prevActive.name };
+                    this.announceQuestCompletion(prevActive.id, prevActive.name);
+                    this.justCompletedQuest = null;
                 }
             }
         }
 
         let lines = Array.isArray(data.dialogue) ? data.dialogue.join(' ') : String(data.dialogue || '');
 
-        if (completedDuringTalk) {
-            this.announceQuestCompletion(completedDuringTalk.id, completedDuringTalk.name);
-            // Prepend a clear completion banner in the NPC speech box so the player sees it even when the next quest is offered!
-            lines = `🏆 [QUEST COMPLETED: ${completedDuringTalk.name}] — "${lines}"`;
+        if (completedBanner) {
+            lines = `🏆 [QUEST COMPLETED: ${completedBanner.name}] — "${lines}"`;
         }
 
         const speechEl = document.getElementById('dlg-speech-text');
         if (speechEl && lines) {
-            speechEl.textContent = completedDuringTalk ? lines : `"${lines}"`;
+            speechEl.textContent = completedBanner ? lines : `"${lines}"`;
         }
 
         const questBtn = document.getElementById('dlg-btn-quest');

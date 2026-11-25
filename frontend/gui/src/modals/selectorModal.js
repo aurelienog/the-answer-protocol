@@ -37,15 +37,15 @@ const SelectorModal = {
 
             options = dirs.map(dir => {
                 const targetId = exits[dir];
-                const rMeta = ASSETS.rooms[targetId] || ASSETS.rooms.default;
+                const rMeta = GameState.getRoomMeta(targetId);
                 return {
                     value: dir,
                     icon: rMeta.icon || '',
                     img: rMeta.cardImg || rMeta.img || '',
                     iconImg: rMeta.iconImg || rMeta.img || '',
                     title: dir.charAt(0).toUpperCase() + dir.slice(1),
-                    subtitle: targetId.replace(/_/g, ' '),
-                    desc: `Travel ${dir} towards ${targetId.replace(/_/g, ' ')}.`,
+                    subtitle: rMeta.name,
+                    desc: `Travel ${dir} towards ${rMeta.name}.`,
                     stats: [['Direction', dir.toUpperCase()], ['Destination', targetId], ['Region', rMeta.region]]
                 };
             });

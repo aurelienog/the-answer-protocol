@@ -5,7 +5,7 @@
 const StageView = {
     renderStage() {
         const room = GameState.room;
-        const meta = ASSETS.rooms[room.id] || ASSETS.rooms.default;
+        const meta = GameState.getRoomMeta(room.id);
 
         const stageIconEl = document.getElementById('stage-icon');
         if (meta.iconImg) {
@@ -64,15 +64,15 @@ const StageView = {
         }
 
         const shortRoomNames = {
-            "harbor_square":    "Harbor",
-            "market_street":    "Market",
-            "blacksmith_forge": "Forge",
-            "apothecary":       "Apothecary",
-            "tavern":           "Tavern",
-            "docks":            "Docks",
-            "warehouse":        "Warehouse",
-            "town_gate":        "Gate",
-            "forest_edge":      "Forest"
+            "loc.central_harbor_square":  "Harbor",
+            "loc.market_street":          "Market",
+            "loc.royal_blacksmith_forge": "Forge",
+            "loc.apothecary_shop":        "Apothecary",
+            "loc.the_salty_siren_tavern": "Tavern",
+            "loc.the_great_pier":         "Pier",
+            "loc.abandoned_warehouse":    "Warehouse",
+            "loc.north_town_gate":        "Gate",
+            "loc.whispering_forest_edge": "Forest"
         };
 
         const exits = room.exits || {};
@@ -81,7 +81,7 @@ const StageView = {
             if (!btn) return;
             const targetId = exits[dir];
             if (targetId) {
-                const tMeta = ASSETS.rooms[targetId] || ASSETS.rooms.default;
+                const tMeta = GameState.getRoomMeta(targetId);
                 const shortLabel = shortRoomNames[targetId] || targetId.replace(/^[^.]+\./, '').split('_')[0];
                 const capLabel = shortLabel.charAt(0).toUpperCase() + shortLabel.slice(1);
                 const pinIcon = tMeta.iconImg
@@ -90,7 +90,7 @@ const StageView = {
 
                 btn.classList.remove('hidden');
                 btn.dataset.cmd = `MOVE ${dir}`;
-                btn.title = `${dir.toUpperCase()} → ${targetId.replace(/_/g, ' ')}`;
+                btn.title = `${dir.toUpperCase()} → ${tMeta.name}`;
                 btn.innerHTML = `
                     ${pinIcon}
                     <span class="comp-sq-label">${capLabel}</span>

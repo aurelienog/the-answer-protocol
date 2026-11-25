@@ -11,7 +11,7 @@ const GameState = {
     status: "healthy",
 
     room: {
-        id: "harbor_square",
+        id: "loc.central_harbor_square",
         name: "Central Harbor Square",
         description: "",
         exits: {}
@@ -23,6 +23,7 @@ const GameState = {
     inventory: [],
     inventoryCounts: {},
     quests: [],
+    worldRooms: {},
     worldQuests: {},
     selectedInventoryItem: null,
 
@@ -212,6 +213,9 @@ const GameState = {
             });
         }
 
+        if (worldData.rooms) {
+            this.worldRooms = worldData.rooms;
+        }
         if (worldData.quests) {
             this.worldQuests = worldData.quests;
         }
@@ -245,6 +249,20 @@ const GameState = {
             return entry.id;
         }
         return String(entry);
+    },
+
+    getRoomMeta(roomId) {
+        const id = String(roomId || '');
+        const visual = ASSETS.rooms[id] || ASSETS.rooms[`loc.${id}`] || ASSETS.rooms.default;
+        const worldDef = (this.worldRooms && (this.worldRooms[id] || this.worldRooms[`loc.${id}`])) || null;
+        const cleanFallback = id.replace(/^[^.]+\./, '').replace(/_/g, ' ');
+        const capFallback = cleanFallback ? cleanFallback.charAt(0).toUpperCase() + cleanFallback.slice(1) : 'Unknown';
+        return {
+            ...ASSETS.rooms.default,
+            ...visual,
+            id,
+            name: (worldDef && worldDef.name) || capFallback
+        };
     },
 
     getItemMeta(id) {
@@ -287,8 +305,9 @@ const GameState = {
         if (typeof keyOrName === 'object' && keyOrName !== null) {
             keyOrName = this.normalizeNpc(keyOrName);
         }
-        if (ASSETS.npcs[keyOrName] && ASSETS.npcs[keyOrName].name) {
-            return ASSETS.npcs[keyOrName];
+        const direct = ASSETS.npcs[keyOrName] || ASSETS.npcs[`npc.${keyOrName}`];
+        if (direct && direct.name) {
+            return direct;
         }
         const lower = String(keyOrName).toLowerCase();
         for (const k in ASSETS.npcs) {
