@@ -38,15 +38,71 @@ func TestEventsCommandOpensScrollableHistory(t *testing.T) {
 	if !strings.Contains(view, "EVENT HISTORY") {
 		t.Fatalf("EVENTS did not open the event history view: %q", view)
 	}
-	if !strings.Contains(view, "EVT NOTICE event-005") {
+	if !strings.Contains(view, "Notice update: event-005") {
 		t.Errorf("event history = %q, want oldest retained event-005", view)
 	}
-	if strings.Contains(view, "EVT NOTICE event-004") {
+	if strings.Contains(view, "Notice update: event-004") {
 		t.Errorf("event history contains event-004, which should be outside the 100-event limit")
 	}
 
 	model, _ = updateModel(t, model, tea.KeyMsg{Type: tea.KeyEnd})
-	if view := model.View(); !strings.Contains(view, "EVT NOTICE event-104") {
+	if view := model.View(); !strings.Contains(view, "Notice update: event-104") {
 		t.Errorf("bottom of event history = %q, want newest event-104", view)
+	}
+}
+
+func TestEventHistoryShowsConciseSummaries(t *testing.T) {
+	events := []string{
+		"EVT ITEM DROPPED item.rope",
+		"EVT COMBAT DAMAGE attacker=Alice target=Dock Warden amount=12 remaining_hp=28",
+		`EVT COMBAT STARTED combat=combat:2 room=forest_edge participants=[{"id":"Bob","name":"Bob","is_player":true,"hp":100,"max_hp":100,"alive":true}]`,
+		"EVT QUEST COMPLETED quest=quest.explore_arvendale",
+	}
+	model := ui.NewModel(newHistoryClient(t, len(events), func(index int) string {
+		return events[index]
+	}))
+	model, cmd := enterText(t, model, "Alice")
+	if cmd == nil {
+		t.Fatal("authentication command is nil")
+	}
+	model, cmd = updateModel(t, model, cmd())
+	model, _ = updateModel(t, model, tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	for range events {
+		event := nextMessage(t, cmd)
+		model, cmd = updateModel(t, model, event)
+	}
+
+	model, cmd = enterText(t, model, "EVENTS")
+	if cmd == nil {
+		t.Fatal("EVENTS did not start the event view transition")
+	}
+	model, cmd = updateModel(t, model, cmd())
+	if cmd == nil {
+		t.Fatal("event view transition did not schedule completion")
+	}
+	model, _ = updateModel(t, model, cmd())
+
+	view := model.View()
+	for _, expected := range []string{
+		"Item dropped: item.rope",
+		"Alice dealt 12 damage to Dock Warden",
+		"Combat started in forest_edge",
+		"Quest completed: quest.explore_arvendale",
+	} {
+		if !strings.Contains(view, expected) {
+			t.Errorf("event history = %q, want %q", view, expected)
+		}
+	}
+	for _, payload := range []string{
+		"EVT ITEM DROPPED",
+		"remaining_hp=",
+		"participants=",
+		`"id":"Bob"`,
+		"EVT QUEST COMPLETED",
+	} {
+		if strings.Contains(view, payload) {
+			t.Errorf("event history contains raw payload %q: %q", payload, view)
+		}
 	}
 }

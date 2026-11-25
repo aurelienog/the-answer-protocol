@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"the-answer-protocol/frontend/cli/ui/layout"
 	"the-answer-protocol/internal/protocol"
 )
 
@@ -33,7 +35,11 @@ func (m Model) handleServerEvent(
 			}
 		}
 	} else {
-		m.appendEventLog(msg.event.Raw)
+		if event.Kind == protocol.KindEVT {
+			m.appendEventLog(formatEventEntry(event))
+		} else {
+			m.appendEventLog(msg.event.Raw)
+		}
 
 		if event.Kind == protocol.KindEVT {
 			switch event.EventType {
@@ -99,6 +105,232 @@ func (m *Model) appendEventLog(message string) {
 	if len(m.communication.EventLog) > maxEventLogEntries {
 		m.communication.EventLog = m.communication.EventLog[len(m.communication.EventLog)-maxEventLogEntries:]
 	}
+}
+
+func formatEventEntry(event protocol.Message) string {
+	data := strings.TrimSpace(event.Data)
+	var summary string
+	var style lipgloss.Style
+
+	switch event.EventType {
+	case "ROOM":
+		summary, style = formatRoomEvent(data)
+	case "GROUP":
+		summary, style = formatGroupEvent(data)
+	case "COMBAT":
+		summary, style = formatCombatEvent(data)
+	case "ITEM":
+		summary, style = formatItemEvent(data)
+	case "UNIQUE":
+		summary, style = formatUniqueItemsEvent(data)
+	case "QUEST":
+		summary, style = formatQuestEvent(data)
+	case "NPC":
+		summary, style = formatNPCEvent(data)
+	case "RESPAWN":
+		summary, style = formatRespawnEvent(data)
+	case "STATS":
+		summary, style = formatStatsEvent(data)
+	default:
+		summary, style = formatUnknownEvent(event.EventType, data)
+	}
+
+	return style.Render(summary)
+}
+
+func formatRoomEvent(data string) (string, lipgloss.Style) {
+	name, player := splitEventName(data, "PRESENCE ENTER", "PRESENCE LEAVE")
+	switch name {
+	case "PRESENCE ENTER":
+		return strings.TrimSpace(player) + " entered the room", layout.SuccessStyle
+	case "PRESENCE LEAVE":
+		return strings.TrimSpace(player) + " left the room", layout.MutedStyle
+	default:
+		return formatUnknownEvent("ROOM", data)
+	}
+}
+
+func formatGroupEvent(data string) (string, lipgloss.Style) {
+	name, body := splitEventName(data, "INVITE", "JOIN", "LEAVE")
+	fields := parseKeyValuesOrdered(body, "player", "group")
+	switch name {
+	case "INVITE":
+		return fields["player"] + " invited you to " + fields["group"], layout.WarningStyle
+	case "JOIN":
+		return fields["player"] + " joined the group", layout.SuccessStyle
+	case "LEAVE":
+		return fields["player"] + " left the group", layout.MutedStyle
+	default:
+		return formatUnknownEvent("GROUP", data)
+	}
+}
+
+func formatCombatEvent(data string) (string, lipgloss.Style) {
+	name, body := splitEventName(
+		data,
+		"STARTED",
+		"TURN",
+		"ATTACK",
+		"DAMAGE",
+		"NPC DIED",
+		"PLAYER DIED",
+		"PLAYER FLED",
+		"PLAYER JOINED",
+		"HELP REQUESTED",
+		"ENDED",
+	)
+	switch name {
+	case "STARTED":
+		room := parseKeyValuesOrdered(body, "combat", "room", "participants")["room"]
+		summary := "Combat started"
+		if room != "" {
+			summary += " in " + room
+		}
+		return summary, layout.CombatStartStyle
+	case "TURN":
+		fields := parseKeyValuesOrdered(body, "participant_type", "participant", "round", "actions")
+		summary := fields["participant"] + "'s turn"
+		if fields["round"] != "" {
+			summary = "Round " + fields["round"] + ": " + summary
+		}
+		return summary, layout.CombatTurnStyle
+	case "ATTACK":
+		fields := parseKeyValuesOrdered(body, "attacker_type", "attacker", "target")
+		return fields["attacker"] + " attacked " + fields["target"], layout.CombatAttackStyle
+	case "DAMAGE":
+		fields := parseKeyValuesOrdered(body, "attacker", "target", "amount", "remaining_hp")
+		summary := fields["attacker"] + " dealt " + fields["amount"] + " damage to " + fields["target"]
+		return summary, layout.CombatDamageStyle
+	case "NPC DIED", "PLAYER DIED":
+		participant := parseKeyValuesOrdered(body, "participant", "killer")["participant"]
+		style := layout.CombatVictoryStyle
+		if name == "PLAYER DIED" {
+			style = layout.DangerStyle
+		}
+		return participant + " was defeated", style
+	case "PLAYER FLED":
+		player := parseKeyValuesOrdered(body, "player", "damage", "remaining_hp")["player"]
+		return player + " fled combat", layout.WarningStyle
+	case "PLAYER JOINED":
+		player := parseKeyValuesOrdered(body, "player", "combat", "hp", "max_hp")["player"]
+		return player + " joined combat", layout.SuccessStyle
+	case "HELP REQUESTED":
+		player := parseKeyValuesOrdered(body, "player", "combat", "room")["player"]
+		return player + " called for combat help", layout.WarningStyle
+	case "ENDED":
+		return "Combat ended", layout.CombatInfoStyle
+	default:
+		return formatUnknownEvent("COMBAT", data)
+	}
+}
+
+func formatItemEvent(data string) (string, lipgloss.Style) {
+	name, body := splitEventName(data, "DROPPED", "USED")
+	switch name {
+	case "DROPPED":
+		summary := "Item dropped"
+		if item := strings.TrimSpace(body); item != "" {
+			summary += ": " + item
+		}
+		return summary, layout.AccentStyle
+	case "USED":
+		fields := parseKeyValuesOrdered(body, "player", "item", "hp")
+		return fields["player"] + " used " + fields["item"], layout.SuccessStyle
+	default:
+		return formatUnknownEvent("ITEM", data)
+	}
+}
+
+func formatUniqueItemsEvent(data string) (string, lipgloss.Style) {
+	name, itemIDs := splitEventName(data, "ITEMS RETURNED")
+	if name != "ITEMS RETURNED" {
+		return formatUnknownEvent("UNIQUE", data)
+	}
+
+	summary := "Unique items returned to the room"
+	if itemIDs != "" {
+		summary += " (" + strconv.Itoa(len(strings.Split(itemIDs, ","))) + ")"
+	}
+	return summary, layout.AccentStyle
+}
+
+func formatQuestEvent(data string) (string, lipgloss.Style) {
+	name, body := splitEventName(data, "COMPLETED")
+	if name != "COMPLETED" {
+		return formatUnknownEvent("QUEST", data)
+	}
+
+	summary := "Quest completed"
+	if quest := parseKeyValuesOrdered(body, "quest")["quest"]; quest != "" {
+		summary += ": " + quest
+	}
+	return summary, layout.SuccessStyle
+}
+
+func formatNPCEvent(data string) (string, lipgloss.Style) {
+	name, body := splitEventName(data, "RESPAWN")
+	if name != "RESPAWN" {
+		return formatUnknownEvent("NPC", data)
+	}
+
+	fields := parseKeyValuesOrdered(body, "npc", "name", "room")
+	summary := fields["name"] + " returned"
+	if fields["room"] != "" {
+		summary += " to " + fields["room"]
+	}
+	return summary, layout.InfoStyle
+}
+
+func formatRespawnEvent(data string) (string, lipgloss.Style) {
+	fields := parseKeyValuesOrdered(data, "player", "room", "hp", "max_hp", "combat")
+	summary := fields["player"] + " respawned"
+	if fields["room"] != "" {
+		summary += " in " + fields["room"]
+	}
+	return summary, layout.InfoStyle
+}
+
+func formatStatsEvent(data string) (string, lipgloss.Style) {
+	players := parseKeyValuesOrdered(data, "players")["players"]
+	if players == "" {
+		return formatUnknownEvent("STATS", data)
+	}
+	return "Players online: " + players, layout.InfoStyle
+}
+
+func formatUnknownEvent(eventType, data string) (string, lipgloss.Style) {
+	summary := eventLabel(eventType) + " update"
+	if first, _, found := strings.Cut(data, " "); found && !strings.Contains(first, "=") {
+		summary += ": " + first
+	} else if data != "" && !strings.Contains(data, "=") {
+		summary += ": " + data
+	}
+	return summary, layout.MutedStyle
+}
+
+func splitEventName(data string, names ...string) (string, string) {
+	for _, name := range names {
+		if data == name {
+			return name, ""
+		}
+		if strings.HasPrefix(data, name+" ") {
+			return name, strings.TrimSpace(strings.TrimPrefix(data, name))
+		}
+	}
+
+	name, body, found := strings.Cut(data, " ")
+	if !found {
+		return strings.ToUpper(name), ""
+	}
+	return strings.ToUpper(name), strings.TrimSpace(body)
+}
+
+func eventLabel(eventType string) string {
+	eventType = strings.ReplaceAll(strings.ToLower(eventType), "_", " ")
+	if eventType == "" {
+		return "Event"
+	}
+	return strings.ToUpper(eventType[:1]) + eventType[1:]
 }
 
 func (m *Model) handleGroupEvent(data string) tea.Cmd {
