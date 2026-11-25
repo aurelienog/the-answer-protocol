@@ -172,6 +172,7 @@ const App = {
         if (upper.startsWith('GROUP LEAVE'))       verb = 'GROUP_LEAVE';
         if (upper.startsWith('GROUP INFO'))        verb = 'GROUP_INFO';
         if (upper.startsWith('GROUP INVITATIONS')) verb = 'GROUP_INVITATIONS';
+        if (upper.startsWith('COMBAT DEFEND'))     verb = 'COMBAT_DEFEND';
         if (upper.startsWith('COMBAT HELP'))       verb = 'COMBAT_HELP';
         if (upper.startsWith('COMBAT JOIN')) {
             verb = 'COMBAT_JOIN';
@@ -272,6 +273,10 @@ const App = {
         if (packet.type === 'ERR') {
             UI.addChatLine('LOG', 'Server ←', raw, 'chat-err');
             const failedVerb = GameState.commandQueue.shift();
+
+            if (failedVerb === 'COMBAT_DEFEND') {
+                CombatModal.cancelDefendAnim();
+            }
 
             // 1. Auto-join ONLY if there is a valid party/help combat for THIS enemy in OUR CURRENT ROOM
             if (raw.includes('NPC_ALREADY_IN_COMBAT')) {
@@ -407,9 +412,6 @@ const App = {
         if (payload.startsWith('defended=')) {
             const redMatch = payload.match(/(?:reduction|defense_bonus)=(\d+)/);
             const pct = parseInt(redMatch ? redMatch[1] : '50', 10);
-            if (GameState.inCombat) {
-                CombatModal.playDefendEffect(pct);
-            }
             UI.addChatLine('COMBAT', '🛡️ Defend', `Defensive stance active (+${pct}% defense on next hit).`, 'chat-sys');
             return;
         }

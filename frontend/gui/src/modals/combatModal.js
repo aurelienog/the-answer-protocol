@@ -19,6 +19,8 @@ const CombatModal = {
 
     animQueue: [],
     isPlayingAnim: false,
+    animStepTimer: null,
+    currentAnimTag: null,
     isMyTurn: true,
     isFallen: false,
     turnEventCounter: 0,
@@ -174,6 +176,7 @@ const CombatModal = {
                 if (this.isPlayingAnim || !this.isMyTurn || this.isFallen) return;
                 this.isMyTurn = false;
                 this.setButtonsDisabled(true);
+                this.playDefendEffect(50);
                 App.sendCommand('COMBAT DEFEND');
             });
         }
@@ -222,16 +225,21 @@ const CombatModal = {
         });
     },
 
-    enqueueAnim(fn, durationMs = 1100) {
-        this.animQueue.push({ fn, durationMs });
+    enqueueAnim(fn, durationMs = 1100, tag = null) {
+        this.animQueue.push({ fn, durationMs, tag });
         if (!this.isPlayingAnim) {
             this.processNextAnim();
         }
     },
 
     processNextAnim() {
+        if (this.animStepTimer) {
+            clearTimeout(this.animStepTimer);
+            this.animStepTimer = null;
+        }
         if (this.animQueue.length === 0) {
             this.isPlayingAnim = false;
+            this.currentAnimTag = null;
             this.updateBannerFromOwner();
             this.syncActionButtonsState();
             return;
@@ -241,11 +249,25 @@ const CombatModal = {
         this.setButtonsDisabled(true);
 
         const step = this.animQueue.shift();
+        this.currentAnimTag = step.tag || null;
         step.fn();
 
-        setTimeout(() => {
+        this.animStepTimer = setTimeout(() => {
+            this.animStepTimer = null;
             this.processNextAnim();
         }, step.durationMs);
+    },
+
+    cancelDefendAnim() {
+        this.animQueue = this.animQueue.filter(s => s.tag !== 'defend');
+        if (this.currentAnimTag === 'defend') {
+            if (typeof CombatAnimator !== 'undefined') {
+                CombatAnimator.triggerAction('hero', 'idle');
+            }
+            const dmgEl = document.getElementById('dmg-on-hero');
+            if (dmgEl) dmgEl.classList.add('hidden');
+            this.processNextAnim();
+        }
     },
 
     syncActionButtonsState() {
@@ -440,7 +462,7 @@ const CombatModal = {
             const turnText = document.getElementById('combat-turn-text');
             if (turnText) turnText.innerHTML = `DEFENDING <img src="/assets/icons/ui/shield.webp" alt="" class="ui-ico">`;
             this.showFloatingDmg('dmg-on-hero', `+${reductionPct}% DEF`, '#63b3ed');
-        }, timing.totalMs);
+        }, timing.totalMs, 'defend');
     },
 
     playHealEffect(healAmount) {
@@ -746,6 +768,10 @@ const CombatModal = {
         if (this.endedFallbackTimer) clearTimeout(this.endedFallbackTimer);
         this.endedFallbackTimer = null;
         this.pendingCombatRewards = [];
+
+        if (this.animStepTimer) clearTimeout(this.animStepTimer);
+        this.animStepTimer = null;
+        this.currentAnimTag = null;
 
         GameState.inCombat = false;
         this.combatId = null;

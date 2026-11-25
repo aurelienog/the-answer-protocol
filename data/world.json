@@ -70,7 +70,7 @@
       "name": "North Town Gate",
       "description": "Massive iron-bound stone gates adorned with blue and gold banners, marking the boundary between the city and the northern forest. An Explorer's Seal rests on the guard post.",
       "exits": { "south": "loc.market_street", "north": "loc.whispering_forest_edge" },
-      "items": { "item.northern_gate_seal": 2 },
+      "items": { "item.northern_gate_seal": 5 },
       "npcs": ["npc.north_gate_guard"]
     },
     "loc.whispering_forest_edge": {
