@@ -103,11 +103,7 @@ frontend/
         │
         ├── animations/                 # Small UI animation helpers
         │   ├── cursor.go
-        │   ├── damage.go
-        │   ├── health.go
-        │   ├── loot.go
-        │   ├── notification.go
-        │   └── quest.go
+        │   └── health.go
         │
         └── layout/                     # Terminal layout, styles and reusable components
             ├── main.go
@@ -245,8 +241,7 @@ Individual view files render the relevant domain data.
 and layout calculations. It adapts the main view and sidebar to the
 available terminal dimensions.
 
-`ui/animations` contains focused animation helpers for cursor blinking,
-health bars, damage, loot, notifications, and quest feedback. These
+`ui/animations` contains focused animation helpers for cursor blinking and health bars. These
 helpers support presentation only; they do not determine game outcomes.
 
 ---
@@ -325,8 +320,8 @@ The CLI accepts the normal TAP command syntax and forwards game commands
 to the server. It also provides a small number of local interface
 conveniences.
 
-- TAP commands such as `LOOK`, `MOVE`, `TAKE`, `CHAT`, `ATTACK`, `STATUS`, and `GROUP` are server requests.
-- `MAP` is a local view shortcut; it changes the terminal view and is not a TAP protocol command.
+- Server Commands: TAP commands (such as `LOOK`, `MOVE`, `TAKE`, `DROP`, `ATTACK`, and `WHO`) send requests to the server.
+- Local View Shortcuts: `MAP`, `CHAT`, `EVENTS`, and `COMBAT` are client-side shortcuts that switch the active terminal view without sending a TAP protocol request to the server.
 - Keyboard controls such as `Tab`, arrow keys, and `<` control navigation, scrolling, chat filters, or panel focus. They are not sent to the server.
 
 This separation keeps the CLI useful for direct protocol interaction
@@ -368,11 +363,10 @@ closed when the Bubble Tea program exits.
 
 ## 10. Related Documentation
 
-- [`CLI_USER_GUIDE.md`](../CLI_USER_GUIDE.md) - player-facing CLI
+- [`CLI_USER_GUIDE.md`](CLI_USER_GUIDE.md) - player-facing CLI
     usage and keyboard controls.
 - [`gui-architecture.md`](gui-architecture.md) - architecture of the
     desktop GUI client.
 - [`server-architecture.md`](server-architecture.md) - server
     architecture and concurrency model.
-- [`protocol-rfc.html`](../protocol-rfc.html) - TAP wire protocol
-    specification.
+- [`protocol-rfc.html`](protocol-rfc.html) - TAP wire protocol specification.
