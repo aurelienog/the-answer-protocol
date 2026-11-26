@@ -270,9 +270,8 @@ not a public web API and does not replace server-side validation.
     architecture.
 - [`server-architecture.md`](server-architecture.md) - TCP server,
     world domain, concurrency, and event distribution.
-- [`../GUI_USER_GUIDE.md`](../GUI_USER_GUIDE.md) - player-facing GUI
+- [`../GUI_USER_GUIDE.md`](GUI_USER_GUIDE.md) - player-facing GUI
     instructions.
-- [`../CLI_USER_GUIDE.md`](../CLI_USER_GUIDE.md) - player-facing CLI
+- [`../CLI_USER_GUIDE.md`](CLI_USER_GUIDE.md) - player-facing CLI
     instructions.
-- [`../protocol-rfc.html`](../protocol-rfc.html) - TAP wire protocol
-    specification.
+

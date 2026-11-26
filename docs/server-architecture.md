@@ -609,9 +609,8 @@ command/response cycle.
     HTTP/SSE bridge architecture.
 - [`cli-architecture.md`](cli-architecture.md) - terminal client
     architecture.
-- [`CLI_USER_GUIDE.md`](../CLI_USER_GUIDE.md) - player-facing CLI
+- [`CLI_USER_GUIDE.md`](CLI_USER_GUIDE.md) - player-facing CLI
     instructions.
-- [`GUI_USER_GUIDE.md`](../GUI_USER_GUIDE.md) - player-facing GUI
+- [`GUI_USER_GUIDE.md`](GUI_USER_GUIDE.md) - player-facing GUI
     instructions.
-- [`protocol-rfc.html`](../protocol-rfc.html) - TAP wire protocol
-    specification.
+

@@ -369,4 +369,3 @@ closed when the Bubble Tea program exits.
     desktop GUI client.
 - [`server-architecture.md`](server-architecture.md) - server
     architecture and concurrency model.
-- [`protocol-rfc.html`](protocol-rfc.html) - TAP wire protocol specification.
