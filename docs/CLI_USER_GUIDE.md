@@ -54,6 +54,8 @@ Available views include:
 | Character | Displays the player's name and health status. |
 | Quests | Displays available and active quest information. |
 | Group | Displays group membership and pending invitations. |
+| Chat | Displays the retained chat history with channel filtering. |
+| Events | Displays the retained history of server events and notifications. |
 | Combat | Displays information and actions related to combat. |
 | Talk | Displays the current NPC conversation. |
 
@@ -97,10 +99,6 @@ Enter commands in the input area and press `Enter` to execute them.
 | `Esc` | Return to the world view. |
 
 The interface also supports animated transitions between views.
-
-Enter `CHAT` to open the full chat history. Use `Tab` to cycle through all,
-group, room chat, and global messages; use the viewport controls to scroll.
-Enter `EVENTS` to open the full event history and use the viewport controls to scroll.
 
 ## 5. Available Commands
 
@@ -175,8 +173,7 @@ Each channel has a different audience.
 
 ### Events
 
-Enter `EVENTS` to review the retained event history. Use the viewport controls to
-scroll through the entries.
+Enter `EVENTS` to open the event log view and review the retained event history. Use the viewport controls to scroll through the entries.
 
 ### Combat
 
@@ -232,6 +229,14 @@ The quests view provides detailed information about the player's quests, includi
 
 The group view displays the group name, identifier, members, and pending invitations.
 
+### Chat
+
+The chat view expands the conversation log into the main view, allowing you to read past messages, scroll through history, and filter conversations by channel using Tab.
+
+### Events
+
+The events view expands the event log into the main view, providing a scrollable history of server notifications, combat logs, and world events.
+
 ### Combat
 
 The combat view displays information relevant to the current encounter and available combat actions.
@@ -261,6 +266,8 @@ This makes it easier to follow conversations without mixing messages from differ
 - Use `INVENTORY` to review your collected items.
 - Talk to NPCs to discover quests and interactions.
 - Use `QUESTS` to track your progress.
+- Use `CHAT` to review missed player messages and filter by channel.
+- Use `EVENTS` to review past server notifications and combat logs.
 - Form a group to cooperate with other players.
 - Pay attention to the event log for important server notifications.
 - Check your health before entering combat.
