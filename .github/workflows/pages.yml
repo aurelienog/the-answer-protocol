@@ -1,0 +1,78 @@
+name: Deploy TAP Web Demo to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare static site bundle & rewrite relative paths
+        run: |
+          mkdir -p _site/data
+          cp -r frontend/gui/* _site/
+          cp data/world.json _site/data/world.json
+          touch _site/.nojekyll
+
+          # Ensure demoBridge.js is injected right before assets.js (supports both relative and absolute script tags)
+          if ! grep -q "demoBridge.js" _site/index.html; then
+            sed -i -E 's|<script src="?/?src/core/assets.js"?></script>|<script src="src/core/demoBridge.js"></script>\n    <script src="src/core/assets.js"></script>|' _site/index.html
+          fi
+
+          # 1) HTML rewrites (favicon, stylesheets, scripts, images)
+          sed -i \
+            -e 's|href="/assets/|href="assets/|g' \
+            -e 's|href="/styles/|href="styles/|g' \
+            -e 's|src="/assets/|src="assets/|g' \
+            -e 's|src="/src/|src="src/|g' \
+            _site/index.html
+
+          # 2) CSS rewrites for background-image: url(...)
+          # Deep stylesheets (e.g. styles/frames/*.css) -> ../../assets/
+          find _site/styles -mindepth 2 -name '*.css' -exec sed -i \
+            -e "s|url('/assets/|url('../../assets/|g" \
+            -e 's|url("/assets/|url("../../assets/|g' \
+            -e 's|url(/assets/|url(../../assets/|g' {} +
+
+          # Root stylesheets (e.g. styles/*.css) -> ../assets/
+          find _site/styles -maxdepth 1 -name '*.css' -exec sed -i \
+            -e "s|url('/assets/|url('../assets/|g" \
+            -e 's|url("/assets/|url("../assets/|g' \
+            -e 's|url(/assets/|url(../assets/|g' {} +
+
+          # 3) JavaScript assets paths in all scripts -> assets/
+          find _site/src -name '*.js' -exec sed -i \
+            -e "s|'/assets/|'assets/|g" \
+            -e 's|"/assets/|"assets/|g' \
+            -e 's|`/assets/|`assets/|g' {} +
+
+          echo "Static site bundle ready for deployment."
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
